@@ -426,6 +426,49 @@ Can be thought of as a single, expanded template:
 
 In Schnauzer there is a convenient way of transporting even more kinds of variables. As above there was headline="h3" passed to the partial that could be picked up as {{headline}} inside the partial. If a variable is passed without assigning (so, like: {{> user  headline="h3" foo}}) then it can be picked up by standard variable names: \$0, \$1, ... So, ```headline``` took the first place, so \$0 is taken, so ```foo``` is passed to \$1.
 
+Example for recursive rendering (a menu-tree):
+
+```js
+var model = {
+  name: 'first Element',
+  childNodes: [{
+    name: 'some Element'
+  },{
+    name: 'some Element'
+  },{
+    name: 'some Element',
+    childNodes: [{
+    {
+      name: 'some Element'
+    },{
+      name: 'some Element'
+    }]
+  }]
+}
+```
+
+```html
+<li>{{name}}
+  {{#if childNodes}}
+  <ul>
+      {{#childNodes}}{{>self}}{{/childNodes}}
+    </ul>
+  {{/if}}
+</li>
+```
+
+You would need a ```if``` helper here:
+
+```js
+function helper(text, $1) {
+  var data = this.getData($1);
+
+  if (data && data.length) {
+    return text;
+  }
+}
+```
+
 ### Custom Delimiters
 
 Custom delimiters can be used in place of `{{` and `}}` by setting the new values in JavaScript.
