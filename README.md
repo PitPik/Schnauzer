@@ -1,0 +1,449 @@
+# {{schnauzer.js}} - (almost) Logic-less templates with JavaScript
+
+[Schanuzer](http://github.com/PitPik/schnauzer) is a fairly logic-less template syntax rendering engine that provides the power necessary to let you build semantic templates effectively with no frustration.
+Schanuzer is largely compatible with Mustache and Handlebars templates. In most cases it is possible to swap out Mustache or Handlebars with Schanuzer and continue using your current templates.
+
+I call it "logic-less" because there are no if statements, else clauses, or for loops. Instead there are only tags. Some tags are replaced with a value, some nothing, and others a series of values. But as with Handlebars you can add helpers, or pass data to your partials.
+Schanuzer is also very small and fast. It has the power of Handlebars but is smaller than Mustage (4KB minified, 1.75KB gZip) and therefore also perfectly suitable for mobile applications.
+
+## Where to use schnauzer.js?
+
+You can use schnauzer.js to render templates anywhere you can use JavaScript. This includes web browsers, server-side environments such as [node](http://nodejs.org/), and [CouchDB](http://couchdb.apache.org/) views.
+
+schnauzer.js ships with support for both the [CommonJS](http://www.commonjs.org/) module API and the [Asynchronous Module Definition](https://github.com/amdjs/amdjs-api/wiki/AMD) API, or AMD.
+
+* * *
+
+## Usage
+
+Below is a quick example how to use schnauzer.js:
+
+```js
+var view = {
+  title: "Joe",
+  calc: function (text, $1) {
+    return parseFloat($1) * 0.9;
+  }
+};
+
+var output = new Schnauzer("{{title}} spends {{calc 200}}").render(view);
+```
+
+In this example `Schnauzer()` is initialized with the template as first argument (options would be the second argument) and the `render()` function that takes one parameters:  the  `view` object that contains the data and code needed to render the template.
+
+## API
+
+```js
+new Schnauzer(template /*String*/, options /*Object*/)
+.render(data /*Object*/) // => returns String
+.parse(text /*String*/)
+.registerHelper(name /*String*/, func  /*Function*/)
+.unregisterHelper(name /*String*/)
+.registerPartial(name /*String*/, html  /*String*/)
+.unregisterPartial(name /*String*/)
+.setTags(tags /*Array*/)
+```
+`parse()` is only needed if the template was not passed to `Schnauzer()` in the first place. This might be handy if you're not sure if this template will ever be used...
+
+#### Functions in helpers
+
+All the functions used in the model or helpers can be used as inline or block elements that have the same arguments and scope:
+
+```html
+{{#helper foo}}some text with {{meaning}}{{/helper}}
+or inline
+{{helper foo}}
+```
+```js
+var data = {
+  meaning: 'some more meaning',
+  foo: 'This would be'
+}
+
+function helper(text[, $1, $2,...]) {
+  var data = this.getData($1); // $1 = 'foo'
+  var txt = this.encode(data);
+
+  return txt + ' ' + text;
+}
+```
+In this case you would get "This would be some text with some more meaning" in the block and "This would be  " if used as inline helper.
+The first argument of the helper function is the text that was rendered if it was inside a block element (empty if inline usage) and the $1 etc. represent the String passed with the block (here "foo").
+```this.getData()``` takes an argument representing the key and returns the data with that key if available. ```this.encode()``` would make sure that all characters are encoded (defined by ```entityMap``` in options).
+
+#### Options
+```js
+tags: ['{{', '}}'], // used tags: default is {{}}
+entityMap: { // characters to be escaped
+  '&': '&amp;',
+  '<': '&lt;',
+  '>': '&gt;',
+  '"': '&quot;',
+  "'": '&#39;',
+  '/': '&#x2F;',
+  '`': '&#x60;',
+  '=': '&#x3D;'
+},
+doEscape: true, // if set to false it reacts like {{{}}}
+helpers: {}, // name:function pair defining helpers
+partials: {}, // name:String pair defining partials
+recursion: 'self', // name of initial partial
+characters: '$"<>%=@', // whitelist of chars for variables inside helpers, partials, functions...
+
+// the following are internals and probably never need to be overwritten:
+splitter: '|##|', // internal string splitter; change if this also used in template
+stopper: '__' // internal string splitter for nested block names; (__1__, __2__, etc.)
+
+```
+
+## Templates
+
+A Schnauzer template is a string that contains any number of schnauzer tags. Tags are indicated by the double mustaches that surround them. `{{person}}` is a tag, as is `{{#person}}`. In both examples we refer to `person` as the tag's key. There are several types of tags available in schnauzer.js, described below.
+
+There are several techniques that can be used to load templates and hand them to schnauzer.js, here are two of them:
+
+#### Include Templates
+
+If you need a template for a dynamic part in a static website, you can consider including the template in the static HTML file to avoid loading templates separately. Here's a small example using `jQuery`:
+
+```html
+<!DOCTYPE HTML>
+<html>
+<body onload="loadUser()">
+<div id="target">Loading...</div>
+<script id="template" type="x-tmpl-schnauzer">
+Hello {{name}}!
+</script>
+</body>
+</html>
+```
+
+```js
+function loadUser() {
+  var template = $('#template').html();
+  var schnauzer = new Schnauzer(template);
+  var rendered = schnauzer.render({name: "Luke"});
+  $('#target').html(rendered);
+}
+```
+
+#### Load External Templates
+
+If your templates reside in individual files, you can load them asynchronously and render them when they arrive. Another example using `jQuery`:
+
+```js
+var schnauzer = new Schnauzer();
+var data = {name: "Luke"};
+var rendered = '';
+
+function loadUser() {
+  $.get('template.mst', function(template) {
+    schnauzer.parse(template);
+    rendered = schnauzer.render(data);
+    $('#target').html(rendered);
+  });
+}
+```
+
+### Variables
+
+The most basic tag type is a simple variable. A `{{name}}` tag renders the value of the `name` key in the current context. If there is no such key, nothing is rendered.
+
+All variables are HTML-escaped by default (option: doEscape). If you want to render unescaped HTML, use the triple mustache: `{{{name}}}`.
+
+View:
+
+```json
+{
+  "name": "Chris",
+  "company": "<b>GitHub</b>"
+}
+```
+
+Template:
+
+```
+* {{name}}
+* {{age}}
+* {{company}}
+* {{{company}}}
+```
+
+Output:
+
+```html
+* Chris
+*
+* &lt;b&gt;GitHub&lt;/b&gt;
+* <b>GitHub</b>
+```
+
+JavaScript's dot notation may be used to access keys that are properties of objects in a view.
+
+View:
+
+```json
+{
+  "name": {
+    "first": "Michael",
+    "last": "Jackson"
+  },
+  "age": "RIP"
+}
+```
+
+Template:
+
+```html
+* {{name.first}} {{name.last}}
+* {{age}}
+```
+
+Output:
+
+```html
+* Michael Jackson
+* RIP
+```
+
+### Sections
+
+Sections render blocks of text one or more times, depending on the value of the key in the current context.
+
+A section begins with a pound and ends with a slash. That is, `{{#person}}` begins a `person` section, while `{{/person}}` ends it. The text between the two tags is referred to as that section's "block".
+
+The behavior of the section is determined by the value of the key.
+
+#### False Values or Empty Lists
+
+If the `person` key does not exist, or exists and has a value of `null`, `undefined`, `false`, `0`, or `NaN`, or is an empty string or an empty list, the block will not be rendered.
+
+View:
+
+```json
+{
+  "person": false
+}
+```
+
+Template:
+
+```html
+Shown.
+{{#person}}
+Never shown!
+{{/person}}
+```
+
+Output:
+
+```html
+Shown.
+```
+
+#### Non-Empty Lists
+
+If the `person` key exists and is not `null`, `undefined`, or `false`, and is not an empty list the block will be rendered one or more times.
+
+When the value is a list (an array), the block is rendered once for each item in the list. The context of the block is set to the current item in the list for each iteration. In this way we can loop over collections.
+
+View:
+
+```json
+{
+  "stooges": [
+    { "name": "Moe" },
+    { "name": "Larry" },
+    { "name": "Curly" }
+  ]
+}
+```
+
+Template:
+
+```html
+{{#stooges}}
+<b>{{name}}</b>
+{{/stooges}}
+```
+
+Output:
+
+```html
+<b>Moe</b>
+<b>Larry</b>
+<b>Curly</b>
+```
+
+When looping over an array of strings, a `.` can be used to refer to the current item in the list.
+
+View:
+
+```json
+{
+  "musketeers": ["Athos", "Aramis", "Porthos", "D'Artagnan"]
+}
+```
+
+Template:
+
+```html
+{{#musketeers}}
+* {{.}}
+{{/musketeers}}
+```
+
+Output:
+
+```html
+* Athos
+* Aramis
+* Porthos
+* D'Artagnan
+```
+
+#### Functions
+
+If the value of a section key is a function, it is called with the section's literal block of text..
+
+View:
+
+```js
+{
+  "name": "Tater",
+  "greeting": "Hi",
+  "bold": function (text, $1) {
+      return this.getData($1) + " <b>" + text + "</b>";
+  }
+}
+```
+
+Template:
+
+```html
+{{#bold greeting}}{{name}}.{{/bold}} or
+{{#bold}}{{greeting}}{{name}}.{{/bold}}
+```
+
+Output:
+
+```html
+Hi <b>Tater.</b>
+```
+
+### Inverted Sections
+
+An inverted section opens with `{{^section}}` instead of `{{#section}}`. The block of an inverted section is rendered only if the value of that section's tag is `null`, `undefined`, `false`, *falsy* or an empty list.
+
+View:
+
+```json
+{
+  "repos": []
+}
+```
+
+Template:
+
+```html
+{{#repos}}<b>{{name}}</b>{{/repos}}
+{{^repos}}No repos :({{/repos}}
+```
+
+Output:
+
+```html
+No repos :(
+```
+
+### Helpers
+
+As with Handlebars you can also use helpers in Schnauzer to make your live easier. Schnauzer helpers can be accessed from any context in a template. You can register a helper with the Schnauzer.registerHelper method.
+Helpers and their function are explained in the API section above.
+
+### Comments
+
+Comments begin with a bang and are ignored. The following template:
+
+```html
+<h1>Today{{! ignore me }}.</h1>
+```
+
+Will render as follows:
+
+```html
+<h1>Today.</h1>
+```
+
+Comments may contain newlines.
+
+### Partials
+
+Partials begin with a greater than sign, like {{> box}}.
+
+Partials can be set in options or registered by ```registerPartial```:
+
+```javascript
+var schnauzer = new Schnauzer(template, {
+    partials: {
+        myPartial: html
+    }
+});
+// or ...
+schnauzer.registerPartial('myPartial', html);
+```
+
+Partials are pre-parsed, so they are as fast rendered as regular template items. Recursive partials are possible. Just avoid infinite loops. The name of the main partial is defined in options and defaults to "self"
+`{{> self}}`
+
+They also inherit the calling context but ignore the deeper context if 'self' (to avoid endless recursion).
+
+Schnauzer requires only the name of the partial but can also pass some variables:
+
+```html
+{{> next_more headline="h1"}}
+```
+
+For example, this template and partial:
+
+    // base:
+    <h2>Names</h2>
+    {{#names}}
+      {{> user  headline="h3"}}
+    {{/names}}
+
+    // user:
+    <{{headline}}>{{name}}</{{headline}}>
+
+Can be thought of as a single, expanded template:
+
+```html
+<h2>Names</h2>
+{{#names}}
+  <h3>{{name}}</h3>
+{{/names}}
+```
+
+In Schnauzer there is a convenient way of transporting even more kinds of variables. As above there was headline="h3" passed to the partial that could be picked up as {{headline}} inside the partial. If a variable is passed without assigning (so, like: {{> user  headline="h3" foo}}) then it can be picked up by standard variable names: \$0, \$1, ... So, ```headline``` took the first place, so \$0 is taken, so ```foo``` is passed to \$1.
+
+### Custom Delimiters
+
+Custom delimiters can be used in place of `{{` and `}}` by setting the new values in JavaScript.
+
+#### Setting delimiters for Templates
+
+Delimiters can be set by options or by using ```setTags([String, String])```. Other than with Mustage, Schnauzer doesn't switch delimiters while parsing but only before parsing:
+
+```html+erb
+var myTemplate = new Schnauzer(template, {
+    tags: ['<%', '%>']
+});
+// or...
+myTemplate.setTags(['<%', '%>']);
+```
+
+Custom delimiters may not contain whitespace.
+
+## Pre-parsing and Caching Templates
+
+By default, when schnauzer.js first parses a template it builds arrays of currying functions that keep all data cached. The currying functions not only already hold the parsed HTML snippets but also the right key to the JSON being passed so it can concatenate strings on the fly.
