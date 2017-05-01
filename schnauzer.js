@@ -9,7 +9,7 @@
 		root.Schnauzer = factory(root);
 	}
 }(this, function SchnauzerFactory(root, undefined) {
-	'use strict'; // 4.01 KB, 1.76 KB vs 5.47 KB, 2.26 KB vs 71.50 KB, 20.99 KB
+	'use strict'; // 4.00 KB, 1.77 KB vs 5.47 KB, 2.26 KB vs 71.50 KB, 20.99 KB
 
 	var Schnauzer = function(template, options) {
 			this.version = '0.1.0';
@@ -97,6 +97,10 @@
 
 	function isArray(obj) { //obj instanceof Array;
 		return obj && obj.constructor === Array;
+	}
+
+	function isFunction(obj) {
+		return obj && typeof obj === 'function';
 	}
 
 	function crawlObject(data, keys) { // faster than while
@@ -197,9 +201,8 @@
 					tmp = options.helpers[key] ? // helpers
 						options.helpers[key].apply(tools(_this, data, dataTree),
 							[''].concat(keys[n][1])) :
-						typeof tmp === 'function' ? // inline function
-							tmp.apply(tools(_this, data, dataTree),
-								[''].concat(keys[n][1])) :
+						isFunction(tmp) ? tmp.apply(tools(_this, data, dataTree),
+							[''].concat(keys[n][1])) : // inline function
 						key.name === 'executor' ?
 						key(data, dataTree) : tmp && (keys[n][3] ? tmp :
 						escapeHtml(tmp, _this));
@@ -229,7 +232,7 @@
 					[func(data, dataTree)].concat(_key.split(/\s+/)));
 			}
 			foundData = data[key] || findData(data, dataTree, key);
-			if (foundData && typeof foundData === 'function') { // functions
+			if (foundData && isFunction(foundData)) { // functions
 				return foundData.apply(tools(_this, data, dataTree),
 					[func(data, dataTree)].concat(_key.split(/\s+/)));
 			}
@@ -270,8 +273,7 @@
 			parts[nesting[n]] = sizzleTemplate(_this, parts[nesting[n]]);
 		}
 		for (var n = 0, l = parts.length; n < l; n++) { // rearrange
-			output.push(typeof parts[n] === 'function' ? parts[n] :
-				variable(_this, parts[n]));
+			output.push(isFunction(parts[n]) ? parts[n] : variable(_this, parts[n]));
 			partCollector[n] && output.push(partCollector[n]);
 		}
 
