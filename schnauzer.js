@@ -212,8 +212,11 @@
 
 	function section(_this, func, key, _key, negative) {
 		return function fastLoop(data, dataTree, foundData) {
-			if (isArray(data[key]) && data[key].length && !negative) { // array
+			if (isArray(data[key])) { // array
 				data = data[key];
+				if (negative) {
+					return !data.length ? func(data, dataTree) : '';
+				}
 				for (var n = 0, l = data.length, out = ''; n < l; n++) {
 					out = out + (typeof data[n] === 'object' ?
 						func(data[n], [data[n]].concat(dataTree)) :
