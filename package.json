@@ -1,0 +1,30 @@
+{
+  "name": "Schnauzer",
+  "version": "0.1.0",
+  "description": "A tiny templating rendering engine",
+  "main": "Gruntfile.js",
+  "repository": {
+    "type": "git",
+    "url": "http://github.com/PitPik/Schnauer.git"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "grunt": "^1.0.1",
+    "grunt-contrib-uglify": "^2.0.0",
+    "grunt-smushit": "^2.1.0",
+    "grunt-template-jasmine-istanbul": "^0.5.0",
+    "jasmine": "^2.6.0"
+  },
+  "scripts": {
+    "test": "test"
+  },
+  "keywords": [
+    "template",
+    "Mustage",
+    "Handlebars",
+    "rendering",
+    "engine"
+  ],
+  "author": "Peter Dematté",
+  "license": "ISC"
+}
