@@ -233,7 +233,7 @@
 				return foundData.apply(tools(_this, data, dataTree),
 					[func(data, dataTree)].concat(_key.split(/\s+/)));
 			}
-			if (negative && (!foundData || !foundData.length) || // regular replace
+			if (negative && !foundData || // regular replace
 					!negative && foundData && foundData !== false) {
 				return func(data, dataTree);
 			}
