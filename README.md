@@ -71,6 +71,18 @@ In this case you would get "This would be some text with some more meaning" in t
 The first argument of the helper function is the text that was rendered if it was inside a block element (empty if inline usage) and the $1 etc. represent the String passed with the block (here "foo").
 ```this.getData()``` takes an argument representing the key and returns the data with that key if available. ```this.encode()``` would make sure that all characters are encoded (defined by ```entityMap``` in options).
 
+Inline helpers can be used for something like the following:
+
+```html
+{{today}}
+```
+
+```js
+today: function(text) {
+    return new Date().toLocaleString();
+}
+```
+
 #### Options
 ```js
 tags: ['{{', '}}'], // used tags: default is {{}}
