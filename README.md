@@ -83,7 +83,7 @@ today: function(text) {
 }
 ```
 
-#### Options
+## Options
 ```js
 tags: ['{{', '}}'], // used tags: default is {{}}
 entityMap: { // characters to be escaped
