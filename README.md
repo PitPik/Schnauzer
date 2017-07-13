@@ -35,7 +35,7 @@ In this example `Schnauzer()` is initialized with the template as first argument
 
 ```js
 new Schnauzer(template /*String*/, options /*Object*/)
-.render(data /*Object*/) // => returns String
+.render(data /*Object*/, extraData /*Object|Array*/) // => returns String
 .parse(text /*String*/)
 .registerHelper(name /*String*/, func  /*Function*/)
 .unregisterHelper(name /*String*/)
@@ -44,6 +44,7 @@ new Schnauzer(template /*String*/, options /*Object*/)
 .setTags(tags /*Array*/)
 ```
 `parse()` is only needed if the template was not passed to `Schnauzer()` in the first place. This might be handy if you're not sure if this template will ever be used...
+In `render(data, extraData)` you can pass some extra data source needed for parsing your template. If parser doesn't find the required data in `data` then it looks inside `extraData`. `extraData` can be and opbject or an array of objects.
 
 #### Functions in helpers
 
