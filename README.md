@@ -291,6 +291,8 @@ Output:
 
 When looping over an array of strings, a `.` can be used to refer to the current item in the list.
 
+If you want to use ```{{#stooges}}foo{{/stooges}}``` just like an if statement, so you want to know if there are any items in the array but not want to render foo as many times as there are items, you can do this like following: ```{{#stooges.0}}foo{{/stooges.0}}``` or ```{{^stooges.0}}foo{{/stooges.0}}```
+
 View:
 
 ```json
