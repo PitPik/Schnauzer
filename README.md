@@ -46,6 +46,25 @@ new Schnauzer(template /*String*/, options /*Object*/)
 `parse()` is only needed if the template was not passed to `Schnauzer()` in the first place. This might be handy if you're not sure if this template will ever be used...
 
 In `render(data, extraData)` you can pass some extra data source needed for parsing your template. If parser doesn't find the required data in `data` then it looks inside `extraData`. `extraData` can be and opbject or an array of objects.
+This can be very handy if you have, for example, an array of links to render where the root of the link is always the same (stored in extraModel) but the end of the link is different (stored in the array). So you don't have to put the root inside evey item of the array.
+
+```js
+var data = {
+  links: [{
+     link: 'link1',
+     text: '',
+  }, {
+     link: 'link2',
+     text: 'link3'
+  }]
+}
+var extraData = {
+  root: './some/path'
+}
+
+var output = new Schnauzer("{{#links}}<a href="{{root}}/{{link}}">{{text}}</a>{{/links}}")
+   .render(data, extraData);
+```
 
 #### Functions in helpers
 
