@@ -52,10 +52,10 @@ This can be very handy if you have, for example, an array of links to render whe
 var data = {
   links: [{
      link: 'link1',
-     text: '',
+     text: 'My first link',
   }, {
      link: 'link2',
-     text: 'link3'
+     text: 'My second link'
   }]
 }
 var extraData = {
