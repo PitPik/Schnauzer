@@ -62,7 +62,7 @@ var extraData = {
   root: './some/path'
 }
 
-var output = new Schnauzer("{{#links}}<a href="{{root}}/{{link}}">{{text}}</a>{{/links}}")
+var output = new Schnauzer('{{#links}}<a href="{{root}}/{{link}}">{{text}}</a>{{/links}}')
    .render(data, extraData);
 ```
 
