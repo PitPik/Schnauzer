@@ -68,7 +68,7 @@ var output = new Schnauzer('{{#links}}<a href="{{root}}/{{link}}">{{text}}</a>{{
 
 #### Functions in helpers
 
-All the functions used in the model or helpers can be used as inline or block elements that have the same arguments and scope:
+All the functions used inside the model or being registered or passed in options as helpers can be used as inline or block elements that have the same arguments and scope:
 
 ```html
 {{#helper foo}}some text with {{meaning}}{{/helper}}
@@ -78,10 +78,11 @@ or inline
 ```js
 var data = {
   meaning: 'some more meaning',
-  foo: 'This would be'
+  foo: 'This would be',
+  helper: helper
 }
 
-function helper(text[, $1, $2,...]) {
+function helper(text[, $1, $2,...]) { // can also be passed as option or registered via .registerHelper()
   var data = this.getData($1); // $1 = 'foo'
   var txt = this.encode(data);
 
