@@ -526,16 +526,3 @@ Custom delimiters may not contain whitespace.
 ## Pre-parsing and Caching Templates
 
 By default, when schnauzer.js first parses a template it builds arrays of currying functions that keep all data cached. The currying functions not only already hold the parsed HTML snippets but also the right key to the JSON being passed so it can concatenate strings on the fly.
-
-## Limitations
-
-For now it is not possible to have other sections inside a nested section with the same name unless it is inside the last nesting.
-
-```html+erb
-{{#if something}}
-  {{#if somethingElse}} ... {{/if}}
-  {{#foo}}foo{{/foo}}
-{{/if}}
-```
-In this case the first ```if``` would not resolve unless the section ```{{#foo}}``` is removed or the socond ```{{if}}``` is taken out.
-This limitation will be taken care of soon.
