@@ -485,24 +485,12 @@ var model = {
 
 ```html
 <li>{{name}}
-  {{#if childNodes}}
-  <ul>
+  {{#childNodes.0}}
+    <ul>
       {{#childNodes}}{{>self}}{{/childNodes}}
     </ul>
-  {{/if}}
+  {{/childNodes.0}}
 </li>
-```
-
-You would need a ```if``` helper here:
-
-```js
-function helper(text, $1) {
-  var data = this.getData($1);
-
-  if (data && data.length) {
-    return text;
-  }
-}
 ```
 
 ### Custom Delimiters
