@@ -109,6 +109,7 @@ function createExtraData(data, extra, newData, path, helpers) {
     extra: extra && [].concat(extra) || data.extra || [],
     path: [].concat(data.path !== undefined ? data.path : data, path || []),
     helpers: helpers || {},
+    __schnauzer: true,
   };
 };
 
@@ -297,6 +298,9 @@ function sizzleTemplate(_this, html) {
   }
 
   return function executor(data, keys) {
+    if (!data.__schnauzer) {
+      return _this.render(data);
+    }
     executor.isExecutor = true;
     for (var n = 0, l = output.length, out = ''; n < l; n++) {
       out = out + (output[n](data, keys) || '');
