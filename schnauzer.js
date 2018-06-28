@@ -103,11 +103,11 @@ function isFunction(obj) {
   return obj && typeof obj === 'function';
 }
 
-function createExtraData(data, extra, newData, helpers) {
+function createExtraData(data, extra, newData, path, helpers) {
   return {
     data: newData || data.data || data,
     extra: extra && [].concat(extra) || data.extra || [],
-    path: [].concat(data.path !== undefined ? data.path : data, newData || []),
+    path: [].concat(data.path !== undefined ? data.path : data, path || []),
     helpers: helpers || {},
   };
 };
@@ -241,20 +241,21 @@ function section(_this, func, key, _key, negative) {
       for (var n = 0, l = _data.length, out = ''; n < l; n++) {
         var helpers = {'@index': '' + n, '@last': n === l - 1,
           '@fist': !n, '.': _data[n]};
-        data = createExtraData(data, undefined, _data[n], helpers);
+        data = createExtraData(data, undefined, _data[n], _data[n], helpers);
         out = out + func(data);
         data.path.pop();
       }
       return out;
     }
 
-    var foundData = typeof _data === 'object' ? _data : data; // is object
+    var isObject = typeof _data === 'object';
+    var foundData = isObject ? _data : data; // is object
     var _func = _this.options.helpers[name] || isFunction(foundData) && foundData;
     if (_func) { // helpers or inline functions
       return _func.apply(tools(_this, data), [func(data)].concat(_key.split(/\s+/)));
     }
     if (negative && !_data || !negative && _data) { // regular replace
-      return func(createExtraData(data, data.extra, foundData));
+      return func(createExtraData(data, data.extra, foundData, isObject ? foundData : []));
     }
   }
 }
