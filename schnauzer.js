@@ -155,11 +155,15 @@ function variable(_this, html) {
         isSelf = false,
         name = '',
         path = [],
+        isStrict = false,
         _data = {};
 
       if (isIgnore) return '';
 
-      $3 = $3.split(/\s+/); // split variables
+      $3 = $3.replace(/^(?:\.|this)\//, function() {
+        isStrict = true;
+        return '';
+      }).split(/\s+/); // split variables
       name = $3.shift($3);
       path = name.split('../'); // extract path...
       name = path.pop();
@@ -173,8 +177,8 @@ function variable(_this, html) {
       }
       isSelf = name === options.recursion;
       keys.push(isPartial && (_this.partials[name] || isSelf) ?
-        [_this.partials[name], _data, isPartial, isUnescaped, isSelf] :
-        [name, $3, null, isUnescaped, null, path.length]);
+        [_this.partials[name], _data, isPartial, isUnescaped, isSelf, null, isStrict] :
+        [name, $3, null, isUnescaped, null, path.length, isStrict]);
       return options.splitter;
     }).split(options.splitter);
 
@@ -195,7 +199,7 @@ function variable(_this, html) {
         tmp = data.data[key] !== undefined ? data.data[key] :
           findData(data, key, null, keys[n][5]);
 
-        var _func = options.helpers[key] || isFunction(tmp) && tmp;
+        var _func = !keys[n][6] && options.helpers[key] || isFunction(tmp) && tmp;
         tmp = _func ? _func.apply(tools(_this, data), [].concat(keys[n][1])) :
           key.isExecutor ? key(data) :
           tmp && (keys[n][3] ? tmp : escapeHtml(tmp, _this));
@@ -209,7 +213,12 @@ function variable(_this, html) {
 function section(_this, func, key, _key, negative) {
   var path = key.split('../');
   var name = path.pop();
+  var isStrict = false;
   var pathDepth = path.length; path = null;
+  name = name.replace(/^(?:\.|this)\//, function() {
+    isStrict = true;
+    return '';
+  });
 
   return function fastLoop(data) {
     var _data = findData(data, name, null, pathDepth);
@@ -227,7 +236,8 @@ function section(_this, func, key, _key, negative) {
 
     var isObject = typeof _data === 'object';
     var foundData = isObject ? _data : data; // is object
-    var _func = _this.options.helpers[name] || isFunction(foundData) && foundData;
+    var _func = (!isStrict && _this.options.helpers[name]) ||
+      (isFunction(foundData) && foundData);
     if (_func) { // helpers or inline functions
       return _func.apply(tools(_this, data), [func(data)].concat(_key.split(/\s+/)));
     }
