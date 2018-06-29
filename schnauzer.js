@@ -226,7 +226,7 @@ function section(_this, func, key, _key, negative) {
     if (isArray(_data)) {
       if (negative) return !_data.length ? func(_data) : '';
       for (var n = 0, l = _data.length, out = ''; n < l; n++) {
-        var helpers = {'@index': '' + n, '@last': n === l - 1, '@fist': !n, '.': _data[n]};
+        var helpers = {'@index': '' + n, '@last': n === l - 1, '@first': !n, '.': _data[n]};
         data = createExtraData(data, undefined, _data[n], _data[n], helpers);
         out = out + func(data);
         data.path.pop();
