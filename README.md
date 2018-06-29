@@ -551,11 +551,11 @@ var model = {
 
 ```html
 <li>{{name}}
-  {{#childNodes.0}}
+  {{#childNodes.0.name}}
     <ul>
       {{#childNodes}}{{>self}}{{/childNodes}}
     </ul>
-  {{/childNodes.0}}
+  {{/childNodes.0.name}}
 </li>
 ```
 
