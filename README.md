@@ -560,7 +560,7 @@ For example, this template and partial:
 
 Can be thought of as a single, expanded template:
 
-``````handlebars
+```handlebars
 <h2>Names</h2>
 {{#names}}
   <h3>{{name}}</h3>
