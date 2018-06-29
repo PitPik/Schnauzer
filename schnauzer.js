@@ -41,7 +41,7 @@ var Schnauzer = function(template, options) {
       }
       return new RegExp('[' + output + ']', 'g');
     })(options.entityMap, []);
-    _this.stopRegExp = new RegExp(/^\°+/);
+    _this.stopRegExp = new RegExp(/^°+/);
     switchTags(_this, options.tags);
     _this.partials = {};
     for (var name in options.partials) {
@@ -86,6 +86,8 @@ function switchTags(_this, tags) {
   _this.sectionRegExp = new RegExp(
     _tags[0] + '(#|\\^)([\\w'+ chars + ']*)\\s*(.*?)' + _tags[1] +
     '([\\S\\s]*?)(' + _tags[0] + ')\\/\\2(' + _tags[1] + ')', 'g');
+  _this.partRegExp = new RegExp(_tags[0] + '[#\^]');
+  _this.escapeRegExp = new RegExp(_tags[0]);
 }
 
 function isArray(obj) { //obj instanceof Array;
@@ -150,7 +152,7 @@ function variable(_this, html) {
     function(all, $1, $2, $3) {
       var isIgnore = $2 && ($2[0] === '!' || $2[0] === '='),
         isUnescaped = !options.doEscape ||
-          $1 === '{{{' || $2 && $2[0] === '&',
+          (_this.escapeRegExp.test($1) && $1.length === 3) || $2 && $2[0] === '&',
         isPartial = $2 && $2[0] === '>',
         isSelf = false,
         name = '',
@@ -268,7 +270,7 @@ function sizzleTemplate(_this, html) {
       }
       $2 = $2.replace(_this.stopRegExp, '');
 
-      partCollector.push(new RegExp(options.tags[0] + '[#\^]').test($4) ?
+      partCollector.push(_this.partRegExp.test($4) ?
         section(_this, sizzleTemplate(_this, $4), $2, $3, $1 === '^') :
         section(_this, variable(_this, $4), $2, $3, $1 === '^'));
       return options.splitter;
@@ -285,8 +287,8 @@ function sizzleTemplate(_this, html) {
   return function executor(data, extra) {
     if (!data.__schnauzer) { // oninit
       data = createExtraData(data, extra);
-      executor.isExecutor = true;
     }
+    executor.isExecutor = true;
     for (var n = 0, l = output.length, out = ''; n < l; n++) {
       out = out + (output[n](data) || '');
     }
