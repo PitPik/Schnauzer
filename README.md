@@ -500,7 +500,7 @@ you can replace all by the sections
 {{user/address/state}} {{!-- same as before --}}
 ```
 
-would be the same as in Handlebars:
+If you need to compare variables like ```{{#if foo=="bar"}}...{{/if}}``` you can easily write your own helpers. See above how you can do that.
 
 ### Comments
 
@@ -592,11 +592,11 @@ var model = {
 
 ```handlebars
 <li>{{name}}
-  {{#childNodes.0}}
+  {{#childNodes.0.name}}
     <ul>
       {{#childNodes}}{{>self}}{{/childNodes}}
     </ul>
-  {{/childNodes.0}}
+  {{/childNodes.0.name}}
 </li>
 ```
 
