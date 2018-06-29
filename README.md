@@ -392,6 +392,72 @@ Output:
 No repos :(
 ```
 
+
+### Paths
+Schnauzer supports simple paths, just like Mustache.
+```html
+<p>{{name}}</p>
+Schnauzer also supports nested paths, making it possible to look up properties nested below the current context.
+<div class="entry">
+  <h1>{{title}}</h1>
+  <h2>By {{author.name}}</h2>
+
+  <div class="body">
+    {{body}}
+  </div>
+</div>
+```
+
+That template works with this context
+
+```js
+var context = {
+  title: "My First Blog Post!",
+  author: {
+    id: 47,
+    name: "Yehuda Katz"
+  },
+  body: "My first post. Wheeeee!"
+};
+```
+This makes it possible to use Schnauzer templates with more raw JSON objects.
+
+Nested schnauzer paths can also include ../ segments, which evaluate their paths against a parent context.
+
+```html
+<h1>Comments</h1>
+
+<div id="comments">
+  {{#each comments}}
+  <h2><a href="/posts/{{../permalink}}#{{id}}">{{title}}</a></h2>
+  <div>{{body}}</div>
+  {{/each}}
+</div>
+```
+
+Even though the link is printed while in the context of a comment, it can still go back to the main context (the post) to retrieve its permalink.
+The exact value that ../ will resolve to varies based on the helper that is calling the block. Using ../ is only necessary when context changes, so children of helpers would require the use of ../ while children of helpers such as if do not.
+```html
+{{permalink}}
+{{#comments}}
+  {{../permalink}}
+
+  {{#title}}
+    {{../permalink}}
+  {{/title}}
+{{/comments}}
+```
+In this example all of the above reference the same permalink value even though they are located within different blocks.
+
+Schnauzer also allows for name conflict resolution between helpers and data fields via a this reference:
+
+```html
+<p>{{./name}} or {{this/name}} or {{this.name}}</p>
+```
+
+Any of the above would cause the name field on the current context to be used rather than a helper of the same name.
+
+
 ### Helpers
 
 As with Handlebars you can also use helpers in Schnauzer to make your live easier. Schnauzer helpers can be accessed from any context in a template. You can register a helper with the Schnauzer.registerHelper method.
