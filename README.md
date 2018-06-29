@@ -415,7 +415,7 @@ var context = {
   title: "My First Blog Post!",
   author: {
     id: 47,
-    name: "Yehuda Katz"
+    name: "Peter Dematté"
   },
   body: "My first post. Wheeeee!"
 };
