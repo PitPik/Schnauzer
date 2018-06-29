@@ -70,7 +70,7 @@ var output = new Schnauzer('{{#links}}<a href="{{root}}/{{link}}">{{text}}</a>{{
 
 All the functions used inside the model or being registered or passed in options as helpers can be used as inline or block elements that have the same arguments and scope:
 
-```html
+```handlebars
 {{#helper foo}}some text with {{meaning}}{{/helper}}
 or inline
 {{helper foo}}
@@ -95,7 +95,7 @@ The first argument of the helper function is the text that was rendered if it wa
 
 Inline helpers can be used for something like the following:
 
-```html
+```handlebars
 {{today}}
 ```
 
@@ -140,7 +140,7 @@ There are several techniques that can be used to load templates and hand them to
 
 If you need a template for a dynamic part in a static website, you can consider including the template in the static HTML file to avoid loading templates separately. Here's a small example using `jQuery`:
 
-```html
+```handlebars
 <!DOCTYPE HTML>
 <html>
 <body onload="loadUser()">
@@ -196,7 +196,7 @@ View:
 
 Template:
 
-```
+```handlebars
 * {{name}}
 * {{age}}
 * {{company}}
@@ -228,7 +228,7 @@ View:
 
 Template:
 
-```html
+```handlebars
 * {{name.first}} {{name.last}}
 * {{age}}
 ```
@@ -262,7 +262,7 @@ View:
 
 Template:
 
-```html
+```handlebars
 Shown.
 {{#person}}
 Never shown!
@@ -295,7 +295,7 @@ View:
 
 Template:
 
-```html
+```handlebars
 {{#stooges}}
 <b>{{name}}</b>
 {{/stooges}}
@@ -323,7 +323,7 @@ View:
 
 Template:
 
-```html
+```handlebars
 {{#musketeers}}
 * {{.}}
 {{/musketeers}}
@@ -356,7 +356,7 @@ View:
 
 Template:
 
-```html
+```handlebars
 {{#bold greeting}}{{name}}.{{/bold}} or
 {{#bold}}{{greeting}}{{name}}.{{/bold}}
 ```
@@ -381,7 +381,7 @@ View:
 
 Template:
 
-```html
+```handlebars
 {{#repos}}<b>{{name}}</b>{{/repos}}
 {{^repos}}No repos :({{/repos}}
 ```
@@ -395,7 +395,7 @@ No repos :(
 
 ### Paths
 Schnauzer supports simple paths, just like Mustache.
-```html
+```handlebars
 <p>{{name}}</p>
 Schnauzer also supports nested paths, making it possible to look up properties nested below the current context.
 <div class="entry">
@@ -424,7 +424,7 @@ This makes it possible to use Schnauzer templates with more raw JSON objects.
 
 Nested schnauzer paths can also include ../ segments, which evaluate their paths against a parent context.
 
-```html
+```handlebars
 <h1>Comments</h1>
 
 <div id="comments">
@@ -437,7 +437,7 @@ Nested schnauzer paths can also include ../ segments, which evaluate their paths
 
 Even though the link is printed while in the context of a comment, it can still go back to the main context (the post) to retrieve its permalink.
 The exact value that ../ will resolve to varies based on the helper that is calling the block. Using ../ is only necessary when context changes, so children of helpers would require the use of ../ while children of helpers such as if do not.
-```html
+```handlebars
 {{permalink}}
 {{#comments}}
   {{../permalink}}
@@ -462,6 +462,45 @@ Any of the above would cause the name field on the current context to be used ra
 
 As with Handlebars you can also use helpers in Schnauzer to make your live easier. Schnauzer helpers can be accessed from any context in a template. You can register a helper with the Schnauzer.registerHelper method.
 Helpers and their function are explained in the API section above.
+
+#### Where are the "#if", "#each" and "#with" helpers like in Handlebars?
+
+Well, there are none. They are not really needed.
+Let's say you have the following model:
+```js
+{
+    occupation: 'developer',
+    user: {
+        contact: {
+            email: 'hi@foo.co',
+            twitter: 'foo_co'
+        },
+        address: {
+            city: 'San Francisco',
+            state: 'California'
+        },
+        name: 'Foo',
+        favoriteNumbers: [6, 9, 22, 43]
+    }
+}
+```
+
+you can replace all by the sections
+
+```handlebars
+{{#user}} {{!-- like "with", elevates the scope --}}
+    {{name}} {{lastname}}
+    {{^lastname}}[No last name available]{{/lastname}} {{!-- like "if", but negative --}}
+    [{{../occupation}}]
+    {{#favoriteNumbers}} {{!-- like "each" --}}
+        {{#@first}}favorite numbers: {{/@first}}{{.}}{{^@last}}, {{/@last}}
+    {{#favoriteNumbers}}
+{{/user}}
+{{user.address.state}}
+{{user/address/state}} {{!-- same as before --}}
+```
+
+would be the same as in Handlebars:
 
 ### Comments
 
@@ -502,12 +541,13 @@ They also inherit the calling context but ignore the deeper context if 'self' (t
 
 Schnauzer requires only the name of the partial but can also pass some variables:
 
-```html
+```handlebars
 {{> next_more headline="h1"}}
 ```
 
 For example, this template and partial:
 
+```handlebars
     // base:
     <h2>Names</h2>
     {{#names}}
@@ -516,10 +556,11 @@ For example, this template and partial:
 
     // user:
     <{{headline}}>{{name}}</{{headline}}>
+```
 
 Can be thought of as a single, expanded template:
 
-```html
+``````handlebars
 <h2>Names</h2>
 {{#names}}
   <h3>{{name}}</h3>
@@ -549,13 +590,13 @@ var model = {
 }
 ```
 
-```html
+```handlebars
 <li>{{name}}
-  {{#childNodes.0.name}}
+  {{#childNodes.0}}
     <ul>
       {{#childNodes}}{{>self}}{{/childNodes}}
     </ul>
-  {{/childNodes.0.name}}
+  {{/childNodes.0}}
 </li>
 ```
 
