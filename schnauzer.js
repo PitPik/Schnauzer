@@ -121,7 +121,7 @@ function findData(data, key, keys, pathDepth) {
     _data = pathDepth >= 0 && seachDepth >= 0 ? data.path[seachDepth] : data.data,
     value = data.helpers[key] !== undefined ? data.helpers[key] :
       _data && _data[key] !== undefined ? _data[key] :
-      crawlObjectUp(_data, _keys = keys || key.split('.'));
+      crawlObjectUp(_data, _keys = keys || key.split(/[\.\/]/));
 
   if (value !== undefined) return value;
   for (var n = data.extra.length; n--; ) {
