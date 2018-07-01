@@ -5,7 +5,7 @@
     function () { return factory(root); });
   else root.Schnauzer = factory(root);
 }(this, function SchnauzerFactory(root, undefined, help) { 'use strict';
-// Schnauzer 4.36 KB, 1.80 KB, Mustage 5.47 KB, 2.26 KB, Handlebars 74.20 KB, 21.86 KB
+// Schnauzer 4.57 KB, 2.08 KB, Mustage 5.47 KB, 2.26 KB, Handlebars 74.20 KB, 21.86 KB
 var Schnauzer = function(template, options) {
     this.version = '1.0.0';
     this.options = {
@@ -237,8 +237,7 @@ function section(_this, func, key, _key, negative) {
       return out;
     }
 
-    var isObject = typeof _data === 'object';
-    var foundData = isObject ? _data : data; // is object
+    var foundData = typeof _data === 'object' ? _data : data; // is object
     var _func = (!isStrict && _this.options.helpers[name]) ||
       (isFunction(foundData) && foundData);
     if (_func) { // helpers or inline functions
