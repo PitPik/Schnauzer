@@ -238,8 +238,7 @@ function section(_this, func, key, _key, negative) {
     }
 
     var foundData = typeof _data === 'object' ? _data : data; // is object
-    var _func = (!isStrict && _this.options.helpers[name]) ||
-      (isFunction(foundData) && foundData);
+    var _func = (!isStrict && _this.options.helpers[name]) || (isFunction(_data) && _data);
     if (_func) { // helpers or inline functions
       return _func.apply(tools(_this, data), [func(data)].concat(_key.split(/\s+/)));
     }
