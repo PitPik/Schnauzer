@@ -173,8 +173,7 @@ function variable(_this, html) {
       if (isPartial) { // convert variables
         for (var n = $3.length, parts = []; n--; ) {
           parts = $3[n].split('=');
-          _data[parts[1] ? parts[0] : '$' + n] =
-            (parts[1] ? parts[1] : parts[0]).replace(/"/g, '');
+          _data[parts[1] ? parts[0] : '' + n] = (parts[1] ? parts[1] : parts[0]);
         }
       }
       isSelf = name === options.recursion;
@@ -184,19 +183,20 @@ function variable(_this, html) {
       return options.splitter;
     }).split(options.splitter);
 
-  return function fastReplace(data, _data) {
-    if (_data) { // for partial
-      data = createExtraData(data, undefined, _data);
-    }
-    for (var n = 0, l = html.length, out = '', tmp, key; n < l; n++) {
+  return function fastReplace(data) {
+    for (var n = 0, l = html.length, out = '', tmp, key, _data; n < l; n++) {
       out = out + html[n];
       if (keys[n] === undefined) { // no other functions, just html
         continue;
       }
       key = keys[n][0];
       if (keys[n][2] === true) { // partial -> executor
-        tmp = (key || _this.partials[options.recursion])(data,
-          keys[n][4] ? null : data, keys[n][1]);
+        for (var _key in keys[n][1]) {
+          _data = keys[n][1][_key];
+          keys[n][1][_key] = _data[0] !== '"' && _data[0] !== "'" && findData(data, _data) ||
+            _data.replace(/(?:^'|^"|'$|"$)*/g, '');
+        }
+        tmp = (key || _this.partials[options.recursion])(data, keys[n][1]);
       } else {
         tmp = data.data[key] !== undefined ? data.data[key] :
           findData(data, key, null, keys[n][5]);
@@ -287,7 +287,7 @@ function sizzleTemplate(_this, html) {
   }
 
   return function executor(data, extra) {
-    if (!data.__schnauzer) { // oninit
+    if (!data.__schnauzer || extra) { // oninit or partials
       data = createExtraData(data, extra);
     }
     executor.isExecutor = true;
