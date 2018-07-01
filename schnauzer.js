@@ -141,7 +141,7 @@ function tools(_this, data, dataTree) {
   return {
     getData: function getData(key) {
       key = key.split('../');
-      return findData(data, key.pop(), null, key.length || -1);
+      return findData(data, key.pop(), undefined, key.length || -1);
     },
     escapeHtml: function escape(string) { return escapeHtml(string, _this) }
   }
@@ -181,8 +181,8 @@ function variable(_this, html) {
       }
       isSelf = name === options.recursion;
       keys.push(isPartial && (_this.partials[name] || isSelf) ?
-        [_this.partials[name], _data, isPartial, isUnescaped, isSelf, null, isStrict] :
-        [name, $3, null, isUnescaped, null, path.length, isStrict]);
+        [_this.partials[name], _data, isPartial, isUnescaped, isSelf, undefined, isStrict] :
+        [name, $3, undefined, isUnescaped, undefined, path.length, isStrict]);
       return options.splitter;
     }).split(options.splitter);
 
@@ -202,7 +202,7 @@ function variable(_this, html) {
         tmp = (key || _this.partials[options.recursion])(data, keys[n][1]);
       } else {
         tmp = data.data[key] !== undefined ? data.data[key] :
-          findData(data, key, null, keys[n][5]);
+          findData(data, key, undefined, keys[n][5]);
 
         var _func = !keys[n][6] && options.helpers[key] || isFunction(tmp) && tmp;
         tmp = _func ? _func.apply(tools(_this, data), [].concat(keys[n][1])) :
@@ -219,14 +219,15 @@ function section(_this, func, key, _key, negative) {
   var path = key.split('../');
   var name = path.pop();
   var isStrict = false;
-  var pathDepth = path.length; path = null;
+  var pathDepth = path.length;
+
   name = name.replace(/^(?:\.|this)\//, function() {
     isStrict = true;
     return '';
   });
 
   return function fastLoop(data) {
-    var _data = findData(data, name, null, pathDepth);
+    var _data = findData(data, name, undefined, pathDepth);
 
     if (isArray(_data)) {
       if (negative) return !_data.length ? func(_data) : '';
