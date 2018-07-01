@@ -139,7 +139,10 @@ function escapeHtml(string, _this) {
 
 function tools(_this, data, dataTree) {
   return {
-    getData: function getData(key) { return findData(data, key) },
+    getData: function getData(key) {
+      key = key.split('../');
+      return findData(data, key.pop(), null, key.length || -1);
+    },
     escapeHtml: function escape(string) { return escapeHtml(string, _this) }
   }
 }
