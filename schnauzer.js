@@ -183,16 +183,13 @@ function variable(_this, html) {
 
   html = html.replace(_this.variableRegExp, function(all, $1, $2, $3) {
     var char1 =  $2 && $2[0] || '', 
-      isIgnore = char1 === '!' || char1 === '=',
-      isUnescaped = !options.doEscape || char1 === '&' ||
-        (_this.escapeRegExp.test($1) && $1.length === 3),
       isPartial = char1 === '>',
       isSelf = false,
       name = '',
       isStrict = false,
       _data = {};
 
-    if (isIgnore) return '';
+    if (char1 === '!' || char1 === '=') return '';
 
     $3 = $3.replace(/^(?:\.|this)\//, function() {
       isStrict = true;
@@ -215,7 +212,8 @@ function variable(_this, html) {
       value: isPartial ? _this.partials[name] : name,
       data: isPartial ? _data : $3,
       isPartial: isPartial,
-      isUnescaped: isUnescaped,
+      isUnescaped: !options.doEscape || char1 === '&' ||
+        (_this.escapeRegExp.test($1) && $1.length === 3),
       isSelf: isSelf,
       depth: isPartial ? undefined : _data.depth,
       isStrict: isStrict,
