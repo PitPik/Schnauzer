@@ -247,7 +247,7 @@ function variable(_this, html) {
   };
 }
 
-function section(_this, func, key, _key, negative) {
+function section(_this, func, key, vars, negative) {
   key = getVar(key);
   return function fastLoop(data) {
     var _data = findData(data, key.name, key.keys, key.depth);
@@ -268,7 +268,7 @@ function section(_this, func, key, _key, negative) {
     var foundData = typeof _data === 'object' ? _data : data; // is object
     var _func = (!key.isStrict && _this.options.helpers[key.name]) || (isFunction(_data) && _data);
     if (_func) { // helpers or inline functions
-      return _func.apply(tools(_this, data), [func(data)].concat(_key.split(/\s+/)));
+      return _func.apply(tools(_this, data), [func(data)].concat(vars.split(/\s+/)));
     }
     if (negative && !_data || !negative && _data) { // regular replace
       return func(getDataSource(data, data.extra, foundData, { '.': _data, 'this': _data }));
