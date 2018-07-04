@@ -5,7 +5,7 @@
     function () { return factory(root); });
   else root.Schnauzer = factory(root);
 }(this, function SchnauzerFactory(root, undefined, help) { 'use strict';
-// Schnauzer 4.72 KB, 2.17 KB, Mustage 5.47 KB, 2.26 KB, Handlebars 74.20 KB, 21.86 KB
+// Schnauzer 4.85 KB, 2.23 KB, Mustage 5.47 KB, 2.26 KB, Handlebars 74.20 KB, 21.86 KB
 var Schnauzer = function(template, options) {
     this.version = '1.0.0';
     this.options = {
@@ -90,7 +90,7 @@ function switchTags(_this, tags) {
   _this.escapeRegExp = new RegExp(_tags[0]);
 }
 
-function isArray(obj) { //obj instanceof Array;
+function isArray(obj) { // obj instanceof Array;
   return obj && obj.constructor === Array;
 }
 
@@ -132,6 +132,38 @@ function findData(data, key, keys, pathDepth) {
   }
 }
 
+function getVar(text, data) {
+  var parts = text.split(/\s*=\s*/);
+  var value = parts.length > 1 ? parts[1] : parts[0];
+  var isString = value[0] === '"' || value[0] === "'";
+  var depth = 0;
+  var keys = [];
+  var isStrict = false;
+
+  if (isString) {
+    value = value.replace(/(?:^['"]|['"]$)/g, '');
+  } else {
+    var path = value.split('../');
+    if (path.length > 1) {
+      value = path.pop();
+      depth = path.length;
+    }
+    keys = value.split('.');
+    name = name.replace(/^(?:\.|this)\//, function() {
+      isStrict = true;
+      return '';
+    });
+  }
+  return {
+    name: parts.length > 1 ? parts[0] : value,
+    value: isString || !data ? value : findData(data, value, keys, depth),
+    isString: isString,
+    isStrict: isStrict,
+    keys: keys,
+    depth: depth,
+  };
+}
+
 function escapeHtml(string, _this) {
   return String(string).replace(_this.entityRegExp, function(char) {
     return _this.options.entityMap[char];
@@ -140,10 +172,7 @@ function escapeHtml(string, _this) {
 
 function tools(_this, data, dataTree) {
   return {
-    getData: function getData(key) {
-      key = key.split('../');
-      return findData(data, key.pop(), undefined, key.length || -1);
-    },
+    getData: function getData(key) { return getVar(key, data) },
     escapeHtml: function escape(string) { return escapeHtml(string, _this) }
   }
 }
@@ -154,12 +183,15 @@ function variable(_this, html) {
 
   html = html.replace(_this.variableRegExp,
     function(all, $1, $2, $3) {
-      var isIgnore = $2 && ($2[0] === '!' || $2[0] === '='),
-        isUnescaped = !options.doEscape ||
-          (_this.escapeRegExp.test($1) && $1.length === 3) || $2 && $2[0] === '&',
-        isPartial = $2 && $2[0] === '>',
-        isSelf = false, name = '', path = [], isStrict = false, _data = {},
-        _keys = [], val = '', isString = false, depth = 0;
+      var char1 =  $2 && $2[0] || '', 
+        isIgnore = char1 === '!' || char1 === '=',
+        isUnescaped = !options.doEscape || char1 === '&' ||
+          (_this.escapeRegExp.test($1) && $1.length === 3),
+        isPartial = char1 === '>',
+        isSelf = false,
+        name = '',
+        isStrict = false,
+        _data = {};
 
       if (isIgnore) return '';
 
@@ -170,33 +202,26 @@ function variable(_this, html) {
       name = $3.shift();
 
       if (!isPartial) {
-        path = name.split('../'); // extract path...
-        name = path.pop();
-        _keys = name.split('.');
-      } else { // convert variables
-        for (var n = $3.length, parts = []; n--; ) {
-          parts = $3[n].split('=');
-          val = parts[1] || parts[0];
-          isString = val[0] === '"' || val[0] === "'";
-          depth = 0;
-
-          if (isString) {
-            val = val.replace(/(?:^'|^"|'$|"$)*/g, '');
-          } else {
-            path = val.split('../');
-            if (path.length > 1) {
-              val = path.pop();
-              depth = path.length;
-            }
-            _keys = val.split('.');
-          }
-          _data[parts[1] ? parts[0] : '' + n] = [val, depth, isString, _keys];
+        _data = getVar(name);
+        name = _data.name;
+      } else {
+        for (var n = $3.length, tmp = {}; n--; ) {
+          tmp = getVar($3[n]);
+          _data[tmp.name] = tmp;
         }
       }
       isSelf = name === options.recursion;
-      keys.push(isPartial && (_this.partials[name] || isSelf) ?
-        [_this.partials[name], _data, isPartial, isUnescaped, isSelf, undefined, isStrict] :
-        [name, $3, undefined, isUnescaped, undefined, path.length, isStrict, _keys]);
+      isPartial = isPartial && (!!_this.partials[name] || isSelf);
+      keys.push({
+        value: isPartial ? _this.partials[name] : name,
+        data: isPartial ? _data : $3,
+        isPartial: isPartial,
+        isUnescaped: isUnescaped,
+        isSelf: isSelf,
+        depth: isPartial ? undefined : _data.depth,
+        isStrict: isStrict,
+        keys: isPartial ? undefined : _data.keys
+      });
       return options.splitter;
     }).split(options.splitter);
 
@@ -205,20 +230,21 @@ function variable(_this, html) {
       out = out + html[n];
       if (keys[n] === undefined) continue; // no other functions, just html
       part = keys[n];
-      value = part[0];
-      if (part[2] === true) { // partial -> executor
+      value = part.value;
+      if (part.isPartial === true) { // partial -> executor
         data.data = JSON.parse(JSON.stringify(data.data)); // create new scope
-        for (var key in part[1]) {
-          _data = part[1][key];
-          data.data[key] = _data[2] ? _data[0] : findData(data, _data[0], _data[3], _data[1]);
+        for (var key in part.data) {
+          _data = part.data[key];
+          data.data[key] = _data.isString ? _data.value :
+            findData(data, _data.value, _data.keys, _data.depth);
         }
         tmp = (value || _this.partials[options.recursion])(getDataSource(data.data, data.extra));
       } else {
-        tmp = findData(data, value, part[7], part[5]);
-        _func = !part[6] && options.helpers[value] || isFunction(tmp) && tmp;
-        tmp = _func ? _func.apply(tools(_this, data), [].concat(part[1])) :
+        tmp = findData(data, value, part.keys, part.depth);
+        _func = !part.isStrict && options.helpers[value] || isFunction(tmp) && tmp;
+        tmp = _func ? _func.apply(tools(_this, data), part.data) :
           value.isExecutor ? value(data) :
-          tmp && (part[3] ? tmp : escapeHtml(tmp, _this));
+          tmp && (part.isUnescaped ? tmp : escapeHtml(tmp, _this));
       }
       if (tmp !== undefined) out = out + tmp;
     }
@@ -227,17 +253,9 @@ function variable(_this, html) {
 }
 
 function section(_this, func, key, _key, negative) {
-  var isStrict = false;
-  var path = key.split('../');
-  var name = path.pop().replace(/^(?:\.|this)\//, function() {
-    isStrict = true;
-    return '';
-  });
-  var pathDepth = path.length;
-  var splitName = name.split('.');
-
+  key = getVar(key);
   return function fastLoop(data) {
-    var _data = findData(data, name, splitName, pathDepth);
+    var _data = findData(data, key.name, key.keys, key.depth);
 
     if (isArray(_data)) {
       if (negative) return !_data.length ? func(_data) : '';
@@ -253,7 +271,7 @@ function section(_this, func, key, _key, negative) {
     }
 
     var foundData = typeof _data === 'object' ? _data : data; // is object
-    var _func = (!isStrict && _this.options.helpers[name]) || (isFunction(_data) && _data);
+    var _func = (!key.isStrict && _this.options.helpers[key.name]) || (isFunction(_data) && _data);
     if (_func) { // helpers or inline functions
       return _func.apply(tools(_this, data), [func(data)].concat(_key.split(/\s+/)));
     }
