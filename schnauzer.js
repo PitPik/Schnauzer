@@ -118,7 +118,7 @@ function crawlObjectUp(data, keys) { // faster than while
 
 function findData(data, key, keys, pathDepth) {
   var _keys = [],
-    seachDepth = pathDepth === -1 ? 0 : (data.path.length - 1) - pathDepth,
+    seachDepth = (data.path.length - 1) - pathDepth,
     _data = data.path[seachDepth] || {},
     value = data.helpers[key] !== undefined ? data.helpers[key] :
       _data[key] !== undefined ? _data[key] :
