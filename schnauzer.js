@@ -181,49 +181,48 @@ function variable(_this, html) {
   var keys = [],
     options = _this.options;
 
-  html = html.replace(_this.variableRegExp,
-    function(all, $1, $2, $3) {
-      var char1 =  $2 && $2[0] || '', 
-        isIgnore = char1 === '!' || char1 === '=',
-        isUnescaped = !options.doEscape || char1 === '&' ||
-          (_this.escapeRegExp.test($1) && $1.length === 3),
-        isPartial = char1 === '>',
-        isSelf = false,
-        name = '',
-        isStrict = false,
-        _data = {};
+  html = html.replace(_this.variableRegExp, function(all, $1, $2, $3) {
+    var char1 =  $2 && $2[0] || '', 
+      isIgnore = char1 === '!' || char1 === '=',
+      isUnescaped = !options.doEscape || char1 === '&' ||
+        (_this.escapeRegExp.test($1) && $1.length === 3),
+      isPartial = char1 === '>',
+      isSelf = false,
+      name = '',
+      isStrict = false,
+      _data = {};
 
-      if (isIgnore) return '';
+    if (isIgnore) return '';
 
-      $3 = $3.replace(/^(?:\.|this)\//, function() {
-        isStrict = true;
-        return '';
-      }).split(/\s+/); // split variables
-      name = $3.shift();
+    $3 = $3.replace(/^(?:\.|this)\//, function() {
+      isStrict = true;
+      return '';
+    }).split(/\s+/); // split variables
+    name = $3.shift();
 
-      if (!isPartial) {
-        _data = getVar(name);
-        name = _data.name;
-      } else {
-        for (var n = $3.length, tmp = {}; n--; ) {
-          tmp = getVar($3[n]);
-          _data[tmp.name] = tmp;
-        }
+    if (!isPartial) {
+      _data = getVar(name);
+      name = _data.name;
+    } else {
+      for (var n = $3.length, tmp = {}; n--; ) {
+        tmp = getVar($3[n]);
+        _data[tmp.name] = tmp;
       }
-      isSelf = name === options.recursion;
-      isPartial = isPartial && (!!_this.partials[name] || isSelf);
-      keys.push({
-        value: isPartial ? _this.partials[name] : name,
-        data: isPartial ? _data : $3,
-        isPartial: isPartial,
-        isUnescaped: isUnescaped,
-        isSelf: isSelf,
-        depth: isPartial ? undefined : _data.depth,
-        isStrict: isStrict,
-        keys: isPartial ? undefined : _data.keys
-      });
-      return options.splitter;
-    }).split(options.splitter);
+    }
+    isSelf = name === options.recursion;
+    isPartial = isPartial && (!!_this.partials[name] || isSelf);
+    keys.push({
+      value: isPartial ? _this.partials[name] : name,
+      data: isPartial ? _data : $3,
+      isPartial: isPartial,
+      isUnescaped: isUnescaped,
+      isSelf: isSelf,
+      depth: isPartial ? undefined : _data.depth,
+      isStrict: isStrict,
+      keys: isPartial ? undefined : _data.keys
+    });
+    return options.splitter;
+  }).split(options.splitter);
 
   return function fastReplace(data) {
     for (var n = 0, l = html.length, out = '', tmp, value, _data, _func, part; n < l; n++) {
