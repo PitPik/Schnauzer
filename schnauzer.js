@@ -5,7 +5,7 @@
     function () { return factory(root); });
   else root.Schnauzer = factory(root);
 }(this, function SchnauzerFactory(root, undefined, help) { 'use strict';
-// Schnauzer 4.57 KB, 2.08 KB, Mustage 5.47 KB, 2.26 KB, Handlebars 74.20 KB, 21.86 KB
+// Schnauzer 4.74 KB, 2.19 KB, Mustage 5.47 KB, 2.26 KB, Handlebars 74.20 KB, 21.86 KB
 var Schnauzer = function(template, options) {
     this.version = '1.0.0';
     this.options = {
@@ -37,7 +37,7 @@ var Schnauzer = function(template, options) {
     options = _this.options;
     _this.entityRegExp = (function(entityMap, output){
       for (var symbol in entityMap) {
-        output += symbol; //.push(n);
+        output += symbol;
       }
       return new RegExp('[' + output + ']', 'g');
     })(options.entityMap, []);
@@ -98,15 +98,16 @@ function isFunction(obj) {
   return obj && typeof obj === 'function';
 }
 
-function createExtraData(data, extra, newData, path, helpers) {
+function getDataSource(data, extra, newData, helpers) {
   return {
     data: newData || data.data || data,
-    extra: extra && [].concat(extra) || data.extra || [],
-    path: [].concat(data.path !== undefined ? data.path : data, path || []),
+    extra: extra && [extra] || data.extra || [],
+    path: [].concat(data.path !== undefined ? data.path : data, newData || []),
     helpers: helpers || {},
     __schnauzer: true,
   };
 };
+
 
 function crawlObjectUp(data, keys) { // faster than while
   for (var n = 0, m = keys.length; n < m; n++) {
@@ -117,10 +118,10 @@ function crawlObjectUp(data, keys) { // faster than while
 
 function findData(data, key, keys, pathDepth) {
   var _keys = [],
-    seachDepth = (data.path.length - 1) - (pathDepth >= 0 ? pathDepth : 0),
-    _data = pathDepth >= 0 && seachDepth >= 0 ? data.path[seachDepth] : data.data,
+    seachDepth = pathDepth === -1 ? 0 : (data.path.length - 1) - pathDepth,
+    _data = data.path[seachDepth] || {},
     value = data.helpers[key] !== undefined ? data.helpers[key] :
-      _data && _data[key] !== undefined ? _data[key] :
+      _data[key] !== undefined ? _data[key] :
       crawlObjectUp(_data, _keys = keys || key.split(/[\.\/]/));
 
   if (value !== undefined) return value;
@@ -157,11 +158,8 @@ function variable(_this, html) {
         isUnescaped = !options.doEscape ||
           (_this.escapeRegExp.test($1) && $1.length === 3) || $2 && $2[0] === '&',
         isPartial = $2 && $2[0] === '>',
-        isSelf = false,
-        name = '',
-        path = [],
-        isStrict = false,
-        _data = {};
+        isSelf = false, name = '', path = [], isStrict = false, _data = {},
+        _keys = [], val = '', isString = false, depth = 0;
 
       if (isIgnore) return '';
 
@@ -169,45 +167,58 @@ function variable(_this, html) {
         isStrict = true;
         return '';
       }).split(/\s+/); // split variables
-      name = $3.shift($3);
-      path = name.split('../'); // extract path...
-      name = path.pop();
+      name = $3.shift();
 
-      if (isPartial) { // convert variables
+      if (!isPartial) {
+        path = name.split('../'); // extract path...
+        name = path.pop();
+        _keys = name.split('.');
+      } else { // convert variables
         for (var n = $3.length, parts = []; n--; ) {
           parts = $3[n].split('=');
-          _data[parts[1] ? parts[0] : '' + n] = (parts[1] ? parts[1] : parts[0]);
+          val = parts[1] || parts[0];
+          isString = val[0] === '"' || val[0] === "'";
+          depth = 0;
+
+          if (isString) {
+            val = val.replace(/(?:^'|^"|'$|"$)*/g, '');
+          } else {
+            path = val.split('../');
+            if (path.length > 1) {
+              val = path.pop();
+              depth = path.length;
+            }
+            _keys = val.split('.');
+          }
+          _data[parts[1] ? parts[0] : '' + n] = [val, depth, isString, _keys];
         }
       }
       isSelf = name === options.recursion;
       keys.push(isPartial && (_this.partials[name] || isSelf) ?
         [_this.partials[name], _data, isPartial, isUnescaped, isSelf, undefined, isStrict] :
-        [name, $3, undefined, isUnescaped, undefined, path.length, isStrict]);
+        [name, $3, undefined, isUnescaped, undefined, path.length, isStrict, _keys]);
       return options.splitter;
     }).split(options.splitter);
 
   return function fastReplace(data) {
-    for (var n = 0, l = html.length, out = '', tmp, key, _data; n < l; n++) {
+    for (var n = 0, l = html.length, out = '', tmp, value, _data, _func, part; n < l; n++) {
       out = out + html[n];
-      if (keys[n] === undefined) { // no other functions, just html
-        continue;
-      }
-      key = keys[n][0];
-      if (keys[n][2] === true) { // partial -> executor
-        for (var _key in keys[n][1]) {
-          _data = keys[n][1][_key];
-          keys[n][1][_key] = _data[0] !== '"' && _data[0] !== "'" && findData(data, _data) ||
-            _data.replace(/(?:^'|^"|'$|"$)*/g, '');
+      if (keys[n] === undefined) continue; // no other functions, just html
+      part = keys[n];
+      value = part[0];
+      if (part[2] === true) { // partial -> executor
+        data.data = JSON.parse(JSON.stringify(data.data)); // create new scope
+        for (var key in part[1]) {
+          _data = part[1][key];
+          data.data[key] = _data[2] ? _data[0] : findData(data, _data[0], _data[3], _data[1]);
         }
-        tmp = (key || _this.partials[options.recursion])(data, keys[n][1]);
+        tmp = (value || _this.partials[options.recursion])(getDataSource(data.data, data.extra));
       } else {
-        tmp = data.data[key] !== undefined ? data.data[key] :
-          findData(data, key, undefined, keys[n][5]);
-
-        var _func = !keys[n][6] && options.helpers[key] || isFunction(tmp) && tmp;
-        tmp = _func ? _func.apply(tools(_this, data), [].concat(keys[n][1])) :
-          key.isExecutor ? key(data) :
-          tmp && (keys[n][3] ? tmp : escapeHtml(tmp, _this));
+        tmp = findData(data, value, part[7], part[5]);
+        _func = !part[6] && options.helpers[value] || isFunction(tmp) && tmp;
+        tmp = _func ? _func.apply(tools(_this, data), [].concat(part[1])) :
+          value.isExecutor ? value(data) :
+          tmp && (part[3] ? tmp : escapeHtml(tmp, _this));
       }
       if (tmp !== undefined) out = out + tmp;
     }
@@ -216,25 +227,25 @@ function variable(_this, html) {
 }
 
 function section(_this, func, key, _key, negative) {
-  var path = key.split('../');
-  var name = path.pop();
   var isStrict = false;
-  var pathDepth = path.length;
-
-  name = name.replace(/^(?:\.|this)\//, function() {
+  var path = key.split('../');
+  var name = path.pop().replace(/^(?:\.|this)\//, function() {
     isStrict = true;
     return '';
   });
+  var pathDepth = path.length;
+  var splitName = name.split('.');
 
   return function fastLoop(data) {
-    var _data = findData(data, name, undefined, pathDepth);
+    var _data = findData(data, name, splitName, pathDepth); console.log(pathDepth, name, ':', _data)
 
     if (isArray(_data)) {
       if (negative) return !_data.length ? func(_data) : '';
       for (var n = 0, l = _data.length, out = ''; n < l; n++) {
         var helpers = {'@index': '' + n, '@last': n === l - 1,
           '@first': !n, '.': _data[n], 'this': _data[n] };
-        data = createExtraData(data, undefined, _data[n], _data[n], helpers);
+
+        data = getDataSource(data, data.extra, _data[n], helpers);
         out = out + func(data);
         data.path.pop();
       }
@@ -247,8 +258,7 @@ function section(_this, func, key, _key, negative) {
       return _func.apply(tools(_this, data), [func(data)].concat(_key.split(/\s+/)));
     }
     if (negative && !_data || !negative && _data) { // regular replace
-      return func(createExtraData(data, data.extra, foundData, foundData),
-        { '.': _data, 'this': _data });
+      return func(getDataSource(data, data.extra, foundData, { '.': _data, 'this': _data }));
     }
   }
 }
@@ -290,7 +300,7 @@ function sizzleTemplate(_this, html) {
 
   return function executor(data, extra) {
     if (!data.__schnauzer || extra) { // oninit or partials
-      data = createExtraData(data, extra);
+      data = getDataSource(data, extra);
     }
     executor.isExecutor = true;
     for (var n = 0, l = output.length, out = ''; n < l; n++) {
