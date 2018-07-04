@@ -148,11 +148,11 @@ function getVar(text, data) {
       value = path.pop();
       depth = path.length;
     }
-    keys = value.split('.');
     name = name.replace(/^(?:\.|this)\//, function() {
       isStrict = true;
       return '';
     });
+    keys = value.split(/[\.\/]/);
   }
   return {
     name: parts.length > 1 ? parts[0] : value,
