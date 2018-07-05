@@ -228,13 +228,14 @@ function variable(_this, html) {
       part = keys[n];
       value = part.value;
       if (part.isPartial === true) { // partial -> executor
-        data.data = JSON.parse(JSON.stringify(data.data)); // create new scope
+        var newData = {}; // create new scope (but keep functions in scope)
+        for (var item in data.data) newData[item] = data.data[item];
         for (var key in part.data) {
           _data = part.data[key];
-          data.data[key] = _data.isString ? _data.value :
+          newData[key] = _data.isString ? _data.value :
             findData(data, _data.value, _data.keys, _data.depth);
         }
-        tmp = (value || _this.partials[options.recursion])(getDataSource(data.data, data.extra));
+        tmp = (value || _this.partials[options.recursion])(getDataSource(newData, data.extra));
       } else {
         tmp = findData(data, value, part.keys, part.depth);
         _func = !part.isStrict && options.helpers[value] || isFunction(tmp) && tmp;
@@ -291,7 +292,6 @@ function sizzleTemplate(_this, html) {
     parts = html.replace(_this.sectionRegExp, function(_, $1, $2, $3, $4, $5, $6) {
       var replacer = $5 + $1 + $2,
         index = $4.lastIndexOf(replacer);
-      // $4 = $4.replace('{{else}}', '@else');
       if (nesting.length) return _; // skip for next replace
       counter++;
       if (index !== -1) { // only if nesting occures
@@ -303,8 +303,7 @@ function sizzleTemplate(_this, html) {
       }
       var depth = $2.split('°').length;
       $2 = $2.replace(_this.stopRegExp, '');
-       // better Handlebars compatibility
-      if (/(?:with|each)/.test($2)) { $2 = $3; $3 = ''; }
+      if (/(?:with|each)/.test($2)) { $2 = $3; $3 = ''; } // better Handlebars compatibility
       if ($2 === 'if') {
         nesting.push(counter--);
         $4 = $4.replace(new RegExp(options.tags[0] +
