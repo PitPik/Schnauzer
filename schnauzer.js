@@ -24,7 +24,7 @@ var Schnauzer = function(template, options) {
       helpers: {},
       partials: {},
       recursion: 'self',
-      characters: '$"<>%-=@',
+      characters: '$"<>%-=@°',
       splitter: '|##|'
     };
     init(this, options || {}, template);
@@ -182,7 +182,7 @@ function variable(_this, html) {
     options = _this.options;
 
   html = html.replace(_this.variableRegExp, function(all, $1, $2, $3) {
-    var char1 =  $2 && $2[0] || '', 
+    var char1 =  $2 && $2[0] || '',
       isPartial = char1 === '>',
       isSelf = false,
       name = '',
@@ -296,6 +296,7 @@ function sizzleTemplate(_this, html) {
           $4.substring(index + replacer.length) + $5 + '/' + stop + $2 + $6;
       }
       $2 = $2.replace(_this.stopRegExp, '');
+      if (/(?:with|each)/.test($2)) { $2 = $3; $3 = ''; } // better Handlebars compatibility
 
       partCollector.push(_this.partRegExp.test($4) ?
         section(_this, sizzleTemplate(_this, $4), $2, $3, $1 === '^') :
