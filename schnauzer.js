@@ -249,10 +249,11 @@ function variable(_this, html) {
 }
 
 function section(_this, func, key, vars, negative) {
+  var isIf = key.substr(0, 3) === 'if°';
+
+  key = isIf ? key.replace(/^if°/, '') : key;
   key = getVar(key);
   return function fastLoop(data) {
-    var isIf = key.value.substr(0,3) === 'if°';
-    key.name = isIf ? key.name.replace(/^if°/, '') : key.name;
     var _data = findData(data, key.name, key.keys, key.depth);
 
     if (isArray(_data)) {
