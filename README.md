@@ -464,9 +464,6 @@ Helpers and their function are explained in the API section above.
 
 #### Where are the "#if", "#unless", "#each" and "#with" helpers like in Handlebars?
 
-Lately there is support for "#if", "#unless", "#each" and "#with" to be as compatible as possible with Handlebars.
-Try to avoid them and use your templates as described in the following, older description:
-
 Well, there are none. They are not really needed.
 Let's say you have the following model:
 ```js
