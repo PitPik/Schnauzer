@@ -462,9 +462,9 @@ Any of the above would cause the name field on the current context to be used ra
 As with Handlebars you can also use helpers in Schnauzer to make your live easier. Schnauzer helpers can be accessed from any context in a template. You can register a helper with the Schnauzer.registerHelper method.
 Helpers and their function are explained in the API section above.
 
-#### Where are the "#if", "#each" and "#with" helpers like in Handlebars?
+#### Where are the "#if", "#unless", "#each" and "#with" helpers like in Handlebars?
 
-Lately there is support for "#if", "#each" and "#with" to be as compatible as possible with Handlebars.
+Lately there is support for "#if", "#unless", "#each" and "#with" to be as compatible as possible with Handlebars.
 Try to avoid them and use your templates as described in the following, older description:
 
 Well, there are none. They are not really needed.
