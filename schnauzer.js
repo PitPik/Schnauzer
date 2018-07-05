@@ -5,7 +5,7 @@
     function () { return factory(root); });
   else root.Schnauzer = factory(root);
 }(this, function SchnauzerFactory(root, undefined, help) { 'use strict';
-// Schnauzer 5.20 KB, 2.39 KB, Mustage 5.47 KB, 2.26 KB, Handlebars 74.20 KB, 21.86 KB
+// Schnauzer 5.20 KB, 2.28 KB, Mustage 5.47 KB, 2.26 KB, Handlebars 74.20 KB, 21.86 KB
 var Schnauzer = function(template, options) {
     this.version = '1.0.0';
     this.options = {
