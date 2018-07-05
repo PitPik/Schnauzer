@@ -5,7 +5,7 @@
     function () { return factory(root); });
   else root.Schnauzer = factory(root);
 }(this, function SchnauzerFactory(root, undefined, help) { 'use strict';
-// Schnauzer 4.80 KB, 2.22 KB, Mustage 5.47 KB, 2.26 KB, Handlebars 74.20 KB, 21.86 KB
+// Schnauzer 5.20 KB, 2.39 KB, Mustage 5.47 KB, 2.26 KB, Handlebars 74.20 KB, 21.86 KB
 var Schnauzer = function(template, options) {
     this.version = '1.0.0';
     this.options = {
@@ -88,6 +88,7 @@ function switchTags(_this, tags) {
     '([\\S\\s]*?)(' + _tags[0] + ')\\/\\2(' + _tags[1] + ')', 'g');
   _this.partRegExp = new RegExp(_tags[0] + '[#\^]');
   _this.escapeRegExp = new RegExp(_tags[0]);
+  _this.elseRegExp = new RegExp(_tags[0] + '(else)' + _tags[1]);
 }
 
 function isArray(obj) { // obj instanceof Array;
@@ -250,6 +251,8 @@ function variable(_this, html) {
 function section(_this, func, key, vars, negative) {
   key = getVar(key);
   return function fastLoop(data) {
+    var isIf = key.value.substr(0,3) === 'if°';
+    key.name = isIf ? key.name.replace(/^if°/, '') : key.name;
     var _data = findData(data, key.name, key.keys, key.depth);
 
     if (isArray(_data)) {
@@ -271,7 +274,8 @@ function section(_this, func, key, vars, negative) {
       return _func.apply(tools(_this, data), [func(data)].concat(vars.split(/\s+/)));
     }
     if (negative && !_data || !negative && _data) { // regular replace
-      return func(getDataSource(data, data.extra, foundData, { '.': _data, 'this': _data }));
+      return func(isIf ? data :
+        getDataSource(data, data.extra, foundData, { '.': _data, 'this': _data }));
     }
   }
 }
@@ -286,17 +290,27 @@ function sizzleTemplate(_this, html) {
     parts = html.replace(_this.sectionRegExp, function(_, $1, $2, $3, $4, $5, $6) {
       var replacer = $5 + $1 + $2,
         index = $4.lastIndexOf(replacer);
-
+      // $4 = $4.replace('{{else}}', '@else');
       if (nesting.length) return _; // skip for next replace
       counter++;
       if (index !== -1) { // only if nesting occures
         nesting.push(counter--);
         stop = Array(++help).join('°');
+        $4 = $4.replace(_this.elseRegExp, function(_, $1) { return $5 + stop + $1 + $6 });
         return replacer + $3 + $6 + $4.substring(0, index) + $5 + $1 + stop + $2 +
           $4.substring(index + replacer.length) + $5 + '/' + stop + $2 + $6;
       }
+      var depth = $2.split('°').length;
       $2 = $2.replace(_this.stopRegExp, '');
-      if (/(?:with|each)/.test($2)) { $2 = $3; $3 = ''; } // better Handlebars compatibility
+       // better Handlebars compatibility
+      if (/(?:with|each)/.test($2)) { $2 = $3; $3 = ''; }
+      if ($2 === 'if') {
+        nesting.push(counter--);
+        $4 = $4.replace(new RegExp(options.tags[0] +
+          Array(depth).join('°') + 'else' + options.tags[1]),
+          $5 + '/' + 'if°' + $3 + $6 + $5 + '^' + 'if°' + $3 + $6);
+        return $5 + $1 + 'if°' + $3 + $6 + $4 + $5 + '/' + 'if°' + $3 + $6;
+      }
 
       partCollector.push(_this.partRegExp.test($4) ?
         section(_this, sizzleTemplate(_this, $4), $2, $3, $1 === '^') :
