@@ -126,7 +126,6 @@ characters: '$"<>%=@', // whitelist of chars for variables inside helpers, parti
 
 // the following are internals and probably never need to be overwritten:
 splitter: '|##|', // internal string splitter; change if this also used in template
-stopper: '__' // internal string splitter for nested block names; (__1__, __2__, etc.)
 
 ```
 
