@@ -256,7 +256,7 @@ function section(_this, func, key, vars, negative) {
   return function fastLoop(data) {
     var _data = findData(data, key.name, key.keys, key.depth);
 
-    if (isArray(_data)) {
+    if (isArray(_data) && !isIf) {
       if (negative) return !_data.length ? func(_data) : '';
       for (var n = 0, l = _data.length, out = ''; n < l; n++) {
         var helpers = {'@index': '' + n, '@last': n === l - 1,
