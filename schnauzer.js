@@ -104,11 +104,10 @@ function getDataSource(data, extra, newData, helpers) {
     data: newData || data.data || data,
     extra: extra && [extra] || data.extra || [],
     path: [].concat(data.path !== undefined ? data.path : data, newData || []),
-    helpers: helpers || {},
+    helpers: [].concat(data.helpers || [], helpers || []),
     __schnauzer: true,
   };
 };
-
 
 function crawlObjectUp(data, keys) { // faster than while
   for (var n = 0, m = keys.length; n < m; n++) {
@@ -121,8 +120,8 @@ function findData(data, key, keys, pathDepth) {
   var _keys = [],
     seachDepth = (data.path.length - 1) - pathDepth,
     _data = data.path[seachDepth] || {},
-    value = data.helpers[key] !== undefined ? data.helpers[key] :
-      _data[key] !== undefined ? _data[key] :
+    helpers = data.helpers[seachDepth - 1] || {},
+    value = helpers[key] !== undefined ? helpers[key] : _data[key] !== undefined ? _data[key] :
       crawlObjectUp(_data, _keys = keys || key.split(/[\.\/]/));
 
   if (value !== undefined) return value;
@@ -260,12 +259,13 @@ function section(_this, func, key, vars, negative) {
     if (isArray(_data) && !isIf) {
       if (negative) return !_data.length ? func(_data) : '';
       for (var n = 0, l = _data.length, out = ''; n < l; n++) {
-        var helpers = {'@index': '' + n, '@last': n === l - 1,
+        var helpers = {'@index': '' + n, '@key': '' + n, '@last': n === l - 1,
           '@first': !n, '.': _data[n], 'this': _data[n] };
 
         data = getDataSource(data, data.extra, _data[n], helpers);
         out = out + func(data);
         data.path.pop();
+        data.helpers.pop();
       }
       return out;
     }
@@ -276,8 +276,9 @@ function section(_this, func, key, vars, negative) {
       return _func.apply(tools(_this, data), [func(data)].concat(vars.split(/\s+/)));
     }
     if (negative && !_data || !negative && _data) { // regular replace
-      return func(isIf ? data :
-        getDataSource(data, data.extra, foundData, { '.': _data, 'this': _data }));
+      return func(getDataSource(data, data.extra, foundData,
+        { '@key': (data.helpers[data.helpers.length - 1] || {})['@index'],
+          '.': _data, 'this': _data }));
     }
   }
 }
