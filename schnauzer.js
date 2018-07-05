@@ -304,12 +304,12 @@ function sizzleTemplate(_this, html) {
       var depth = $2.split('°').length;
       $2 = $2.replace(_this.stopRegExp, '');
       if (/(?:with|each)/.test($2)) { $2 = $3; $3 = ''; } // better Handlebars compatibility
-      if ($2 === 'if') {
+      if ($2 === 'if' || $2 === 'unless') {
         nesting.push(counter--);
         $4 = $4.replace(new RegExp(options.tags[0] +
           Array(depth).join('°') + 'else' + options.tags[1]),
           $5 + '/' + 'if°' + $3 + $6 + $5 + '^' + 'if°' + $3 + $6);
-        return $5 + $1 + 'if°' + $3 + $6 + $4 + $5 + '/' + 'if°' + $3 + $6;
+        return $5 + ($2 === 'if' ? $1 : '^') + 'if°' + $3 + $6 + $4 + $5 + '/' + 'if°' + $3 + $6;
       }
 
       partCollector.push(_this.partRegExp.test($4) ?
