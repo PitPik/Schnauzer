@@ -116,17 +116,16 @@ function crawlObjectUp(data, keys) { // faster than while
 }
 
 function findData(data, key, keys, pathDepth) {
-  var _keys = [],
-    seachDepth = (data.path.length - 1) - pathDepth,
+  var seachDepth = (data.path.length - 1) - pathDepth,
     _data = data.path[seachDepth] || {},
     helpers = data.helpers[seachDepth - 1] || {},
     value = helpers[key] !== undefined ? helpers[key] : _data[key] !== undefined ? _data[key] :
-      crawlObjectUp(_data, _keys = keys || key.split(/[\.\/]/));
+      crawlObjectUp(_data, keys = keys || key.split(/[\.\/]/));
 
   if (value !== undefined) return value;
   for (var n = data.extra.length; n--; ) {
     if (data.extra[n][key] !== undefined) return data.extra[n][key];
-    value = crawlObjectUp(data.extra[n], _keys);
+    value = crawlObjectUp(data.extra[n], keys);
     if (value !== undefined) return value;
   }
 }
@@ -256,7 +255,7 @@ function section(_this, func, key, vars, negative) {
       if (negative) return !_data.length ? func(_data) : '';
       for (var n = 0, l = _data.length, out = ''; n < l; n++) {
         var helpers = {'@index': '' + n, '@last': n === l - 1,
-          '@first': !n, '.': _data[n], 'this': _data[n] };
+          '@first': !n, '.': _data[n], 'this': _data[n], '@key': key.name };
 
         data = getDataSource(data, data.extra, _data[n], helpers);
         out = out + func(data);
@@ -272,7 +271,8 @@ function section(_this, func, key, vars, negative) {
       return _func.apply(tools(_this, data), [func(data)].concat(vars.split(/\s+/)));
     }
     if (negative && !_data || !negative && _data) { // regular replace
-      return func(getDataSource(data, data.extra, foundData, { '.': _data, 'this': _data }));
+      return func(getDataSource(data, data.extra, foundData,
+        { '.': _data, 'this': _data, '@key': key.name }));
     }
   }
 }
