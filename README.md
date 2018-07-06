@@ -464,7 +464,7 @@ Helpers and their function are explained in the API section above.
 
 #### Where are the "#if", "#unless", "#each" and "#with" helpers like in Handlebars?
 
-Well, there are none. They are not really needed.
+Well, there are none. They are not really needed or easy build yourself.
 Let's say you have the following model:
 ```js
 {
@@ -484,22 +484,45 @@ Let's say you have the following model:
 }
 ```
 
-you can replace all by the sections
+you can replace "if", "else", "unless", "each" on Arrays and "with" by doing the following:
 
 ```handlebars
-{{#user}} {{!-- like "with", elevates the scope --}}
+{{#user}} {{!-- like "if", elevates the scope --}}
     {{name}} {{lastname}}
-    {{^lastname}}[No last name available]{{/lastname}} {{!-- like "if", but negative --}}
-    [{{../occupation}}]
-    {{#favoriteNumbers}} {{!-- like "each" --}}
+    {{^lastname}}[No last name available]{{/lastname}} {{!-- like "unless" --}}
+    [{{../occupation}}],<br>
+    {{#address}} {{!-- like "with", elevates the scop --}}
+      City: {{city}}, state: {{state}}
+    {{/address}}
+    {{#favoriteNumbers}} {{!-- like "each" on Arrays and "if at the same time" --}}
         {{#@first}}favorite numbers: {{/@first}}{{.}}{{^@last}}, {{/@last}}
-    {{#favoriteNumbers}}
+    {{/favoriteNumbers}}
 {{/user}}
-{{user.address.state}}
-{{user/address/state}} {{!-- same as before --}}
+{{^user}} {{!-- like "else" or "unless" --}}
+  There are are no users available.
+{{/user}}
 ```
 
 If you need to compare variables like ```{{#if foo=="bar"}}...{{/if}}``` you can easily write your own helpers. See above how you can do that.
+
+"Lookup" can be done like the following:
+
+```javascript
+var lookup = function($1, $2) {
+    return this.getData($1 + '.' + this.getData($2).value).value;
+};
+
+{{lookup ../foo @index}}
+```
+
+or without helper:
+
+```handlebars
+{{../foo.@index}}{{../../bar/@key}}
+```
+
+```@key``` has a reference to the last objects key, ```@index``` the index of the current array.
+
 
 ### Comments
 
