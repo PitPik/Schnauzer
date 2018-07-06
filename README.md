@@ -519,6 +519,40 @@ or without helper:
 
 ```@key``` has a reference to the last objects key, ```@index``` the index of the current array.
 
+#### Simple if-else helper
+
+```Handlebars
+{{#if deep}}
+    --deep is present--{{deep.foo}}
+    {{#if deeps}}
+        --deep is present--{{deep.foo}}
+    {{else}}
+        --deep is "not" present--
+    {{/if}}
+{{else}}
+    --deep is "not" present--
+{{/if}}
+```
+
+```javascript
+var ifHelper = function(txt, $1) {
+    txt = txt.split('{{else}}');
+    return !!this.getData($1).value ? txt[0] : txt[1];
+};
+var elseHelper = function() {
+    return '{{else}}';
+};
+
+var schnauzer = new Schnauzer(template, { helpers: { if: ifHelper, else: elseHelper } });
+
+var model = {
+    deep: {
+        foo: 'deepFooValue',
+        deep: 'even deeper'
+    }
+}
+```
+
 
 ### Comments
 
