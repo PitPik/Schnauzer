@@ -103,7 +103,7 @@ function getDataSource(data, extra, newData, helpers) {
     data: newData || data.data || data,
     extra: extra && [extra] || data.extra || [],
     path: [].concat(data.path !== undefined ? data.path : data, newData || []),
-    helpers: [].concat(data.helpers || [], helpers || []),
+    helpers: [].concat(data.helpers || [], newData && (helpers || {}) || []),
     __schnauzer: true,
   };
 };
