@@ -4,7 +4,7 @@
 Schanuzer is largely compatible with Mustache and Handlebars templates. In most cases it is possible to swap out Mustache or Handlebars with Schanuzer and continue using your current templates.
 
 I call it "logic-less" because there are no if statements, else clauses, or for loops. Instead there are only tags. Some tags are replaced with a value, some nothing, and others a series of values. But as with Handlebars you can add helpers, or pass data to your partials.
-Schanuzer is also very small and fast. It has the power of Handlebars but is smaller than Mustage (4.84KB minified, 2.14KB gZip) and therefore also perfectly suitable for mobile applications.
+Schanuzer is also very small and fast. It has the power of Handlebars but is smaller than Mustage (4KB minified, 1.75KB gZip) and therefore also perfectly suitable for mobile applications.
 
 ## Where to use schnauzer.js?
 
@@ -34,7 +34,27 @@ In this example `Schnauzer()` is initialized with the template as first argument
 ## API
 
 ```js
-new Schnauzer(template /*String*/, options /*Object*/)
+new Schnauzer(template /*String*/, options /*Object*/ {
+    tags: ['{{', '}}'], // used tags: default is {{}}
+    entityMap: { // characters to be escaped
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#39;',
+      '/': '&#x2F;',
+      '`': '&#x60;',
+      '=': '&#x3D;'
+    },
+    doEscape: true, // if set to false it reacts like {{{}}}
+    helpers: {}, // name:function pair defining helpers
+    partials: {}, // name:String pair defining partials
+    recursion: 'self', // name of initial partial
+    characters: '$"<>%=@', // whitelist of chars for variables inside helpers, partials, functions...
+
+    // the following are internals and probably never need to be overwritten:
+    splitter: '|##|', // internal string splitter; change if this also used in template
+})
 .render(data /*Object*/, extraData /*Object|Array*/) // => returns String
 .parse(text /*String*/)
 .registerHelper(name /*String*/, func  /*Function*/)
@@ -103,30 +123,6 @@ Inline helpers can be used for something like the following:
 today: function(text) {
     return new Date().toLocaleString();
 }
-```
-
-## Options
-```js
-tags: ['{{', '}}'], // used tags: default is {{}}
-entityMap: { // characters to be escaped
-  '&': '&amp;',
-  '<': '&lt;',
-  '>': '&gt;',
-  '"': '&quot;',
-  "'": '&#39;',
-  '/': '&#x2F;',
-  '`': '&#x60;',
-  '=': '&#x3D;'
-},
-doEscape: true, // if set to false it reacts like {{{}}}
-helpers: {}, // name:function pair defining helpers
-partials: {}, // name:String pair defining partials
-recursion: 'self', // name of initial partial
-characters: '$"<>%=@', // whitelist of chars for variables inside helpers, partials, functions...
-
-// the following are internals and probably never need to be overwritten:
-splitter: '|##|', // internal string splitter; change if this also used in template
-
 ```
 
 ## Templates
