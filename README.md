@@ -460,7 +460,11 @@ Helpers and their function are explained in the API section above.
 
 #### Where are the "#if", "#unless", "#each" and "#with" helpers like in Handlebars?
 
-Well, there are none. They are not really needed or easy build yourself.
+"#each" and "#with" are supported (without "else" though);
+
+"#each" converts an object into an array and iterates through it. Helpers like "@key", "@index" etc. can be used.
+
+The rest is not really needed or easy build by yourself.
 Let's say you have the following model:
 ```js
 {

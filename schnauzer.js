@@ -5,7 +5,7 @@
     function () { return factory(root); });
   else root.Schnauzer = factory(root);
 }(this, function SchnauzerFactory(root, undefined, help) { 'use strict';
-// Schnauzer 4.84 KB, 2.14 KB, Mustage 5.47 KB, 2.26 KB, Handlebars 74.20 KB, 21.86 KB
+// Schnauzer 5.17 KB, 2.33 KB, Mustage 5.47 KB, 2.26 KB, Handlebars 74.20 KB, 21.86 KB
 var Schnauzer = function(template, options) {
     this.version = '1.0.0';
     this.options = {
@@ -88,6 +88,7 @@ function switchTags(_this, tags) {
     '([\\S\\s]*?)(' + _tags[0] + ')\\/\\2(' + _tags[1] + ')', 'g');
   _this.partRegExp = new RegExp(_tags[0] + '[#\^]');
   _this.escapeRegExp = new RegExp(_tags[0]);
+  // _this.elseRegExp = new RegExp(_tags[0] + 'else' + _tags[1]);
 }
 
 function isArray(obj) { // obj instanceof Array;
@@ -96,6 +97,12 @@ function isArray(obj) { // obj instanceof Array;
 
 function isFunction(obj) {
   return obj && typeof obj === 'function';
+}
+
+function getKeys(obj, keys) { // keys = []
+  if (Object.keys) return Object.keys(obj);
+  for (var key in obj) obj.hasOwnProperty(key) && keys.push(key);
+  return keys;
 }
 
 function getDataSource(data, extra, newData, helpers) {
@@ -133,7 +140,7 @@ function findData(data, key, keys, pathDepth) {
 function getVar(text, data) {
   var parts = text.split(/\s*=\s*/);
   var value = parts.length > 1 ? parts[1] : parts[0];
-  var isString = value[0] === '"' || value[0] === "'";
+  var isString = value.charAt(0) === '"' || value.charAt(0) === "'";
   var depth = 0;
   var keys = [];
   var isStrict = false;
@@ -143,7 +150,7 @@ function getVar(text, data) {
   } else {
     var path = value.split('../');
     if (path.length > 1) {
-      value = path.pop();
+      value = (path[0] === '@' && '@' || '') + path.pop();
       depth = path.length;
     }
     name = name.replace(/^(?:\.|this)\//, function() {
@@ -180,14 +187,14 @@ function variable(_this, html) {
     options = _this.options;
 
   html = html.replace(_this.variableRegExp, function(all, $1, $2, $3) {
-    var char1 =  $2 && $2[0] || '',
-      isPartial = char1 === '>',
+    var char0 =  $2 && $2.charAt(0) || '',
+      isPartial = char0 === '>',
       isSelf = false,
       name = '',
       isStrict = false,
       _data = {};
 
-    if (char1 === '!' || char1 === '=') return '';
+    if (char0 === '!' || char0 === '=') return '';
 
     $3 = $3.split(/\s+/); // split variables
     name = $3.shift();
@@ -208,7 +215,7 @@ function variable(_this, html) {
       value: isPartial ? _this.partials[name] : name,
       data: isPartial ? _data : $3,
       isPartial: isPartial,
-      isUnescaped: !options.doEscape || char1 === '&' ||
+      isUnescaped: !options.doEscape || char0 === '&' ||
         (_this.escapeRegExp.test($1) && $1.length === 3),
       isSelf: isSelf,
       depth: isPartial ? undefined : _data.depth,
@@ -247,17 +254,25 @@ function variable(_this, html) {
 }
 
 function section(_this, func, key, vars, negative) {
-  key = getVar(key);
+  var specialKey = key.match(/^(each|with)°/) || []; // Handlebars compatibility
+  var isEach = specialKey[1] === 'each';
+
+  key = getVar(specialKey[0] ? key.replace(specialKey[0], '') : key);
   return function fastLoop(data) {
     var _data = findData(data, key.name, key.keys, key.depth);
+    var _isArray = isArray(_data);
+    var isObject = !_isArray && typeof _data === 'object';
+    var objData = isEach && isObject && _data;
 
-    if (isArray(_data)) {
+    if (objData) _data = getKeys(_data, []); // Handlebars compatibility
+    if (_isArray || objData) {
       if (negative) return !_data.length ? func(_data) : '';
       for (var n = 0, l = _data.length, out = ''; n < l; n++) {
-        var helpers = {'@index': '' + n, '@last': n === l - 1,
-          '@first': !n, '.': _data[n], 'this': _data[n], '@key': key.name };
+        var loopData = _isArray ? _data[n] : objData[_data[n]];
+        var helpers = {'@index': '' + n, '@last': n === l - 1, '@first': !n,
+          '.': loopData, 'this': loopData, '@key': _isArray ? n : _data[n] };
 
-        data = getDataSource(data, data.extra, _data[n], helpers);
+        data = getDataSource(data, data.extra, loopData, helpers);
         out = out + func(data);
         data.path.pop();
         data.helpers.pop();
@@ -265,7 +280,7 @@ function section(_this, func, key, vars, negative) {
       return out;
     }
 
-    var foundData = typeof _data === 'object' ? _data : data; // is object
+    var foundData = isObject ? _data : data; // is object
     var _func = (!key.isStrict && _this.options.helpers[key.name]) || (isFunction(_data) && _data);
     if (_func) { // helpers or inline functions
       return _func.apply(tools(_this, data), [func(data)].concat(vars.split(/\s+/)));
@@ -296,6 +311,7 @@ function sizzleTemplate(_this, html) {
           $4.substring(index + replacer.length) + $5 + '/' + stop + $2 + $6;
       }
       $2 = $2.replace(_this.stopRegExp, '');
+      if ($2 === 'each' || $2 === 'with') { $2 = $2 + '°' + $3; $3 = ''; } // Handlebars helpers
 
       partCollector.push(_this.partRegExp.test($4) ?
         section(_this, sizzleTemplate(_this, $4), $2, $3, $1 === '^') :
