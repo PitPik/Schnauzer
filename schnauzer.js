@@ -194,10 +194,8 @@ function variable(_this, html) {
       _data = {};
 
     if (char0 === '!' || char0 === '=') return '';
-
     $3 = $3.split(/\s+/); // split variables
     name = $3.shift();
-
     if (!isPartial) {
       _data = getVar(name);
       isStrict = _data.isStrict;
@@ -278,7 +276,6 @@ function section(_this, func, key, vars, negative) {
       }
       return out;
     }
-
     var foundData = isObject ? _data : data; // is object
     var _func = (!key.isStrict && _this.options.helpers[key.name]) || (isFunction(_data) && _data);
     if (_func) { // helpers or inline functions
@@ -311,7 +308,6 @@ function sizzleTemplate(_this, html) {
       }
       $2 = $2.replace(_this.stopRegExp, '');
       if ($2 === 'each' || $2 === 'with') { $2 = $2 + '°' + $3; $3 = ''; } // Handlebars helpers
-
       partCollector.push(_this.partRegExp.test($4) ?
         section(_this, sizzleTemplate(_this, $4), $2, $3, $1 === '^') :
         section(_this, variable(_this, $4), $2, $3, $1 === '^'));
