@@ -4,7 +4,7 @@
 Schanuzer is largely compatible with Mustache and Handlebars templates. In most cases it is possible to swap out Mustache or Handlebars with Schanuzer and continue using your current templates.
 
 I call it "logic-less" because there are no if statements, else clauses, or for loops. Instead there are only tags. Some tags are replaced with a value, some nothing, and others a series of values. But as with Handlebars you can add helpers, or pass data to your partials.
-Schanuzer is also very small and fast. It has the power of Handlebars but is smaller than Mustage (4KB minified, 1.75KB gZip) and therefore also perfectly suitable for mobile applications.
+Schanuzer is also very small and fast. It has the power of Handlebars but is smaller than Mustage (5KB minified, 2.3KB gZip) and therefore also perfectly suitable for mobile applications.
 
 ## Where to use schnauzer.js?
 
