@@ -88,7 +88,6 @@ function switchTags(_this, tags) {
     '([\\S\\s]*?)(' + _tags[0] + ')\\/\\2(' + _tags[1] + ')', 'g');
   _this.partRegExp = new RegExp(_tags[0] + '[#\^]');
   _this.escapeRegExp = new RegExp(_tags[0]);
-  // _this.elseRegExp = new RegExp(_tags[0] + 'else' + _tags[1]);
 }
 
 function isArray(obj) { // obj instanceof Array;
