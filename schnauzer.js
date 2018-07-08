@@ -103,7 +103,7 @@ function switchTags(_this, tags) {
 function getDataSource(data, extra, newData, helpers) {
   return {
     data: newData || data.data || data,
-    extra: extra && [extra] || data.extra || [],
+    extra: [].concat(data.extra || [], extra || []),
     path: [].concat(data.path !== undefined ? data.path : data, newData || []),
     helpers: [].concat(data.helpers || [], newData && (helpers || {}) || []),
     __schnauzer: true,
