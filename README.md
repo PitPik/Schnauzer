@@ -458,6 +458,28 @@ Any of the above would cause the name field on the current context to be used ra
 As with Handlebars you can also use helpers in Schnauzer to make your live easier. Schnauzer helpers can be accessed from any context in a template. You can register a helper with the Schnauzer.registerHelper method.
 Helpers and their function are explained in the API section above.
 
+Built in helpers are: ```#if``` with ```else``` , ```#with```, ```#each``` and ```#unless```.
+```#with``` and ```#each``` can not be uses with ```else``` like in Handlebars.
+
+```#with``` can also be used with block parameters to define known references in the current block.
+
+```Handlebars
+{{#with author as |myAuthor|}}
+  <h2>By {{myAuthor.firstName}} {{myAuthor.lastName}}</h2>
+{{/with}}
+```
+
+Which allows for complex templates to potentially provide clearer code than ../ depthed references allow for.
+
+
+The each helper also supports block parameters, allowing for named references anywhere in the block.
+
+```Handlebars
+{{#each array as |value key|}}
+  {{key}}: {{value}}
+{{/each}}
+```
+Will create a key and value variable that children may access without the need for depthed variable references. In the example above, ```{{key}}``` is identical to ```{{@../key}}``` or ```{{../@key}}``` but in many cases is more readable.
 
 ### Comments
 
