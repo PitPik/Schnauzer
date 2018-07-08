@@ -5,7 +5,7 @@
     function () { return factory(root); });
   else root.Schnauzer = factory(root);
 }(this, function SchnauzerFactory(root, undefined, help) { 'use strict';
-// Schnauzer 5.50 KB, 2.33 KB, Mustage 5.50 KB, 2.27 KB, Handlebars 74.20 KB, 21.86 KB
+// Schnauzer 5.59 KB, 2.40 KB, Mustage 5.50 KB, 2.27 KB, Handlebars 74.20 KB, 21.86 KB
 var Schnauzer = function(template, options) {
     this.version = '1.0.0';
     this.options = {
@@ -21,7 +21,11 @@ var Schnauzer = function(template, options) {
         '=': '&#x3D;'
       },
       doEscape: true,
-      helpers: {},
+      helpers: {
+        if: function(txt, $1) { return txt.split('{{else}}')[!!this.getData($1).value ? 0 : 1] },
+        else: function() { return '{{else}}' },
+        unless: function(txt, $1) { return this.getData($1).value ? '' : txt },
+      },
       partials: {},
       recursion: 'self',
       characters: '$"<>%-=@°',
@@ -31,7 +35,13 @@ var Schnauzer = function(template, options) {
   },
   init = function(_this, options, template) {
     for (var option in options) {
-      _this.options[option] = options[option];
+      if (option === 'helpers') {
+        for (var helper in options[option]) {
+          _this.registerHelper(helper, options[option][helper]);
+        }
+      } else {
+        _this.options[option] = options[option];
+      }
     }
     help = 1; // counter helper for nestings
     options = _this.options;
@@ -98,7 +108,6 @@ function switchTags(_this, tags) {
     '([\\S\\s]*?)(' + _tags[0] + ')\\/\\2(' + _tags[1] + ')', 'g');
   _this.partRegExp = new RegExp(_tags[0] + '[#\^]');
   _this.escapeRegExp = new RegExp(_tags[0]);
-  _this.elseRegExp = new RegExp(_tags[0] + '(else)' + _tags[1]);
 }
 
 function getDataSource(data, extra, newData, helpers) {
@@ -122,9 +131,10 @@ function findData(data, key, keys, pathDepth) {
   var seachDepth = (data.path.length - 1) - pathDepth,
     _data = data.path[seachDepth] || {},
     helpers = data.helpers[seachDepth - 1] || {},
-    value = helpers[key] !== undefined ? helpers[key] : _data[key] !== undefined ? _data[key] :
-      crawlObjectUp(_data, keys = keys || key.split(/[\.\/]/));
-
+    value = helpers[key] !== undefined ? helpers[key] : crawlObjectUp(helpers, keys);
+  if (value === undefined) {
+      value = _data[key] !== undefined ? _data[key] : crawlObjectUp(_data, keys);
+  }
   if (value !== undefined) return value;
   for (var n = data.extra.length; n--; ) {
     if (data.extra[n][key] !== undefined) return data.extra[n][key];
@@ -247,20 +257,25 @@ function variable(_this, html) {
   };
 }
 
-function section(_this, func, key, vars, negative) {
-  var specialKey = key.match(/^(each|with|if|unless)°/) || []; // Handlebars compatibility
-  var isEach = specialKey[1] === 'each';
-  var isUnless = specialKey[1] === 'unless';
-  var isIf = isUnless || specialKey[1] === 'if';
+function addToHelper(helpers, keys, key, value) {
+  helpers[keys[0]] = value;
+  helpers[keys[1]] = key;
+}
 
+function section(_this, func, key, vars, negative) {
+  var specialKey = key.match(/^(each|with)°/) || []; // Handlebars compatibility
+  var isEach = specialKey[1] === 'each';
+  var keys = key.split(/\s+as\s+\|/);
+
+  key = keys.shift().split(/\s+/)[0]; // remove waste
   key = getVar(specialKey[0] ? key.replace(specialKey[0], '') : key);
+  keys = keys[0] && keys[0].replace(/\|/g, '').split(/\s+/);
   return function fastLoop(data) {
     var _data = findData(data, key.name, key.keys, key.depth);
     var _isArray = isArray(_data);
     var isObject = !_isArray && typeof _data === 'object';
     var objData = isEach && isObject && _data; // Handlebars compatibility
 
-    _data = isUnless ? !_data : _data;
     if (objData) _data = getKeys(_data, []);
     if (_isArray || objData) {
       if (negative) return !_data.length ? func(_data) : '';
@@ -269,6 +284,7 @@ function section(_this, func, key, vars, negative) {
         var helpers = {'@index': '' + n, '@last': n === l - 1, '@first': !n,
           '.': loopData, 'this': loopData, '@key': _isArray ? n : _data[n] };
 
+        if (keys) addToHelper(helpers, keys, _isArray ? n : _data[n], loopData);
         data = getDataSource(data, data.extra, loopData, helpers);
         out = out + func(data);
         data.path.pop(); // jump back out of scope-level for next iteration
@@ -282,8 +298,9 @@ function section(_this, func, key, vars, negative) {
       return _func.apply(tools(_this, data), [func(data)].concat(vars.split(/\s+/)));
     }
     if (negative && !_data || !negative && _data) { // regular replace
-      return func(isIf ? data : getDataSource(data, data.extra, foundData,
-        { '.': _data, 'this': _data, '@key': key.name }));
+      helpers = { '.': _data, 'this': _data, '@key': key.name };
+      if (keys) addToHelper(helpers, keys, key.name, _data);
+      return func(getDataSource(data, data.extra, foundData, helpers));
     }
   }
 }
@@ -303,24 +320,11 @@ function sizzleTemplate(_this, html) {
       if (index !== -1) { // only if nesting occures
         nesting.push(counter--);
         stop = Array(++help).join('°');
-        $4 = $4.replace(_this.elseRegExp, function(_, $1) { return $5 + stop + $1 + $6 });
         return replacer + ($3 ? ' ' + $3 : $3) + $6 + $4.substring(0, index) + $5 + $1 + stop + $2 +
           $4.substring(index + replacer.length) + $5 + '/' + stop + $2 + $6;
       }
-      var depth = $2.split('°').length;
       $2 = $2.replace(_this.stopRegExp, '');
-      if ($2.match(/^(each|with|unless)/)) { $2 = $2 + '°' + $3; $3 = ''; } // Handlebars helpers
-      if ($2 === 'if') {
-        $3 = 'if°' + $3;
-        var _$4 = $4;
-        $4 = $4.replace($5 + Array(depth).join('°') + 'else' + $6,
-          $5 + '/' + $3 + $6 + $5 + '^' + $3 + $6);
-        if (_$4 !== $4) {
-          nesting.push(counter--);
-          return $5 + $1 + $3 + $6 + $4 + $5 + '/' + $3 + $6;
-        }
-        $2 = $3; $3 = '';
-      }
+      if ($2 === 'each' || $2 === 'with') { $2 = $2 + '°' + $3; $3 = ''; } // Handlebars helpers
       partCollector.push(_this.partRegExp.test($4) ?
         section(_this, sizzleTemplate(_this, $4), $2, $3, $1 === '^') :
         section(_this, variable(_this, $4), $2, $3, $1 === '^'));
