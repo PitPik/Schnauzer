@@ -1,11 +1,11 @@
-/**! @license schnauzer v1.0.00; Copyright (C) 2017-2018 by Peter Dematté */
+/**! @license schnauzer v1.0.0; Copyright (C) 2017-2018 by Peter Dematté */
 (function defineSchnauzer(root, factory) {
   if (typeof exports === 'object') module.exports = factory(root);
   else if (typeof define === 'function' && define.amd) define('schnauzer', [],
     function () { return factory(root); });
   else root.Schnauzer = factory(root);
 }(this, function SchnauzerFactory(root, undefined, help) { 'use strict';
-// Schnauzer 5.17 KB, 2.33 KB, Mustage 5.50 KB, 2.27 KB, Handlebars 74.20 KB, 21.86 KB
+// Schnauzer 5.50 KB, 2.33 KB, Mustage 5.50 KB, 2.27 KB, Handlebars 74.20 KB, 21.86 KB
 var Schnauzer = function(template, options) {
     this.version = '1.0.0';
     this.options = {
@@ -98,6 +98,7 @@ function switchTags(_this, tags) {
     '([\\S\\s]*?)(' + _tags[0] + ')\\/\\2(' + _tags[1] + ')', 'g');
   _this.partRegExp = new RegExp(_tags[0] + '[#\^]');
   _this.escapeRegExp = new RegExp(_tags[0]);
+  _this.elseRegExp = new RegExp(_tags[0] + '(else)' + _tags[1]);
 }
 
 function getDataSource(data, extra, newData, helpers) {
@@ -247,8 +248,10 @@ function variable(_this, html) {
 }
 
 function section(_this, func, key, vars, negative) {
-  var specialKey = key.match(/^(each|with)°/) || []; // Handlebars compatibility
+  var specialKey = key.match(/^(each|with|if|unless)°/) || []; // Handlebars compatibility
   var isEach = specialKey[1] === 'each';
+  var isUnless = specialKey[1] === 'unless';
+  var isIf = isUnless || specialKey[1] === 'if';
 
   key = getVar(specialKey[0] ? key.replace(specialKey[0], '') : key);
   return function fastLoop(data) {
@@ -257,6 +260,7 @@ function section(_this, func, key, vars, negative) {
     var isObject = !_isArray && typeof _data === 'object';
     var objData = isEach && isObject && _data; // Handlebars compatibility
 
+    _data = isUnless ? !_data : _data;
     if (objData) _data = getKeys(_data, []);
     if (_isArray || objData) {
       if (negative) return !_data.length ? func(_data) : '';
@@ -278,7 +282,7 @@ function section(_this, func, key, vars, negative) {
       return _func.apply(tools(_this, data), [func(data)].concat(vars.split(/\s+/)));
     }
     if (negative && !_data || !negative && _data) { // regular replace
-      return func(getDataSource(data, data.extra, foundData,
+      return func(isIf ? data : getDataSource(data, data.extra, foundData,
         { '.': _data, 'this': _data, '@key': key.name }));
     }
   }
@@ -299,11 +303,19 @@ function sizzleTemplate(_this, html) {
       if (index !== -1) { // only if nesting occures
         nesting.push(counter--);
         stop = Array(++help).join('°');
-        return replacer + $3 + $6 + $4.substring(0, index) + $5 + $1 + stop + $2 +
+        $4 = $4.replace(_this.elseRegExp, function(_, $1) { return $5 + stop + $1 + $6 });
+        return replacer + ($3 ? ' ' + $3 : $3) + $6 + $4.substring(0, index) + $5 + $1 + stop + $2 +
           $4.substring(index + replacer.length) + $5 + '/' + stop + $2 + $6;
       }
+      var depth = $2.split('°').length;
       $2 = $2.replace(_this.stopRegExp, '');
-      if ($2 === 'each' || $2 === 'with') { $2 = $2 + '°' + $3; $3 = ''; } // Handlebars helpers
+      if ($2.match(/^(each|with|unless)/)) { $2 = $2 + '°' + $3; $3 = ''; } // Handlebars helpers
+      if ($2 === 'if') {
+        $3 = 'if°' + $3;
+        nesting.push(counter--);
+        return $5 + $1 + $3 + $6 + $4.replace($5 + Array(depth).join('°') + 'else' + $6,
+          $5 + '/' + $3 + $6 + $5 + '^' + $3 + $6) + $5 + '/' + $3 + $6;
+      }
       partCollector.push(_this.partRegExp.test($4) ?
         section(_this, sizzleTemplate(_this, $4), $2, $3, $1 === '^') :
         section(_this, variable(_this, $4), $2, $3, $1 === '^'));

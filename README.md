@@ -4,7 +4,7 @@
 Schanuzer is largely compatible with Mustache and Handlebars templates. In most cases it is possible to swap out Mustache or Handlebars with Schanuzer and continue using your current templates.
 
 I call it "logic-less" because there are no if statements, else clauses, or for loops. Instead there are only tags. Some tags are replaced with a value, some nothing, and others a series of values. But as with Handlebars you can add helpers, or pass data to your partials.
-Schanuzer is also very small and fast. It has the power of Handlebars but is smaller than Mustage (5KB minified, 2.3KB gZip) and therefore also perfectly suitable for mobile applications.
+Schanuzer is also very small and fast. It has the power of Handlebars but is the size of Mustage (5.5KB minified, 2.3KB gZip) and therefore also perfectly suitable for mobile applications.
 
 ## Where to use schnauzer.js?
 
@@ -457,105 +457,6 @@ Any of the above would cause the name field on the current context to be used ra
 
 As with Handlebars you can also use helpers in Schnauzer to make your live easier. Schnauzer helpers can be accessed from any context in a template. You can register a helper with the Schnauzer.registerHelper method.
 Helpers and their function are explained in the API section above.
-
-#### Where are the "#if", "#unless", "#each" and "#with" helpers like in Handlebars?
-
-"#each" and "#with" are supported (without "else" though);
-
-"#each" converts an object into an array and iterates through it. Helpers like "@key", "@index" etc. can be used.
-
-The rest is not really needed or easy build by yourself.
-Let's say you have the following model:
-```js
-{
-    occupation: 'developer',
-    user: {
-        contact: {
-            email: 'hi@foo.co',
-            twitter: 'foo_co'
-        },
-        address: {
-            city: 'San Francisco',
-            state: 'California'
-        },
-        name: 'Foo',
-        favoriteNumbers: [6, 9, 22, 43]
-    }
-}
-```
-
-you can replace "if", "else", "unless", "each" on Arrays and "with" by doing the following:
-
-```handlebars
-{{#user}} {{!-- like "if", elevates the scope --}}
-    {{name}} {{lastname}}
-    {{^lastname}}[No last name available]{{/lastname}} {{!-- like "unless" --}}
-    [{{../occupation}}],<br>
-    {{#address}} {{!-- like "with", elevates the scop --}}
-      City: {{city}}, state: {{state}}
-    {{/address}}
-    {{#favoriteNumbers}} {{!-- like "each" on Arrays and "if at the same time" --}}
-        {{#@first}}favorite numbers: {{/@first}}{{.}}{{^@last}}, {{/@last}}
-    {{/favoriteNumbers}}
-{{/user}}
-{{^user}} {{!-- like "else" or "unless" --}}
-  There are are no users available.
-{{/user}}
-```
-
-If you need to compare variables like ```{{#if foo=="bar"}}...{{/if}}``` you can easily write your own helpers. See above how you can do that.
-
-"Lookup" can be done like the following:
-
-```javascript
-var lookup = function($1, $2) {
-    return this.getData($1 + '.' + this.getData($2).value).value;
-};
-
-{{lookup ../foo @index}}
-```
-
-or without helper:
-
-```handlebars
-{{../foo.@index}}{{../../bar/@key}}
-```
-
-```@key``` has a reference to the last objects key, ```@index``` the index of the current array.
-
-#### Simple if-else helper (for Handlebars compatibility reasons)
-
-```Handlebars
-{{#if deep}}
-    --deep is present--{{deep.foo}}
-    {{#if deeps}}
-        --deep is present--{{deep.foo}}
-    {{else}}
-        --deep is "not" present--
-    {{/if}}
-{{else}}
-    --deep is "not" present--
-{{/if}}
-```
-
-```javascript
-var ifHelper = function(txt, $1) {
-    txt = txt.split('{{else}}');
-    return !!this.getData($1).value ? txt[0] : txt[1];
-};
-var elseHelper = function() {
-    return '{{else}}';
-};
-
-var schnauzer = new Schnauzer(template, { helpers: { if: ifHelper, else: elseHelper } });
-
-var model = {
-    deep: {
-        foo: 'deepFooValue',
-        deep: 'even deeper'
-    }
-}
-```
 
 
 ### Comments
