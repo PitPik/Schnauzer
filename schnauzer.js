@@ -319,6 +319,7 @@ function sizzleTemplate(_this, html) {
           nesting.push(counter--);
           return $5 + $1 + $3 + $6 + $4 + $5 + '/' + $3 + $6;
         }
+        $2 = $3; $3 = '';
       }
       partCollector.push(_this.partRegExp.test($4) ?
         section(_this, sizzleTemplate(_this, $4), $2, $3, $1 === '^') :
