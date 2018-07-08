@@ -523,7 +523,7 @@ or without helper:
 
 ```@key``` has a reference to the last objects key, ```@index``` the index of the current array.
 
-#### Simple if-else helper (for HAndlebars compatibility reasons)
+#### Simple if-else helper (for Handlebars compatibility reasons)
 
 ```Handlebars
 {{#if deep}}
