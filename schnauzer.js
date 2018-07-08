@@ -312,9 +312,13 @@ function sizzleTemplate(_this, html) {
       if ($2.match(/^(each|with|unless)/)) { $2 = $2 + '°' + $3; $3 = ''; } // Handlebars helpers
       if ($2 === 'if') {
         $3 = 'if°' + $3;
-        nesting.push(counter--);
-        return $5 + $1 + $3 + $6 + $4.replace($5 + Array(depth).join('°') + 'else' + $6,
-          $5 + '/' + $3 + $6 + $5 + '^' + $3 + $6) + $5 + '/' + $3 + $6;
+        var _$4 = $4;
+        $4 = $4.replace($5 + Array(depth).join('°') + 'else' + $6,
+          $5 + '/' + $3 + $6 + $5 + '^' + $3 + $6);
+        if (_$4 !== $4) {
+          nesting.push(counter--);
+          return $5 + $1 + $3 + $6 + $4 + $5 + '/' + $3 + $6;
+        }
       }
       partCollector.push(_this.partRegExp.test($4) ?
         section(_this, sizzleTemplate(_this, $4), $2, $3, $1 === '^') :
