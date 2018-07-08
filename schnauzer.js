@@ -5,7 +5,7 @@
     function () { return factory(root); });
   else root.Schnauzer = factory(root);
 }(this, function SchnauzerFactory(root, undefined, help) { 'use strict';
-// Schnauzer 5.17 KB, 2.33 KB, Mustage 5.47 KB, 2.26 KB, Handlebars 74.20 KB, 21.86 KB
+// Schnauzer 5.17 KB, 2.33 KB, Mustage 5.50 KB, 2.27 KB, Handlebars 74.20 KB, 21.86 KB
 var Schnauzer = function(template, options) {
     this.version = '1.0.0';
     this.options = {
@@ -48,6 +48,16 @@ var Schnauzer = function(template, options) {
       _this.registerPartial(name, options.partials[name]);
     }
     template && _this.registerPartial(options.recursion, template);
+  },
+  isArray = Array.isArray || function(obj) { // obj instanceof Array;
+    return obj && obj.constructor === Array;
+  },
+  isFunction = function(obj) {
+    return obj && typeof obj === 'function';
+  },
+  getKeys = Object.keys || function(obj, keys) { // keys = []
+    for (var key in obj) obj.hasOwnProperty(key) && keys.push(key);
+    return keys;
   };
 
 Schnauzer.prototype = {
@@ -88,20 +98,6 @@ function switchTags(_this, tags) {
     '([\\S\\s]*?)(' + _tags[0] + ')\\/\\2(' + _tags[1] + ')', 'g');
   _this.partRegExp = new RegExp(_tags[0] + '[#\^]');
   _this.escapeRegExp = new RegExp(_tags[0]);
-}
-
-function isArray(obj) { // obj instanceof Array;
-  return obj && obj.constructor === Array;
-}
-
-function isFunction(obj) {
-  return obj && typeof obj === 'function';
-}
-
-function getKeys(obj, keys) { // keys = []
-  if (Object.keys) return Object.keys(obj);
-  for (var key in obj) obj.hasOwnProperty(key) && keys.push(key);
-  return keys;
 }
 
 function getDataSource(data, extra, newData, helpers) {
