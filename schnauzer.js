@@ -192,15 +192,15 @@ function variable(_this, html) {
     if (char0 === '!' || char0 === '=') return '';
     $3 = $3.split(/\s+/); // split variables
     name = $3.shift();
-    if (!isPartial) {
-      _data = getVar(name);
-      isStrict = _data.isStrict;
-      name = _data.name;
-    } else {
+    if (isPartial) {
       for (var n = $3.length, tmp = {}; n--; ) {
         tmp = getVar($3[n]);
         _data[tmp.name] = tmp;
       }
+    } else {
+      _data = getVar(name);
+      isStrict = _data.isStrict;
+      name = _data.name;
     }
     isSelf = name === options.recursion;
     isPartial = isPartial && (!!_this.partials[name] || isSelf);
@@ -237,7 +237,7 @@ function variable(_this, html) {
         tmp = findData(data, value, part.keys, part.depth);
         _func = !part.isStrict && options.helpers[value] || isFunction(tmp) && tmp;
         tmp = _func ? _func.apply(tools(_this, data), part.data) :
-          value.isExecutor ? value(data) :
+          isFunction(value) ? value(data) :
           tmp && (part.isUnescaped ? tmp : escapeHtml(tmp, _this));
       }
       if (tmp !== undefined) out = out + tmp;
@@ -322,7 +322,6 @@ function sizzleTemplate(_this, html) {
     if (!data.__schnauzer || extra) { // oninit or partials
       data = getDataSource(data, extra);
     }
-    executor.isExecutor = true;
     for (var n = 0, l = output.length, out = ''; n < l; n++) {
       out = out + (output[n](data) || '');
     }
