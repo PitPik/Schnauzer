@@ -224,7 +224,7 @@ function variable(_this, html) {
       if (keys[n] === undefined) continue; // no other functions, just html
       part = keys[n];
       value = part.value;
-      if (part.isPartial === true) { // partial -> executor
+      if (part.isPartial) { // partial -> executor
         var newData = {}; // create new scope (but keep functions in scope)
         for (var item in data.data) newData[item] = data.data[item];
         for (var key in part.data) {
@@ -255,9 +255,9 @@ function section(_this, func, key, vars, negative) {
     var _data = findData(data, key.name, key.keys, key.depth);
     var _isArray = isArray(_data);
     var isObject = !_isArray && typeof _data === 'object';
-    var objData = isEach && isObject && _data;
+    var objData = isEach && isObject && _data; // Handlebars compatibility
 
-    if (objData) _data = getKeys(_data, []); // Handlebars compatibility
+    if (objData) _data = getKeys(_data, []);
     if (_isArray || objData) {
       if (negative) return !_data.length ? func(_data) : '';
       for (var n = 0, l = _data.length, out = ''; n < l; n++) {
@@ -267,7 +267,7 @@ function section(_this, func, key, vars, negative) {
 
         data = getDataSource(data, data.extra, loopData, helpers);
         out = out + func(data);
-        data.path.pop();
+        data.path.pop(); // jump back out of scope-level for next iteration
         data.helpers.pop();
       }
       return out;
