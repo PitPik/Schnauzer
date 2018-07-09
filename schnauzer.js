@@ -5,7 +5,7 @@
     function () { return factory(root); });
   else root.Schnauzer = factory(root);
 }(this, function SchnauzerFactory(root, undefined, help) { 'use strict';
-// Schnauzer 5.59 KB, 2.40 KB, Mustage 5.50 KB, 2.27 KB, Handlebars 74.20 KB, 21.86 KB
+// Schnauzer 5.43 KB, 2.40 KB, Mustage 5.50 KB, 2.27 KB, Handlebars 74.20 KB, 21.86 KB
 var Schnauzer = function(template, options) {
     this.version = '1.0.0';
     this.options = {
@@ -21,11 +21,7 @@ var Schnauzer = function(template, options) {
         '=': '&#x3D;'
       },
       doEscape: true,
-      helpers: {
-        if: function(txt, $1) { return txt.split('{{else}}')[!!this.getData($1).value ? 0 : 1] },
-        else: function() { return '{{else}}' },
-        unless: function(txt, $1) { return this.getData($1).value ? '' : txt },
-      },
+      helpers: {},
       partials: {},
       recursion: 'self',
       characters: '$"<>%-=@°',
@@ -35,13 +31,7 @@ var Schnauzer = function(template, options) {
   },
   init = function(_this, options, template) {
     for (var option in options) {
-      if (option === 'helpers') {
-        for (var helper in options[option]) {
-          _this.registerHelper(helper, options[option][helper]);
-        }
-      } else {
-        _this.options[option] = options[option];
-      }
+      _this.options[option] = options[option];
     }
     help = 1; // counter helper for nestings
     options = _this.options;
@@ -258,34 +248,36 @@ function variable(_this, html) {
 }
 
 function addToHelper(helpers, keys, key, value) {
-  helpers[keys[0]] = value;
-  helpers[keys[1]] = key;
+  if (keys) { helpers[keys[0]] = value;  helpers[keys[1]] = key; }
+  return helpers;
 }
 
 function section(_this, func, key, vars, negative) {
-  var specialKey = key.match(/^(each|with)°/) || []; // Handlebars compatibility
+  var specialKey = key.match(/^(each|with|if|unless)°/) || []; // Handlebars compatibility
   var isEach = specialKey[1] === 'each';
+  var isUnless = specialKey[1] === 'unless';
+  var isIf = isUnless || specialKey[1] === 'if';
   var keys = key.split(/\s+as\s+\|/);
 
   key = keys.shift().split(/\s+/)[0]; // remove waste
   key = getVar(specialKey[0] ? key.replace(specialKey[0], '') : key);
   keys = keys[0] && keys[0].replace(/\|/g, '').split(/\s+/);
+
   return function fastLoop(data) {
     var _data = findData(data, key.name, key.keys, key.depth);
     var _isArray = isArray(_data);
     var isObject = !_isArray && typeof _data === 'object';
     var objData = isEach && isObject && _data; // Handlebars compatibility
 
-    if (objData) _data = getKeys(_data, []);
+    _data = isUnless ? !_data : objData ? getKeys(_data, []) : _data;
     if (_isArray || objData) {
       if (negative) return !_data.length ? func(_data) : '';
       for (var n = 0, l = _data.length, out = ''; n < l; n++) {
         var loopData = _isArray ? _data[n] : objData[_data[n]];
-        var helpers = {'@index': '' + n, '@last': n === l - 1, '@first': !n,
-          '.': loopData, 'this': loopData, '@key': _isArray ? n : _data[n] };
-
-        if (keys) addToHelper(helpers, keys, _isArray ? n : _data[n], loopData);
-        data = getDataSource(data, data.extra, loopData, helpers);
+        data = getDataSource(data, data.extra, loopData,
+          addToHelper({ '@index': '' + n, '@last': n === l - 1, '@first': !n,
+            '.': loopData, 'this': loopData, '@key': _isArray ? n : _data[n] },
+            keys, _isArray ? n : _data[n], loopData));
         out = out + func(data);
         data.path.pop(); // jump back out of scope-level for next iteration
         data.helpers.pop();
@@ -293,14 +285,14 @@ function section(_this, func, key, vars, negative) {
       return out;
     }
     var foundData = isObject ? _data : data; // is object
-    var _func = (!key.isStrict && _this.options.helpers[key.name]) || (isFunction(_data) && _data);
+    var _func = (!key.isStrict && _this.options.helpers[key.name]) ||
+      (isFunction(_data) && _data);
     if (_func) { // helpers or inline functions
       return _func.apply(tools(_this, data), [func(data)].concat(vars.split(/\s+/)));
     }
     if (negative && !_data || !negative && _data) { // regular replace
-      helpers = { '.': _data, 'this': _data, '@key': key.name };
-      if (keys) addToHelper(helpers, keys, key.name, _data);
-      return func(getDataSource(data, data.extra, foundData, helpers));
+      return func(isIf ? data : getDataSource(data, data.extra, foundData,
+        addToHelper({ '.': _data, 'this': _data, '@key': key.name }, keys, key.name, _data)));
     }
   }
 }
@@ -320,11 +312,11 @@ function sizzleTemplate(_this, html) {
       if (index !== -1) { // only if nesting occures
         nesting.push(counter--);
         stop = Array(++help).join('°');
-        return replacer + ($3 ? ' ' + $3 : $3) + $6 + $4.substring(0, index) + $5 + $1 + stop + $2 +
-          $4.substring(index + replacer.length) + $5 + '/' + stop + $2 + $6;
+        return replacer + ($3 ? ' ' + $3 : $3) + $6 + $4.substring(0, index) + $5 + $1 +
+          stop + $2 + $4.substring(index + replacer.length) + $5 + '/' + stop + $2 + $6;
       }
       $2 = $2.replace(_this.stopRegExp, '');
-      if ($2 === 'each' || $2 === 'with') { $2 = $2 + '°' + $3; $3 = ''; } // Handlebars helpers
+      if ($2.match(/^(each|with|if|unless)$/)) { $2 = $2 + '°' + $3; $3 = ''; }
       partCollector.push(_this.partRegExp.test($4) ?
         section(_this, sizzleTemplate(_this, $4), $2, $3, $1 === '^') :
         section(_this, variable(_this, $4), $2, $3, $1 === '^'));
