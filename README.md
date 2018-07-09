@@ -12,6 +12,49 @@ You can use schnauzer.js to render templates anywhere you can use JavaScript. Th
 
 schnauzer.js ships with support for both the [CommonJS](http://www.commonjs.org/) module API and the [Asynchronous Module Definition](https://github.com/amdjs/amdjs-api/wiki/AMD) API, or AMD.
 
+## Main differences to Handlebars
+
+Schnauzer and Handlebars do almost the same thing and use almost the same syntax, but there is a difference in size and performance. Schnauzer has the same power as Handlebars but the size of Mustache.
+
+### The ```else``` helper
+
+```if```, ```with``` and ```each``` helpers in Handlebars can also contain an ```else```.
+In Schnauzer this is not possible. You need to create a new block and use ```unless``` instead.
+
+### The ```as``` in ```with``` and ```each``` helpers
+
+```as``` works similar to Handlebar's ```as``` except that if you nest blocks, the variables don't get pushed to the next scope. So you would have to use ```../``` for a previous scoped variable:
+
+```handlebars
+{{#each array as |value key|}}
+  {{#each child as |childValue childKey|}}
+    {{../key}} - {{childKey}}. {{childValue}}
+  {{/each}}
+{{/each}}
+```
+
+Recognice the ```{{../key}}``` that differs from Handlebars.
+
+### ```@key``` in ```with``` and ```as |value key|``` in ```with```
+
+Handlebars doesn't support keys in those cases, Schnauzer does. In deeper contexts it can also be read out with ```../@key```, ```@../key``` or ```../key```, depending on the situation.
+
+### ```@key```, ```@index```, ```@first```, ```@last``` in upper contexts
+
+If you need to read out one of those helper variables further up in the tree there is 2 ways to do so.
+
+ - The Handlebars way: ```@../key```, ...
+ - Alternative way: ```../@key```, ...
+
+### There is no tag switching on the fly in Schnauzer
+
+So ```{{=<%}}``` will be ignored and removed from the output just like a comment.
+
+### Helpers
+
+do the same in Schnauzer although the API is totally different. See below on how to make helpers.
+
+
 * * *
 
 ## Usage
