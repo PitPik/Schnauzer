@@ -455,11 +455,35 @@ Any of the above would cause the name field on the current context to be used ra
 
 ### Helpers
 
-As with Handlebars you can also use helpers in Schnauzer to make your live easier. Schnauzer helpers can be accessed from any context in a template. You can register a helper with the Schnauzer.registerHelper method.
+As with Handlebars you can also use helpers in Schnauzer to make your live easier. Schnauzer helpers can be accessed from any context in a template. You can register a helper with the ```Schnauzer.registerHelper``` method.
 Helpers and their function are explained in the API section above.
 
-Built in helpers are: ```#if``` with ```else``` , ```#with```, ```#each``` and ```#unless```.
-```#with``` and ```#each``` can not be uses with ```else``` like in Handlebars.
+Built in helpers are: ```#if```, ```#with```, ```#each``` and ```#unless```, although there is no ```else``` like in Handlebars but ```as``` in ```#with``` and ```#each``` is supported (within one level of context).
+
+#### replacing ```else```
+
+Instead of else you van use the ```#unless``` helper. So instead of
+```Handlebars
+{{#if author}}
+  <h2>By {{author.firstName}} {{author.lastName}}</h2>
+{{else}}
+  No Author available.
+{{/if}}
+```
+
+you can write:
+
+```Handlebars
+{{#if author}}
+  <h2>By {{author.firstName}} {{author.lastName}}</h2>
+{{/if}}
+{{#unless author}}
+  No Author available.
+{{/unless}}
+```
+
+This is due to performance issues when Schnauzer would have to analyse a tag that actually looks like a inline tag but should act like a block tag.
+It is a little more writing but way better performance.
 
 ```#with``` can also be used with block parameters to define known references in the current block.
 
