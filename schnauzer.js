@@ -268,8 +268,7 @@ function section(_this, func, name, vars, negative, sections) {
   return function fastLoop(data) {
     var _data = findData(data, name.name, name.keys, name.depth);
     var _isArray = isArray(_data);
-    var isObject = !_isArray && typeof _data === 'object';
-    var objData = isEach && isObject && _data; // Handlebars compatibility
+    var objData = isEach && !_isArray && typeof _data === 'object' && _data;
 
     _data = isUnless ? !_data : objData ? getKeys(_data, []) : _data;
     if (_isArray || objData) {
@@ -286,15 +285,13 @@ function section(_this, func, name, vars, negative, sections) {
       }
       return out;
     }
-    var foundData = isObject ? _data : data.data;
-    console.log(foundData)
     var _func = (!name.isStrict && _this.options.helpers[name.name]) ||
       (isFunction(_data) && _data);
     if (_func) { // helpers or inline functions
       return _func.apply(tools(_this, data), [func[0](data, sections)].concat(vars.split(/\s+/)));
     }
     if (negative && !_data || !negative && _data) { // regular replace
-      return func[0](isIf ? data : getDataSource(data, data.extra, foundData,
+      return func[0](isIf ? data : getDataSource(data, data.extra, _data,
         addToHelper({ '.': _data, 'this': _data, '@key': name.name },
           keys, name.name, _data)), sections);
     }
