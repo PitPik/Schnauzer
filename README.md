@@ -19,7 +19,7 @@ Schnauzer and Handlebars do almost the same thing and use almost the same syntax
 ### The ```else``` helper
 
 ```if```, ```with``` and ```each``` helpers in Handlebars can also contain an ```else```.
-In Schnauzer this is also with regular sections possible possible.
+In Schnauzer this is also with regular sections possible.
 
 ### The ```as``` in ```with``` and ```each``` helpers
 
