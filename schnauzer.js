@@ -231,6 +231,7 @@ function inline(_this, html) {
       if (part === undefined) continue; // no other functions, just html
       if (part.value === '->') {
         out += sections[part.data[0]](data) || '';
+        continue;
       }
       value = part.value;
       if (part.isPartial) { // partial -> executor
@@ -285,7 +286,8 @@ function section(_this, func, name, vars, negative, sections) {
       }
       return out;
     }
-    var foundData = isObject ? _data : data; //data; // is object
+    var foundData = isObject ? _data : data.data;
+    console.log(foundData)
     var _func = (!name.isStrict && _this.options.helpers[name.name]) ||
       (isFunction(_data) && _data);
     if (_func) { // helpers or inline functions
