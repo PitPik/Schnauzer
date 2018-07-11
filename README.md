@@ -19,7 +19,7 @@ Schnauzer and Handlebars do almost the same thing and use almost the same syntax
 ### The ```else``` helper
 
 ```if```, ```with``` and ```each``` helpers in Handlebars can also contain an ```else```.
-In Schnauzer this is not possible. You need to create a new block and use ```unless``` instead.
+In Schnauzer this is also with regular sections possible possible.
 
 ### The ```as``` in ```with``` and ```each``` helpers
 
@@ -33,7 +33,7 @@ In Schnauzer this is not possible. You need to create a new block and use ```unl
 {{/each}}
 ```
 
-Recognice the ```{{../key}}``` that differs from Handlebars.
+Notice the ```{{../key}}``` that differs from Handlebars.
 
 ### ```@key``` in ```with``` and ```as |value key|``` in ```with```
 
@@ -501,32 +501,8 @@ Any of the above would cause the name field on the current context to be used ra
 As with Handlebars you can also use helpers in Schnauzer to make your live easier. Schnauzer helpers can be accessed from any context in a template. You can register a helper with the ```Schnauzer.registerHelper``` method.
 Helpers and their function are explained in the API section above.
 
-Built in helpers are: ```#if```, ```#with```, ```#each``` and ```#unless```, although there is no ```else``` like in Handlebars but ```as``` in ```#with``` and ```#each``` is supported (within one level of context).
-
-#### replacing ```else```
-
-Instead of else you van use the ```#unless``` helper. So instead of
-```Handlebars
-{{#if author}}
-  <h2>By {{author.firstName}} {{author.lastName}}</h2>
-{{else}}
-  No Author available.
-{{/if}}
-```
-
-you can write:
-
-```Handlebars
-{{#if author}}
-  <h2>By {{author.firstName}} {{author.lastName}}</h2>
-{{/if}}
-{{#unless author}}
-  No Author available.
-{{/unless}}
-```
-
-This is due to performance issues when Schnauzer would have to analyse a tag that actually looks like a inline tag but should act like a block tag.
-It is a little more writing but way better performance.
+Built in helpers are: ```#if```, ```#with```, ```#each``` and ```#unless```;
+```as``` in ```#with``` and ```#each``` is supported (within one level of context).
 
 ```#with``` can also be used with block parameters to define known references in the current block.
 
