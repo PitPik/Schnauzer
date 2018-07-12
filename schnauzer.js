@@ -87,8 +87,8 @@ Schnauzer.prototype = {
 return Schnauzer;
 
 function switchTags(_this, tags) {
-  var _tags = _this.options.tags = tags[0] === '{{' ? ['{{2,3}', '}{2,3}'] : tags,
-    chars = _this.options.characters;
+  var _tags = _this.options.tags = tags[0] === '{{' ? ['{{2,3}', '}{2,3}'] : tags;
+  var chars = _this.options.characters;
 
   _this.variableRegExp = new RegExp('(' + _tags[0] + ')' +
     '([>!&=]\\s*)*([\\w\\'+ chars + '\\.\\s*]+)*' + _tags[1], 'g');
@@ -115,10 +115,10 @@ function crawlObjectUp(data, keys) { // faster than while
 }
 
 function findData(data, key, keys, pathDepth) {
-  var seachDepth = (data.path.length - 1) - pathDepth,
-    _data = data.path[seachDepth] || {},
-    helpers = data.helpers[seachDepth - 1] || {},
-    value = helpers[key] !== undefined ? helpers[key] : crawlObjectUp(helpers, keys);
+  var seachDepth = (data.path.length - 1) - pathDepth;
+  var _data = data.path[seachDepth] || {};
+  var helpers = data.helpers[seachDepth - 1] || {};
+  var value = helpers[key] !== undefined ? helpers[key] : crawlObjectUp(helpers, keys);
 
   if (value === undefined) {
       value = _data[key] !== undefined ? _data[key] : crawlObjectUp(_data, keys);
@@ -182,16 +182,16 @@ function addToHelper(helpers, keys, name, value) {
 }
 
 function inline(_this, html) {
-  var keys = [],
-    options = _this.options;
+  var keys = [];
+  var options = _this.options;
 
   html = html.replace(_this.variableRegExp, function(all, start, type, vars) {
-    var char0 =  type && type.charAt(0) || '',
-      isPartial = char0 === '>',
-      isSelf = false,
-      name = '',
-      isStrict = false,
-      _data = {};
+    var char0 =  type && type.charAt(0) || '';
+    var isPartial = char0 === '>';
+    var isSelf = false;
+    var name = '';
+    var isStrict = false;
+    var _data = {};
 
     if (char0 === '!' || char0 === '=') return '';
     vars = vars.split(/\s+/); // split variables
@@ -293,8 +293,8 @@ function section(_this, func, name, vars, isNot, sections) {
 }
 
 function sizzleTemplate(_this, html) {
-  var _html = '',
-    sections = [];
+  var _html = '';
+  var sections = [];
 
   while (_html !== html && (_html = html)) {
     html = html.replace(_this.sectionRegExp, function(all, start, type, name, vars, end, text) {
