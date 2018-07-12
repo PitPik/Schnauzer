@@ -5,7 +5,7 @@
     function () { return factory(root); });
   else root.Schnauzer = factory(root);
 }(this, function SchnauzerFactory(root, undefined, help) { 'use strict';
-// Schnauzer 4.97 KB, 2.23 KB, Mustage 5.50 KB, 2.27 KB, Handlebars 74.20 KB, 21.86 KB
+// Schnauzer 4.95 KB, 2.23 KB, Mustage 5.50 KB, 2.27 KB, Handlebars 74.20 KB, 21.86 KB
 var Schnauzer = function(template, options) {
     this.version = '1.1.0';
     this.options = {
@@ -225,16 +225,13 @@ function inline(_this, html) {
   }).split(options.splitter);
 
   return function fastReplace(data, sections) {
-    for (var n = 0, l = html.length, out = '', _out, _data, part; n < l; n++) {
+    for (var n = 0, l = html.length, out = '', _out, _func, _data, newData, part; n < l; n++) {
       out = out + html[n];
       part = keys[n];
       if (part === undefined) continue; // no other functions, just html
-      if (part.inline) {
-        out += sections[part.inline](data) || '';
-        continue;
-      }
+      if (part.inline) { out += sections[part.inline](data) || ''; continue; }
       if (part.isPartial) { // partial -> executor
-        var newData = {}; // create new scope (but keep functions in scope)
+        newData = {}; // create new scope (but keep functions in scope)
         for (var item in data.data) newData[item] = data.data[item];
         for (var key in part.data) {
           _data = part.data[key];
@@ -244,7 +241,7 @@ function inline(_this, html) {
         _out = (part.value || _this.partials[options.recursion])(getSource(newData, data.extra));
       } else {
         _out = findData(data, part.value, part.keys, part.depth);
-        var _func = !part.isStrict && options.helpers[part.value] || isFunction(_out) && _out;
+        _func = !part.isStrict && options.helpers[part.value] || isFunction(_out) && _out;
         _out = _func ? _func.apply(tools(_this, data), part.data) :
           _out && (part.isUnescaped ? _out : escapeHtml(_out, _this));
       }
@@ -311,7 +308,6 @@ function sizzleTemplate(_this, html) {
       outerInline = inline(_this, html);
       break;
     }
-    sections.push(undefined);
   }
   return function executor(data, extra) {
     return outerInline((!data.__schnauzer || extra) &&
