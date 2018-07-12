@@ -119,6 +119,7 @@ function findData(data, key, keys, pathDepth) {
     _data = data.path[seachDepth] || {},
     helpers = data.helpers[seachDepth - 1] || {},
     value = helpers[key] !== undefined ? helpers[key] : crawlObjectUp(helpers, keys);
+
   if (value === undefined) {
       value = _data[key] !== undefined ? _data[key] : crawlObjectUp(_data, keys);
   }
@@ -264,8 +265,8 @@ function section(_this, func, name, vars, isNot, sections) {
     _data = type === 'unless' ? !_data : objData ? getKeys(_data, []) : _data;
     if (_isArray || objData) {
       if (isNot) return !_data.length ? func[0](_data, sections) : '';
-      for (var n = 0, l = _data.length, out = ''; n < l; n++) {
-        var loopData = _isArray ? _data[n] : objData[_data[n]];
+      for (var n = 0, l = _data.length, out = '', loopData; n < l; n++) {
+        loopData = _isArray ? _data[n] : objData[_data[n]];
         data = getSource(data, data.extra, loopData,
           addToHelper({ '@index': '' + n, '@last': n === l - 1, '@first': !n,
             '.': loopData, 'this': loopData, '@key': _isArray ? n : _data[n] },
