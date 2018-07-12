@@ -4,8 +4,8 @@
   else if (typeof define === 'function' && define.amd) define('schnauzer', [],
     function () { return factory(root); });
   else root.Schnauzer = factory(root);
-}(this, function SchnauzerFactory(root, undefined, help) { 'use strict';
-// Schnauzer 4.93 KB, 2.21 KB, Mustage 5.50 KB, 2.27 KB, Handlebars 74.20 KB, 21.86 KB
+}(this, function SchnauzerFactory(root, undefined) { 'use strict';
+// Schnauzer 4.93 KB, 2.20 KB, Mustage 5.50 KB, 2.27 KB, Handlebars 74.20 KB, 21.86 KB
 var Schnauzer = function(template, options) {
     this.version = '1.1.0';
     this.options = {
@@ -33,7 +33,6 @@ var Schnauzer = function(template, options) {
     for (var option in options) {
       _this.options[option] = options[option];
     }
-    help = 1; // counter helper for nestings
     options = _this.options;
     _this.entityRegExp = (function(entityMap, output){
       for (var symbol in entityMap) {
