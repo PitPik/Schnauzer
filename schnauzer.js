@@ -257,8 +257,8 @@ function inline(_this, html) {
 
 function section(_this, func, name, vars, negative, sections) {
   var type = name;
+
   name = getVar(/^(each|with|if|unless)/.test(name) ? vars.shift() : name);
-  var keys = vars[0] === 'as' && [vars[1], vars[2] && vars[2]];
 
   return function fastLoop(data) {
     var _data = findData(data, name.name, name.keys, name.depth);
@@ -273,7 +273,7 @@ function section(_this, func, name, vars, negative, sections) {
         data = getDataSource(data, data.extra, loopData,
           addToHelper({ '@index': '' + n, '@last': n === l - 1, '@first': !n,
             '.': loopData, 'this': loopData, '@key': _isArray ? n : _data[n] },
-            keys, _isArray ? n : _data[n], loopData));
+            [vars[1], vars[2]], _isArray ? n : _data[n], loopData));
         out = out + func[0](data, sections);
         data.path.pop(); // jump back out of scope-level for next iteration
         data.helpers.pop();
@@ -289,7 +289,7 @@ function section(_this, func, name, vars, negative, sections) {
       return func[0](type === 'unless' || type === 'if' ? data :
         getDataSource(data, data.extra, _data,
         addToHelper({ '.': _data, 'this': _data, '@key': name.name },
-          keys, name.name, _data)), sections);
+          [vars[1], vars[2]], name.name, _data)), sections);
     }
    return func[1] && func[1](data, sections); // else
   }
