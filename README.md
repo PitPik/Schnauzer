@@ -15,6 +15,7 @@ schnauzer.js ships with support for both the [CommonJS](http://www.commonjs.org/
 ## Main differences to Handlebars
 
 Schnauzer and Handlebars do almost the same thing and use almost the same syntax, but there is a difference in size and performance. Schnauzer has the same power as Handlebars but the size of Mustache.
+Schnauzer does not throw errors when markup is not valid, it only just doesn't process it at all.
 
 ### The ```else``` helper
 
