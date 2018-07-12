@@ -5,7 +5,7 @@
     function () { return factory(root); });
   else root.Schnauzer = factory(root);
 }(this, function SchnauzerFactory(root, undefined, help) { 'use strict';
-// Schnauzer 5.17 KB, 2.36 KB, Mustage 5.50 KB, 2.27 KB, Handlebars 74.20 KB, 21.86 KB
+// Schnauzer 5.04 KB, 2.26 KB, Mustage 5.50 KB, 2.27 KB, Handlebars 74.20 KB, 21.86 KB
 var Schnauzer = function(template, options) {
     this.version = '1.1.0';
     this.options = {
@@ -256,21 +256,16 @@ function inline(_this, html) {
 }
 
 function section(_this, func, name, vars, negative, sections) {
-  var specialKey = name.match(/^(each|with|if|unless)°/) || []; // Handlebars compatibility
-  var isEach = specialKey[1] === 'each';
-  var isUnless = specialKey[1] === 'unless';
-  var isIf = isUnless || specialKey[1] === 'if';
-  var keys = name.split(/\s+as\s+\|/);
+  var type = name;
+  name = getVar(/^(each|with|if|unless)/.test(name) ? vars.shift() : name);
+  var keys = vars[0] === 'as' && [vars[1], vars[2] && vars[2]];
 
-  name = keys.shift().split(/\s+/)[0]; // remove waste
-  name = getVar(specialKey[0] ? name.replace(specialKey[0], '') : name);
-  keys = keys[0] && keys[0].replace(/\|/g, '').split(/\s+/);
   return function fastLoop(data) {
     var _data = findData(data, name.name, name.keys, name.depth);
     var _isArray = isArray(_data);
-    var objData = isEach && !_isArray && typeof _data === 'object' && _data;
+    var objData = type === 'each' && !_isArray && typeof _data === 'object' && _data;
 
-    _data = isUnless ? !_data : objData ? getKeys(_data, []) : _data;
+    _data = type === 'unless' ? !_data : objData ? getKeys(_data, []) : _data;
     if (_isArray || objData) {
       if (negative) return !_data.length ? func[0](_data, sections) : '';
       for (var n = 0, l = _data.length, out = ''; n < l; n++) {
@@ -288,43 +283,40 @@ function section(_this, func, name, vars, negative, sections) {
     var _func = (!name.isStrict && _this.options.helpers[name.name]) ||
       (isFunction(_data) && _data);
     if (_func) { // helpers or inline functions
-      return _func.apply(tools(_this, data), [func[0](data, sections)].concat(vars.split(/\s+/)));
+      return _func.apply(tools(_this, data), [func[0](data, sections)].concat(vars));
     }
     if (negative && !_data || !negative && _data) { // regular replace
-      return func[0](isIf ? data : getDataSource(data, data.extra, _data,
+      return func[0](type === 'unless' || type === 'if' ? data :
+        getDataSource(data, data.extra, _data,
         addToHelper({ '.': _data, 'this': _data, '@key': name.name },
           keys, name.name, _data)), sections);
     }
-    if (func[1]) { // else
-      return func[1](data, sections);
-    }
+   return func[1] && func[1](data, sections); // else
   }
 }
 
 function sizzleTemplate(_this, html) {
   var _html = '',
-    sectionCollector = [],
+    sections = [],
     outerInline = function(){}; // TODO: better name
 
   while (true) {
     _html = html;
     html = html.replace(_this.sectionRegExp, function(all, start, type, name, vars, end, text) {
-      if (name.match(/^(each|with|if|unless)$/)) { name = name + '°' + vars; vars = ''; }
       text = text.split('{{else}}');
-      sectionCollector.push(section(_this,
-        [inline(_this, text[0]), text[1] && inline(_this, text[1])],
-        name, vars, type === '^', sectionCollector));
-      return ('{{-> ' + (sectionCollector.length - 1) + '}}');
+      sections.push(section(_this, [inline(_this, text[0]), text[1] && inline(_this, text[1])],
+        name, vars && vars.replace(/\|/g, '').split(/\s+/) || [], type === '^', sections));
+      return ('{{-> ' + (sections.length - 1) + '}}');
     });
     if (_html === html) {
       outerInline = inline(_this, html);
       break;
     }
-    sectionCollector.push(undefined);
+    sections.push(undefined);
   }
   return function executor(data, extra) {
     return outerInline((!data.__schnauzer || extra) &&
-      getDataSource(data, extra) || data, sectionCollector);
+      getDataSource(data, extra) || data, sections);
   }
 }
 
