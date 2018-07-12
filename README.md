@@ -14,13 +14,14 @@ schnauzer.js ships with support for both the [CommonJS](http://www.commonjs.org/
 
 ## Main differences to Handlebars
 
-Schnauzer and Handlebars do almost the same thing and use almost the same syntax, but there is a difference in size and performance. Schnauzer has the same power as Handlebars but the size of Mustache.
+Schnauzer and Handlebars do almost the same thing and use almost the same syntax, but there is a difference in size and performance. Schnauzer has the same power as Handlebars but the size of Mustache and a higher performance.
 Schnauzer does not throw errors when markup is not valid, it only just doesn't process it at all.
+There are no checks for "ownProperty" therefore even faster and better usable for Web UI components. In case you need to check for objects' own properties you can create your own helper.
 
-### The ```else``` helper
+### The ```else``` inside built-in helpers
 
-```if```, ```with``` and ```each``` helpers in Handlebars can also contain an ```else```.
-In Schnauzer this is also with regular sections possible.
+```if```, ```with``` and ```each``` helpers in Handlebars can contain an ```else```.
+In Schnauzer this is also possible with regular sections.
 
 ### The ```as``` in ```with``` and ```each``` helpers
 
@@ -34,7 +35,7 @@ In Schnauzer this is also with regular sections possible.
 {{/each}}
 ```
 
-Notice the ```{{../key}}``` that differs from Handlebars.
+Notice the ```{{../key}}``` that differs from Handlebars'.
 
 ### ```@key``` in ```with``` and ```as |value key|``` in ```with```
 
@@ -49,12 +50,11 @@ If you need to read out one of those helper variables further up in the tree the
 
 ### There is no tag switching on the fly in Schnauzer
 
-So ```{{=<%}}``` will be ignored and removed from the output just like a comment.
+So ```{{=<%}}``` will be ignored and removed from the output just like a comment. But you can initially switch tags with ```setTags()```.
 
 ### Helpers
 
 do the same in Schnauzer although the API is totally different. See below on how to make helpers.
-
 
 * * *
 
