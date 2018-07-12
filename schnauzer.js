@@ -307,8 +307,7 @@ function sizzleTemplate(_this, html) {
   outerInline = inline(_this, html);
 
   return function executor(data, extra) {
-    return outerInline((!data.__schnauzer || extra) &&
-      getSource(data, extra) || data, sections);
+    return outerInline(!data.__schnauzer || extra ? getSource(data, extra) : data, sections);
   }
 }
 
