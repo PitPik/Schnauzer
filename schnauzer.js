@@ -5,7 +5,7 @@
     function () { return factory(root); });
   else root.Schnauzer = factory(root);
 }(this, function SchnauzerFactory(root, undefined, help) { 'use strict';
-// Schnauzer 4.95 KB, 2.23 KB, Mustage 5.50 KB, 2.27 KB, Handlebars 74.20 KB, 21.86 KB
+// Schnauzer 4.94 KB, 2.22 KB, Mustage 5.50 KB, 2.27 KB, Handlebars 74.20 KB, 21.86 KB
 var Schnauzer = function(template, options) {
     this.version = '1.1.0';
     this.options = {
@@ -296,19 +296,16 @@ function sizzleTemplate(_this, html) {
     sections = [],
     outerInline = function(){}; // TODO: better name
 
-  while (true) {
-    _html = html;
+  while (_html !== html && (_html = html)) {
     html = html.replace(_this.sectionRegExp, function(all, start, type, name, vars, end, text) {
       text = text.split('{{else}}');
       sections.push(section(_this, [inline(_this, text[0]), text[1] && inline(_this, text[1])],
         name, vars && vars.replace(/\|/g, '').split(/\s+/) || [], type === '^', sections));
       return ('{{-> ' + (sections.length - 1) + '}}');
     });
-    if (_html === html) {
-      outerInline = inline(_this, html);
-      break;
-    }
   }
+  outerInline = inline(_this, html);
+
   return function executor(data, extra) {
     return outerInline((!data.__schnauzer || extra) &&
       getSource(data, extra) || data, sections);
