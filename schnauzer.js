@@ -117,10 +117,10 @@ function findData(data, key, keys, pathDepth) {
   var seachDepth = (data.path.length - 1) - pathDepth;
   var _data = data.path[seachDepth] || {};
   var helpers = data.helpers[seachDepth - 1] || {};
-  var value = _data[key] !== undefined ? _data[key] : crawlObjectUp(_data, keys);
+  var value = helpers[key] !== undefined ? helpers[key] : crawlObjectUp(helpers, keys);
 
   if (value === undefined) {
-    value = helpers[key] !== undefined ? helpers[key] : crawlObjectUp(helpers, keys);
+      value = _data[key] !== undefined ? _data[key] : crawlObjectUp(_data, keys);
   }
   if (value !== undefined) return value;
   for (var n = data.extra.length; n--; ) {
@@ -153,7 +153,7 @@ function getVar(text, data) {
     keys = value.split(/[\.\/]/);
   }
   return {
-    name: parts.length > 1 ? parts[0] : value.replace(/^.\//, ''),
+    name: parts.length > 1 ? parts[0] : value,
     value: isString || !data ? value : findData(data, value, keys, depth),
     isString: isString,
     isStrict: isStrict,
