@@ -195,8 +195,8 @@ function inline(_this, html) {
     if (char0 === '!' || char0 === '=') return '';
     vars = vars.split(/\s+/); // split variables
     name = vars.shift();
-    if (name === '->') { // faster approach
-      keys.push({ inline : vars[0] });
+    if (name === '-section-') { // faster approach
+      keys.push({ section : vars[0] });
       return options.splitter;
     }
     if (isPartial) {
@@ -229,7 +229,7 @@ function inline(_this, html) {
       out = out + html[n];
       part = keys[n];
       if (part === undefined) continue; // no other functions, just html
-      if (part.inline) { out += sections[part.inline](data) || ''; continue; }
+      if (part.section) { out += sections[part.section](data) || ''; continue; }
       if (part.isPartial) { // partial -> executor
         newData = {}; // create new scope (but keep functions in scope)
         for (var item in data.data) newData[item] = data.data[item];
@@ -251,7 +251,7 @@ function inline(_this, html) {
   };
 }
 
-function section(_this, func, name, vars, negative, sections) {
+function section(_this, func, name, vars, isNot, sections) {
   var type = name;
   name = getVar(/^(each|with|if|unless)/.test(name) ? vars.shift() : name);
   var keys = vars[0] === 'as' && [vars[1], vars[2]];
@@ -263,7 +263,7 @@ function section(_this, func, name, vars, negative, sections) {
 
     _data = type === 'unless' ? !_data : objData ? getKeys(_data, []) : _data;
     if (_isArray || objData) {
-      if (negative) return !_data.length ? func[0](_data, sections) : '';
+      if (isNot) return !_data.length ? func[0](_data, sections) : '';
       for (var n = 0, l = _data.length, out = ''; n < l; n++) {
         var loopData = _isArray ? _data[n] : objData[_data[n]];
         data = getSource(data, data.extra, loopData,
@@ -281,7 +281,7 @@ function section(_this, func, name, vars, negative, sections) {
     if (_func) { // helpers or inline functions
       return _func.apply(tools(_this, data), [func[0](data, sections)].concat(vars));
     }
-    if (negative && !_data || !negative && _data) { // regular replace
+    if (isNot && !_data || !isNot && _data) { // regular replace
       return func[0](type === 'unless' || type === 'if' ? data :
         getSource(data, data.extra, _data,
         addToHelper({ '.': _data, 'this': _data, '@key': name.name },
@@ -300,7 +300,7 @@ function sizzleTemplate(_this, html) {
       text = text.split('{{else}}');
       sections.push(section(_this, [inline(_this, text[0]), text[1] && inline(_this, text[1])],
         name, vars && vars.replace(/\|/g, '').split(/\s+/) || [], type === '^', sections));
-      return ('{{-> ' + (sections.length - 1) + '}}');
+      return ('{{-section- ' + (sections.length - 1) + '}}');
     });
   }
   html = inline(_this, html);
