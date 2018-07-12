@@ -95,7 +95,6 @@ function switchTags(_this, tags) {
   _this.sectionRegExp = new RegExp('(' + _tags[0] + ')([#^])([\\w' + chars + ']*)' +
     '(?:\\s+([\\w$\\s|./' + chars + ']*))*(' + _tags[1] + ')((?:(?!\\1[#^])[\\S\\s])*?)' +
     '\\1\\/\\3\\5', 'g');
-  _this.escapeRegExp = new RegExp(_tags[0]);
 }
 
 function getSource(data, extra, newData, helpers) {
@@ -216,8 +215,7 @@ function inline(_this, html) {
       value: isPartial ? _this.partials[name] : name,
       data: isPartial ? _data : vars,
       isPartial: isPartial,
-      isUnescaped: !options.doEscape || char0 === '&' ||
-        (_this.escapeRegExp.test(start) && start.length === 3),
+      isUnescaped: !options.doEscape || char0 === '&' || start === '{{{',
       isSelf: isSelf,
       depth: isPartial ? undefined : _data.depth,
       isStrict: isStrict,
