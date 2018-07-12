@@ -24,7 +24,7 @@ var Schnauzer = function(template, options) {
       helpers: {},
       partials: {},
       recursion: 'self',
-      characters: '$"<>%-=@°|./',
+      characters: '$"<>%-=@',
       splitter: '|##|'
     };
     init(this, options || {}, template);
@@ -41,7 +41,6 @@ var Schnauzer = function(template, options) {
       }
       return new RegExp('[' + output + ']', 'g');
     })(options.entityMap, []);
-    _this.stopRegExp = new RegExp(/^°+/);
     switchTags(_this, options.tags);
     _this.partials = {};
     for (var name in options.partials) {
@@ -94,9 +93,8 @@ function switchTags(_this, tags) {
   _this.variableRegExp = new RegExp('(' + _tags[0] + ')' +
     '([>!&=]\\s*)*([\\w\\'+ chars + '\\.\\s*]+)*' + _tags[1], 'g');
   _this.sectionRegExp = new RegExp('(' + _tags[0] + ')([#^])([\\w' + chars + ']*)' +
-    '(?:\\s+([\\w$\\s' + chars + ']*))*(' + _tags[1] + ')((?:(?!\\1[#^])[\\S\\s])*?)' +
+    '(?:\\s+([\\w$\\s|./' + chars + ']*))*(' + _tags[1] + ')((?:(?!\\1[#^])[\\S\\s])*?)' +
     '\\1\\/\\3\\5', 'g');
-  _this.partRegExp = new RegExp(_tags[0] + '[#\^]');
   _this.escapeRegExp = new RegExp(_tags[0]);
 }
 
