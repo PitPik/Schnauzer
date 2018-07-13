@@ -89,8 +89,10 @@ function switchTags(_this, tags) {
   var _tags = _this.options.tags = tags[0] === '{{' ? ['{{2,3}', '}{2,3}'] : tags;
   var chars = _this.options.characters;
 
+  // _this.variableRegExp = new RegExp('(' + _tags[0] + ')' +
+  //   '([>!&=]\\s*)*([\\w\\'+ chars + '\\.\\s*]+)*' + _tags[1], 'g');
   _this.variableRegExp = new RegExp('(' + _tags[0] + ')' +
-    '([>!&=]\\s*)*([\\w\\'+ chars + '\\.\\s*]+)*' + _tags[1], 'g');
+    '([>!&=])*([\\w\\'+ chars + '\\.]+)\\s*([\\w' + chars + '\\.\\s]*)' + _tags[1], 'g');
   _this.sectionRegExp = new RegExp('(' + _tags[0] + ')([#^])([\\w' + chars + ']*)' +
     '(?:\\s+([\\w$\\s|./' + chars + ']*))*(' + _tags[1] + ')((?:(?!\\1[#^])[\\S\\s])*?)' +
     '\\1\\/\\3\\5', 'g');
@@ -181,21 +183,19 @@ function inline(_this, html) {
   var keys = [];
   var options = _this.options;
 
-  html = html.replace(_this.variableRegExp, function(all, start, type, vars) {
+  html = html.replace(_this.variableRegExp, function(all, start, type, name, vars) {
     var char0 =  type && type.charAt(0) || '';
     var isPartial = char0 === '>';
     var isSelf = false;
-    var name = '';
     var isStrict = false;
     var _data = {};
 
-    if (char0 === '!' || char0 === '=') return '';
-    vars = vars.split(/\s+/); // split variables
-    name = vars.shift();
-    if (name === '-section-') { // faster approach
-      keys.push({ section : vars[0] });
+    if (name === '-section-') {
+      keys.push({ section : vars });
       return options.splitter;
     }
+    if (char0 === '!' || char0 === '=') return '';
+    vars = vars.split(/\s+/); // split variables
     if (isPartial) {
       for (var n = vars.length, tmp = {}; n--; ) {
         tmp = getVar(vars[n]);
