@@ -117,10 +117,10 @@ function findData(data, key, keys, pathDepth) {
   var seachDepth = (data.path.length - 1) - pathDepth;
   var _data = data.path[seachDepth] || {};
   var helpers = data.helpers[seachDepth - 1] || {};
-  var value = _data[key] !== undefined ? _data[key] : crawlObjectUp(_data, keys);
+  var value = helpers[key] !== undefined ? helpers[key] : crawlObjectUp(helpers, keys);
 
-  if (value === undefined) {
-    value = helpers[key] !== undefined ? helpers[key] : crawlObjectUp(helpers, keys);
+  if (value === undefined || keys[0] === '.') {
+    value = _data[key] !== undefined ? _data[key] : crawlObjectUp(_data, keys);
   }
   if (value !== undefined) return value;
   for (var n = data.extra.length; n--; ) {
@@ -146,12 +146,9 @@ function getVar(text, data) {
       value = (path[0] === '@' && '@' || '') + path.pop();
       depth = path.length;
     }
-    name = name.replace(/^(?:\.|this)\//, function() {
-      isStrict = true;
-      return '';
-    });
+    name = name.replace(/^(?:\.|this)\//, function() { isStrict = true; return ''; });
     keys = value.split(/[\.\/]/);
-    value = value.replace(/^\.\//, '');
+    value = value.replace(/^\.\//, function() { isStrict = true; keys[0] = '.'; return ''; });
   }
   return {
     name: parts.length > 1 ? parts[0] : value,
