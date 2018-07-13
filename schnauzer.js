@@ -5,7 +5,7 @@
     function () { return factory(root); });
   else root.Schnauzer = factory(root);
 }(this, function SchnauzerFactory(root, undefined) { 'use strict';
-// Schnauzer 4.96 KB, 2.20 KB, Mustage 5.50 KB, 2.27 KB, Handlebars 74.20 KB, 21.86 KB
+// Schnauzer 4.93 KB, 2.17 KB, Mustage 5.50 KB, 2.27 KB, Handlebars 74.20 KB, 21.86 KB
 var Schnauzer = function(template, options) {
     this.version = '1.1.0';
     this.options = {
@@ -98,10 +98,9 @@ function switchTags(_this, tags) {
 
 function getSource(data, extra, newData, helpers) {
   return {
-    data: newData || data.data || data,
     extra: [].concat(data.extra || [], extra || []),
-    path: [].concat(data.path !== undefined ? data.path : data, newData || []),
-    helpers: [].concat(data.helpers || [], newData && (helpers || {}) || [])
+    path: [].concat(newData || [], data.path !== undefined ? data.path : data),
+    helpers: [].concat(newData && (helpers || {}) || [], data.helpers || [])
   };
 };
 
@@ -113,9 +112,8 @@ function crawlObjectUp(data, keys) { // faster than while
 }
 
 function findData(data, key, keys, pathDepth) {
-  var seachDepth = (data.path.length - 1) - pathDepth;
-  var _data = data.path[seachDepth] || {};
-  var helpers = data.helpers[seachDepth - 1] || {};
+  var _data = data.path[pathDepth] || {};
+  var helpers = data.helpers[pathDepth] || {};
   var value = helpers[key] !== undefined ? helpers[key] : crawlObjectUp(helpers, keys);
 
   if (value === undefined || keys[0] === '.') {
@@ -227,7 +225,7 @@ function inline(_this, html, sections) {
       if (part.section) { out += sections[part.section](data) || ''; continue; }
       if (part.isPartial) { // partial -> executor
         newData = {}; // create new scope (but keep functions in scope)
-        for (var item in data.data) newData[item] = data.data[item];
+        for (var item in data.path[0]) newData[item] = data.path[0][item];
         for (var key in part.data) {
           _data = part.data[key];
           newData[key] = _data.isString ? _data.value :
@@ -266,8 +264,8 @@ function section(_this, func, name, vars, isNot) {
             '.': loopData, 'this': loopData, '@key': _isArray ? n : _data[n] },
             keys, _isArray ? n : _data[n], loopData));
         out = out + func[0](data);
-        data.path.pop(); // jump back out of scope-level for next iteration
-        data.helpers.pop();
+        data.path.shift(); // jump back out of scope-level for next iteration
+        data.helpers.shift();
       }
       return out;
     }
