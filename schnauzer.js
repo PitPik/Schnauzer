@@ -177,7 +177,7 @@ function addToHelper(helpers, keys, name, value) {
   return helpers;
 }
 
-function inline(_this, html) {
+function inline(_this, html, sections) {
   var keys = [];
   var options = _this.options;
 
@@ -219,7 +219,7 @@ function inline(_this, html) {
     return options.splitter;
   }).split(options.splitter);
 
-  return function fastReplace(data, sections) {
+  return function fastReplace(data) {
     for (var n = 0, l = html.length, out = '', _out, _func, _data, newData, part; n < l; n++) {
       out = out + html[n];
       part = keys[n];
@@ -246,7 +246,7 @@ function inline(_this, html) {
   };
 }
 
-function section(_this, func, name, vars, isNot, sections) {
+function section(_this, func, name, vars, isNot) {
   var type = name;
   name = getVar(/^(each|with|if|unless)/.test(name) ? vars.shift() : name);
   var keys = vars[0] === 'as' && [vars[1], vars[2]];
@@ -258,14 +258,14 @@ function section(_this, func, name, vars, isNot, sections) {
 
     _data = type === 'unless' ? !_data : objData ? getKeys(_data, []) : _data;
     if (_isArray || objData) {
-      if (isNot) return !_data.length ? func[0](_data, sections) : '';
+      if (isNot) return !_data.length ? func[0](_data) : '';
       for (var n = 0, l = _data.length, out = '', loopData; n < l; n++) {
         loopData = _isArray ? _data[n] : objData[_data[n]];
         data = getSource(data, data.extra, loopData,
           addToHelper({ '@index': '' + n, '@last': n === l - 1, '@first': !n,
             '.': loopData, 'this': loopData, '@key': _isArray ? n : _data[n] },
             keys, _isArray ? n : _data[n], loopData));
-        out = out + func[0](data, sections);
+        out = out + func[0](data);
         data.path.pop(); // jump back out of scope-level for next iteration
         data.helpers.pop();
       }
@@ -274,15 +274,15 @@ function section(_this, func, name, vars, isNot, sections) {
     var _func = (!name.isStrict && _this.options.helpers[name.name]) ||
       (isFunction(_data) && _data);
     if (_func) { // helpers or inline functions
-      return _func.apply(tools(_this, data), [func[0](data, sections)].concat(vars));
+      return _func.apply(tools(_this, data), [func[0](data)].concat(vars));
     }
     if (isNot && !_data || !isNot && _data) { // regular replace
       return func[0](type === 'unless' || type === 'if' ? data :
         getSource(data, data.extra, _data,
         addToHelper({ '.': _data, 'this': _data, '@key': name.name },
-          keys, name.name, _data)), sections);
+          keys, name.name, _data)));
     }
-   return func[1] && func[1](data, sections); // else
+   return func[1] && func[1](data); // else
   }
 }
 
@@ -293,14 +293,15 @@ function sizzleTemplate(_this, html) {
   while (_html !== html && (_html = html)) {
     html = html.replace(_this.sectionRegExp, function(all, start, type, name, vars, end, text) {
       text = text.split('{{else}}');
-      sections.push(section(_this, [inline(_this, text[0]), text[1] && inline(_this, text[1])],
-        name, vars && vars.replace(/\|/g, '').split(/\s+/) || [], type === '^', sections));
+      sections.push(section(_this, [inline(_this, text[0], sections),
+        text[1] && inline(_this, text[1], sections)],
+        name, vars && vars.replace(/\|/g, '').split(/\s+/) || [], type === '^'));
       return ('{{-section- ' + (sections.length - 1) + '}}');
     });
   }
-  html = inline(_this, html);
+  html = inline(_this, html, sections);
 
-  return function executor(data, extra) { return html(getSource(data, extra), sections) };
+  return function executor(data, extra) { return html(getSource(data, extra)) };
 }
 
 }));
