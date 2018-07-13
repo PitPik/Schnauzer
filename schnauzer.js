@@ -35,9 +35,7 @@ var Schnauzer = function(template, options) {
     }
     options = _this.options;
     _this.entityRegExp = (function(entityMap, output) {
-      for (var symbol in entityMap) {
-        output += symbol;
-      }
+      for (var symbol in entityMap) output += symbol;
       return new RegExp('[' + output + ']', 'g');
     })(options.entityMap, []);
     switchTags(_this, options.tags);
@@ -134,7 +132,7 @@ function getVar(text, data) {
   var depth = 0;
   var keys = [];
   var path = [];
-  var isStrict = false;
+  var strict = false;
 
   if (isString) {
     value = value.replace(/(?:^['"]|['"]$)/g, '');
@@ -144,15 +142,15 @@ function getVar(text, data) {
       value = (path[0] === '@' && '@' || '') + path.pop();
       depth = path.length;
     }
-    name = name.replace(/^(?:\.|this)\//, function() { isStrict = true; return ''; });
+    name = name.replace(/^(?:\.|this)\//, function() { strict = true; return ''; });
     keys = value.split(/[\.\/]/);
-    value = value.replace(/^\.\//, function() { isStrict = true; keys[0] = '.'; return ''; });
+    value = value.replace(/^\.\//, function() { strict = true; keys[0] = '.'; return ''; });
   }
   return {
     name: parts.length > 1 ? parts[0] : value,
     value: isString || !data ? value : findData(data, value, keys, depth),
     isString: isString,
-    isStrict: isStrict,
+    strict: strict,
     keys: keys,
     depth: depth,
   };
@@ -184,7 +182,7 @@ function inline(_this, html, sections) {
     var char0 =  type && type.charAt(0) || '';
     var isPartial = char0 === '>';
     var isSelf = false;
-    var isStrict = false;
+    var strict = false;
     var _data = {};
 
     if (name === '-section-') {
@@ -200,7 +198,7 @@ function inline(_this, html, sections) {
       }
     } else {
       _data = getVar(name);
-      isStrict = _data.isStrict;
+      strict = _data.strict;
       name = _data.name;
     }
     isSelf = name === options.recursion;
@@ -212,7 +210,7 @@ function inline(_this, html, sections) {
       isUnescaped: !options.doEscape || char0 === '&' || start === '{{{',
       isSelf: isSelf,
       depth: isPartial ? undefined : _data.depth,
-      isStrict: isStrict,
+      strict: strict,
       keys: isPartial ? undefined : _data.keys
     });
     return options.splitter;
@@ -235,7 +233,7 @@ function inline(_this, html, sections) {
         _out = (part.value || _this.partials[options.recursion])(getSource(newData, data.extra));
       } else {
         _out = findData(data, part.value, part.keys, part.depth);
-        _func = !part.isStrict && options.helpers[part.value] || isFunction(_out) && _out;
+        _func = !part.strict && options.helpers[part.value] || isFunction(_out) && _out;
         _out = _func ? _func.apply(tools(_this, data), part.data) :
           _out && (part.isUnescaped ? _out : escapeHtml(_out, _this));
       }
@@ -270,16 +268,13 @@ function section(_this, func, name, vars, isNot) {
       }
       return out;
     }
-    var _func = (!name.isStrict && _this.options.helpers[name.name]) ||
-      (isFunction(_data) && _data);
+    var _func = (!name.strict && _this.options.helpers[name.name]) || (isFunction(_data) && _data);
     if (_func) { // helpers or inline functions
       return _func.apply(tools(_this, data), [func[0](data)].concat(vars));
     }
     if (isNot && !_data || !isNot && _data) { // regular replace
-      return func[0](type === 'unless' || type === 'if' ? data :
-        getSource(data, data.extra, _data,
-        addToHelper({ '.': _data, 'this': _data, '@key': name.name },
-          keys, name.name, _data)));
+      return func[0](type === 'unless' || type === 'if' ? data : getSource(data, data.extra, _data,
+        addToHelper({ '.': _data, 'this': _data, '@key': name.name }, keys, name.name, _data)));
     }
    return func[1] && func[1](data); // else
   }
@@ -302,5 +297,4 @@ function sizzleTemplate(_this, html) {
 
   return function executor(data, extra) { return html(getSource(data, extra)) };
 }
-
 }));
