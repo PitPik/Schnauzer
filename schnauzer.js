@@ -89,8 +89,6 @@ function switchTags(_this, tags) {
   var _tags = _this.options.tags = tags[0] === '{{' ? ['{{2,3}', '}{2,3}'] : tags;
   var chars = _this.options.characters;
 
-  // _this.variableRegExp = new RegExp('(' + _tags[0] + ')' +
-  //   '([>!&=]\\s*)*([\\w\\'+ chars + '\\.\\s*]+)*' + _tags[1], 'g');
   _this.variableRegExp = new RegExp('(' + _tags[0] + ')' +
     '([>!&=])*([\\w\\'+ chars + '\\.]+)\\s*([\\w' + chars + '\\.\\s]*)' + _tags[1], 'g');
   _this.sectionRegExp = new RegExp('(' + _tags[0] + ')([#^])([\\w' + chars + ']*)' +
