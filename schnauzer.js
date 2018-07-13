@@ -303,9 +303,7 @@ function sizzleTemplate(_this, html) {
   }
   html = inline(_this, html);
 
-  return function executor(data, extra) {
-    return html(!data.__schnauzer || extra ? getSource(data, extra) : data, sections);
-  }
+  return function executor(data, extra) { return html(getSource(data, extra), sections) };
 }
 
 }));
