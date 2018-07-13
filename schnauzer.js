@@ -34,7 +34,7 @@ var Schnauzer = function(template, options) {
       _this.options[option] = options[option];
     }
     options = _this.options;
-    _this.entityRegExp = (function(entityMap, output){
+    _this.entityRegExp = (function(entityMap, output) {
       for (var symbol in entityMap) {
         output += symbol;
       }
@@ -133,12 +133,13 @@ function getVar(text, data) {
   var isString = value.charAt(0) === '"' || value.charAt(0) === "'";
   var depth = 0;
   var keys = [];
+  var path = [];
   var isStrict = false;
 
   if (isString) {
     value = value.replace(/(?:^['"]|['"]$)/g, '');
   } else {
-    var path = value.split('../');
+    path = value.split('../');
     if (path.length > 1) {
       value = (path[0] === '@' && '@' || '') + path.pop();
       depth = path.length;
