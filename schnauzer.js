@@ -200,20 +200,20 @@ function splitVars(_this, vars, _data, unEscaped, char0) {
 
 function inline(_this, html, sections) {
   var keys = [];
-  var options = _this.options;
+  var splitter = _this.options.splitter;
 
   html = html.replace(_this.variableRegExp, function(all, start, type, name, vars) {
     var char0 =  type && type.charAt(0) || '';
 
     if (name === '-section-') {
       keys.push({ section : vars });
-      return options.splitter;
+      return splitter;
     }
     if (char0 === '!' || char0 === '=') return '';
     vars = vars.split(/\s+/); // split variables
     keys.push(splitVars(_this, vars, getVar(name), start === '{{{', char0));
-    return options.splitter;
-  }).split(options.splitter);
+    return splitter;
+  }).split(splitter);
 
   return function fastReplace(data) {
     for (var n = 0, l = html.length, out = '', _out, _fn, _data, newData, part; n < l; n++) {
@@ -232,7 +232,7 @@ function inline(_this, html, sections) {
         _out = part.partial(getSource(newData));
       } else {
         _out = findData(data, part.name, part.keys, part.depth);
-        _fn = !part.strict && options.helpers[part.name] || isFunction(_out) && _out;
+        _fn = !part.strict && _this.options.helpers[part.name] || isFunction(_out) && _out;
         _out = _fn ? _fn.apply(tools(_this, data, part), part.vars) :
           _out && (part.isUnescaped ? _out : escapeHtml(_out, _this));
       }
