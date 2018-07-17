@@ -146,16 +146,17 @@ var data = {
   helper: helper
 }
 
-function helper(text[, $1, $2,...]) { // can also be passed as option or registered via .registerHelper()
+function helper([$1, $2,...]) { // can also be passed as option or registered via .registerHelper()
   var data = this.getData($1).value; // $1 = 'foo'
   var txt = this.encode(data);
 
-  return txt + ' ' + text;
+  return txt + ' ' + this.body;
 }
 ```
 In this case you would get "This would be some text with some more meaning" in the block and "This would be  " if used as inline helper.
-The first argument of the helper function is the text that was rendered if it was inside a block element (empty if inline usage) and the $1 etc. represent the String passed with the block (here "foo").
-```this.getData().value``` takes an argument representing the key and returns the data with that key if available. ```this.encode()``` would make sure that all characters are encoded (defined by ```entityMap``` in options).
+$1 etc. represent the String passed with the block (here "foo").
+```this.body``` is the text that was rendered if it was inside a block element (empty if inline usage), ```this.altBody``` the block after an else (if exists, else undefined).
+```this.getData()``` takes an argument representing the key and returns the data with that key if available. ```this.encode()``` would make sure that all characters are encoded (defined by ```entityMap``` in options).
 
 Inline helpers can be used for something like the following:
 
