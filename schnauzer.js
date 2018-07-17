@@ -81,7 +81,7 @@ Schnauzer.prototype = {
 return Schnauzer;
 
 function switchTags(_this, tags) {
-  var _tags = _this.options.tags = tags[0] === '{{' ? ['{{2,3}', '}{2,3}'] : tags;
+  var _tags = tags[0] === '{{' ? ['{{2,3}', '}{2,3}'] : tags;
   var chars = _this.options.characters;
 
   _this.variableRegExp = new RegExp('(' + _tags[0] + ')' +
@@ -89,6 +89,7 @@ function switchTags(_this, tags) {
   _this.sectionRegExp = new RegExp('(' + _tags[0] + ')([#^])([\\w' + chars + ']*)' +
     '(?:\\s+([\\w$\\s|./' + chars + ']*))*(' + _tags[1] + ')((?:(?!\\1[#^])[\\S\\s])*?)' +
     '\\1\\/\\3\\5', 'g');
+  _this.elseSplitter = new RegExp(_tags[0] + 'else' + _tags[1]);
 }
 
 function getSource(data, extra, newData, helpers) {
@@ -285,11 +286,11 @@ function sizzleTemplate(_this, html) {
 
   while (_html !== html && (_html = html)) {
     html = html.replace(_this.sectionRegExp, function(all, start, type, name, vars, end, text) {
-      text = text.split('{{else}}');
+      text = text.split(_this.elseSplitter);
       sections.push(section(_this, [inline(_this, text[0], sections),
         text[1] && inline(_this, text[1], sections)],
         name, vars && vars.replace(/\|/g, '').split(/\s+/) || [], start === '{{{', type === '^'));
-      return ('{{-section- ' + (sections.length - 1) + '}}');
+      return (_this.options.tags[0] + '-section- ' + (sections.length - 1) + _this.options.tags[1]);
     });
   }
   html = inline(_this, html, sections);
