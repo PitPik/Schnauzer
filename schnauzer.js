@@ -5,7 +5,7 @@
     function () { return factory(root); });
   else root.Schnauzer = factory(root);
 }(this, function SchnauzerFactory(root, undefined) { 'use strict';
-// Schnauzer 4.88 KB, 2.17 KB, Mustage 5.50 KB, 2.27 KB, Handlebars 74.20 KB, 21.86 KB
+// Schnauzer 4.85 KB, 2.15 KB, Mustage 5.50 KB, 2.27 KB, Handlebars 74.20 KB, 21.86 KB
 var Schnauzer = function(template, options) {
     this.version = '1.1.0';
     this.options = {
@@ -122,7 +122,7 @@ function findData(data, key, keys, pathDepth) {
   }
 }
 
-function getVar(text, data) {
+function getVar(text) {
   var parts = text.split(/\s*=\s*/);
   var value = parts.length > 1 ? parts[1] : parts[0];
   var isString = value.charAt(0) === '"' || value.charAt(0) === "'";
@@ -145,7 +145,7 @@ function getVar(text, data) {
   }
   return {
     name: parts.length > 1 ? parts[0] : value,
-    value: isString || !data ? value : findData(data, value, keys, depth),
+    value: value,
     isString: isString,
     strict: strict,
     keys: keys,
@@ -159,9 +159,12 @@ function escapeHtml(string, _this) {
   });
 }
 
-function tools(_this, data, dataTree) {
+function tools(_this, data, parts) {
   return {
-    getData: function getData(key) { return getVar(key, data) },
+    getData: function getData(key) {
+      key = parts.parts[key];
+      return key.isString ? key.value : findData(data, key.name, key.keys, key.depth);
+    },
     escapeHtml: function escape(string) { return escapeHtml(string, _this) }
   }
 }
@@ -177,9 +180,8 @@ function inline(_this, html, sections) {
 
   html = html.replace(_this.variableRegExp, function(all, start, type, name, vars) {
     var char0 =  type && type.charAt(0) || '';
-    var isPartial = char0 === '>';
-    var isSelf = false;
-    var strict = false;
+    var partial = char0 === '>';
+    var parts = {};
     var _data = {};
 
     if (name === '-section-') {
@@ -188,50 +190,44 @@ function inline(_this, html, sections) {
     }
     if (char0 === '!' || char0 === '=') return '';
     vars = vars.split(/\s+/); // split variables
-    if (isPartial) {
-      for (var n = vars.length, tmp = {}; n--; ) {
-        tmp = getVar(vars[n]);
-        _data[tmp.name] = tmp;
-      }
-    } else {
-      _data = getVar(name);
-      strict = _data.strict;
-      name = _data.name;
+    for (var n = vars.length, tmp = {}; n--; ) {
+      tmp = getVar(vars[n]);
+      parts[tmp.name] = tmp;
+      parts[vars[n]] = tmp; // for tools.getData()
     }
-    isSelf = name === options.recursion;
-    isPartial = isPartial && (!!_this.partials[name] || isSelf);
+    _data = getVar(name);
     keys.push({
-      value: isPartial ? _this.partials[name] : name,
-      data: isPartial ? _data : vars,
-      isPartial: isPartial,
+      value: _data.name,
+      data: vars,
+      parts: parts,
+      partial: partial && (_this.partials[_data.name] || _this.partials[options.recursion]),
       isUnescaped: !options.doEscape || char0 === '&' || start === '{{{',
-      isSelf: isSelf,
-      depth: isPartial ? undefined : _data.depth,
-      strict: strict,
-      keys: isPartial ? undefined : _data.keys
+      depth: _data.depth,
+      strict: _data.strict,
+      keys: _data.keys,
     });
     return options.splitter;
   }).split(options.splitter);
 
   return function fastReplace(data) {
-    for (var n = 0, l = html.length, out = '', _out, _func, _data, newData, part; n < l; n++) {
+    for (var n = 0, l = html.length, out = '', _out, _fn, _data, newData, part; n < l; n++) {
       out = out + html[n];
       part = keys[n];
       if (part === undefined) continue; // no other functions, just html
       if (part.section) { out += sections[part.section](data) || ''; continue; }
-      if (part.isPartial) { // partial -> executor
+      if (part.partial) { // partial -> executor
         newData = {}; // create new scope (but keep functions in scope)
         for (var item in data.path[0]) newData[item] = data.path[0][item];
-        for (var key in part.data) {
-          _data = part.data[key];
+        for (var key in part.parts) { // TODO: this also for section.fastLoop
+          _data = part.parts[key];
           newData[key] = _data.isString ? _data.value :
             findData(data, _data.value, _data.keys, _data.depth);
         }
-        _out = (part.value || _this.partials[options.recursion])(getSource(newData, data.extra));
+        _out = part.partial(getSource(newData, data.extra));
       } else {
         _out = findData(data, part.value, part.keys, part.depth);
-        _func = !part.strict && options.helpers[part.value] || isFunction(_out) && _out;
-        _out = _func ? _func.apply(tools(_this, data), part.data) :
+        _fn = !part.strict && options.helpers[part.value] || isFunction(_out) && _out;
+        _out = _fn ? _fn.apply(tools(_this, data, part), part.data) :
           _out && (part.isUnescaped ? _out : escapeHtml(_out, _this));
       }
       if (_out !== undefined) out = out + _out;
@@ -240,9 +236,9 @@ function inline(_this, html, sections) {
   };
 }
 
-function section(_this, func, name, vars, isNot) {
+function section(_this, fn, name, vars, isNot) {
   var type = name;
-  name = getVar(/^(each|with|if|unless)/.test(name) ? vars.shift() : name);
+  name = getVar(vars.length && /^(each|with|if|unless)/.test(name) ? vars.shift() : name);
   var keys = vars[0] === 'as' && [vars[1], vars[2]];
 
   return function fastLoop(data) {
@@ -252,28 +248,28 @@ function section(_this, func, name, vars, isNot) {
 
     _data = type === 'unless' ? !_data : objData ? getKeys(_data, []) : _data;
     if (_isArray || objData) {
-      if (isNot) return !_data.length ? func[0](_data) : '';
+      if (isNot) return !_data.length ? fn[0](_data) : '';
       for (var n = 0, l = _data.length, out = '', loopData; n < l; n++) {
         loopData = _isArray ? _data[n] : objData[_data[n]];
         data = getSource(data, data.extra, loopData,
           addToHelper({ '@index': '' + n, '@last': n === l - 1, '@first': !n,
             '.': loopData, 'this': loopData, '@key': _isArray ? n : _data[n] },
             keys, _isArray ? n : _data[n], loopData));
-        out = out + func[0](data);
+        out = out + fn[0](data);
         data.path.shift(); // jump back out of scope-level for next iteration
         data.helpers.shift();
       }
       return out;
     }
-    var _func = (!name.strict && _this.options.helpers[name.name]) || (isFunction(_data) && _data);
-    if (_func) { // helpers or inline functions
-      return _func.apply(tools(_this, data), [func[0](data)].concat(vars));
+    var _fn = (!name.strict && _this.options.helpers[name.name]) || (isFunction(_data) && _data);
+    if (_fn) { // helpers or inline functions
+      return _fn.apply(tools(_this, data), [fn[0](data), fn[1] && fn[1](data)].concat(vars));
     }
     if (isNot && !_data || !isNot && _data) { // regular replace
-      return func[0](type === 'unless' || type === 'if' ? data : getSource(data, data.extra, _data,
+      return fn[0](type === 'unless' || type === 'if' ? data : getSource(data, data.extra, _data,
         addToHelper({ '.': _data, 'this': _data, '@key': name.name }, keys, name.name, _data)));
     }
-   return func[1] && func[1](data); // else
+   return fn[1] && fn[1](data); // else
   }
 }
 
