@@ -223,7 +223,7 @@ function inline(_this, html, sections) {
           newData[key] = _data.isString ? _data.value :
             findData(data, _data.value, _data.keys, _data.depth);
         }
-        _out = part.partial(getSource(newData, data.extra));
+        _out = part.partial(getSource(newData));
       } else {
         _out = findData(data, part.value, part.keys, part.depth);
         _fn = !part.strict && options.helpers[part.value] || isFunction(_out) && _out;
