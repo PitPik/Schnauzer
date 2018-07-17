@@ -167,8 +167,8 @@ function tools(_this, data, parts, body, altBody) {
       return key.isString ? key.value : findData(data, key.value, key.keys, key.depth);
     },
     escapeHtml: function escape(string) { return escapeHtml(string, _this) },
-    body: body,
-    altBody: altBody
+    getBody: function() { return body(data) },
+    gatAltBody: function() { return altBody && altBody(data) },
   }
 }
 
@@ -246,7 +246,7 @@ function section(_this, fn, name, vars, unEscaped, isNot) {
   var type = name;
   name = getVar(vars.length && /^(each|with|if|unless)/.test(name) ? vars.shift() : name);
   var keys = vars[0] === 'as' && [vars[1], vars[2]];
-  var _vars = splitVars(_this, vars, getVar(name.name), unEscaped, '');
+  vars = splitVars(_this, vars, getVar(name.name), unEscaped, '');
 
   return function fastLoop(data) {
     var _data = findData(data, name.name, name.keys, name.depth);
@@ -270,7 +270,7 @@ function section(_this, fn, name, vars, unEscaped, isNot) {
     }
     var _fn = (!name.strict && _this.options.helpers[name.name]) || (isFunction(_data) && _data);
     if (_fn) { // helpers or inline functions
-      return _fn.apply(tools(_this, data, _vars, fn[0](data), fn[1] && fn[1](data)), vars);
+      return _fn.apply(tools(_this, data, vars, fn[0], fn[1]), vars.vars);
     }
     if (isNot && !_data || !isNot && _data) { // regular replace
       return fn[0](type === 'unless' || type === 'if' ? data : getSource(data, data.extra, _data,
