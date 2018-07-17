@@ -94,8 +94,8 @@ function switchTags(_this, tags) {
 function getSource(data, extra, newData, helpers) {
   return {
     extra: [].concat(data.extra || [], extra || []),
-    path: [].concat(newData || [], data.path !== undefined ? data.path : data),
-    helpers: [].concat(newData && (helpers || {}) || [], data.helpers || [])
+    path: [].concat(newData || [], data.path || data),
+    helpers: [].concat(newData && helpers || {}, data.helpers || [])
   };
 };
 
