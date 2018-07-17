@@ -283,6 +283,7 @@ function section(_this, fn, name, vars, unEscaped, isNot) {
 function sizzleTemplate(_this, html) {
   var _html = '';
   var sections = [];
+  var tags = _this.options.tags;
 
   while (_html !== html && (_html = html)) {
     html = html.replace(_this.sectionRegExp, function(all, start, type, name, vars, end, text) {
@@ -290,7 +291,7 @@ function sizzleTemplate(_this, html) {
       sections.push(section(_this, [inline(_this, text[0], sections),
         text[1] && inline(_this, text[1], sections)],
         name, vars && vars.replace(/\|/g, '').split(/\s+/) || [], start === '{{{', type === '^'));
-      return (_this.options.tags[0] + '-section- ' + (sections.length - 1) + _this.options.tags[1]);
+      return (tags[0] + '-section- ' + (sections.length - 1) + tags[1]);
     });
   }
   html = inline(_this, html, sections);
