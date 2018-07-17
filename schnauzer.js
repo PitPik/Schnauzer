@@ -167,8 +167,8 @@ function tools(_this, data, parts, body, altBody) {
       return key.isString ? key.value : findData(data, key.value, key.keys, key.depth);
     },
     escapeHtml: function escape(string) { return escapeHtml(string, _this) },
-    getBody: function() { return body(data) },
-    gatAltBody: function() { return altBody && altBody(data) },
+    getBody: function() { return body && body(data) || '' },
+    gatAltBody: function() { return altBody && altBody(data) || '' },
   }
 }
 
