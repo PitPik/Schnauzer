@@ -163,7 +163,7 @@ function escapeHtml(string, _this) {
 function tools(_this, data, parts, body, altBody) {
   return {
     getData: function getData(key) {
-      key = parts.parts[key];
+      key = parts.rawParts[key];
       return key.isString ? key.value : findData(data, key.value, key.keys, key.depth);
     },
     escapeHtml: function escape(string) { return escapeHtml(string, _this) },
@@ -180,16 +180,18 @@ function addToHelper(helpers, keys, name, value) {
 function splitVars(_this, vars, _data, unEscaped, char0) {
   var options = _this.options;
   var parts = {};
+  var rawParts = {};
 
   for (var n = vars.length, tmp = {}; n--; ) {
     tmp = getVar(vars[n]);
     parts[tmp.name] = tmp;
-    parts[vars[n]] = tmp; // for tools.getData()
+    rawParts[vars[n]] = tmp; // for tools.getData()
   }
   return {
     name: _data.name,
     vars: vars,
     parts: parts,
+    rawParts: rawParts,
     partial: char0 === '>' && (_this.partials[_data.name] || _this.partials[options.recursion]),
     isUnescaped: !options.doEscape || char0 === '&' || unEscaped,
     depth: _data.depth,
