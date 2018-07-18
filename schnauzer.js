@@ -5,7 +5,7 @@
     function () { return factory(root); });
   else root.Schnauzer = factory(root);
 }(this, function SchnauzerFactory(root, undefined) { 'use strict';
-// Schnauzer 5.01 KB, 2.21 KB, Mustage 5.50 KB, 2.27 KB, Handlebars 74.20 KB, 21.86 KB
+// Schnauzer 5.08 KB, 2.24 KB, Mustage 5.50 KB, 2.27 KB, Handlebars 74.20 KB, 21.86 KB
 var Schnauzer = function(template, options) {
     this.version = '1.2.0';
     this.options = {
@@ -163,12 +163,13 @@ function escapeHtml(string, _this) {
 function tools(_this, data, parts, body, altBody) {
   return {
     getData: function getData(key) {
-      key = parts.rawParts[key];
+      key = parts.rawParts[key] || { value: key, keys: [key], depth: 0 };
       return key.isString ? key.value : findData(data, key.value, key.keys, key.depth);
     },
     escapeHtml: function escape(string) { return escapeHtml(string, _this) },
     getBody: function() { return body && body(data) || '' },
     gatAltBody: function() { return altBody && altBody(data) || '' },
+    data: data.path[0]
   }
 }
 
