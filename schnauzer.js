@@ -101,9 +101,9 @@ function concat(array, newArray) { // way faster then [].concat
 
 function getSource(data, extra, newData, helpers) {
   return {
-    extra: extra ? concat(extra, data.extra && concat(data.extra, []) || []) : data.extra || [],
-    path: concat(data.path || [data], newData && concat([newData], []) || []),
-    helpers: concat(data.helpers || [], newData && helpers && concat([helpers], []) || [{}]),
+    extra: extra ? concat(extra, data.extra && data.extra || []) : data.extra || [],
+    path: newData ? concat(data.path,[newData] || []) : data.path || [data],
+    helpers: concat(data.helpers || [], newData && helpers && [helpers] || [{}]),
   };
 };
 
