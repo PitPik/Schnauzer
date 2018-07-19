@@ -5,7 +5,7 @@
     function () { return factory(root); });
   else root.Schnauzer = factory(root);
 }(this, function SchnauzerFactory(root, undefined) { 'use strict';
-// Schnauzer 5.18 KB, 2.26 KB, Mustage 5.50 KB, 2.27 KB, Handlebars 74.20 KB, 21.86 KB
+// Schnauzer 5.30 KB, 2.31 KB, Mustage 5.50 KB, 2.27 KB, Handlebars 74.20 KB, 21.86 KB
 var Schnauzer = function(template, options) {
     this.version = '1.2.0';
     this.options = {
@@ -100,11 +100,15 @@ function concat(array, newArray) { // way faster then [].concat
 }
 
 function getSource(data, extra, newData, helpers) {
-  var isNew = newData !== undefined;
+  var hasNewData = newData !== undefined;
+  var isNew = !data.__schnauzerData;
+  var _extra = hasNewData && !isNew && data.extra || [];
+  var _helpers = !isNew && data.helpers || [];
   return {
-    extra: extra ? concat(extra, isNew && data.extra || []) : isNew && data.extra || [],
-    path: isNew ? concat(data.path, [newData] || []) : data.path || [data],
-    helpers: helpers ? concat(data.helpers || [], isNew && [helpers] || [{}]) : data.helpers || [],
+    extra: extra ? concat(extra, _extra) : _extra,
+    path: isNew ? [data] : hasNewData ? concat(data.path, [newData]) : data.path,
+    helpers: helpers ? concat(_helpers, hasNewData && [helpers] || [{}]) : _helpers,
+    __schnauzerData: true,
   };
 }
 
