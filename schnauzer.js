@@ -103,7 +103,7 @@ function getSource(data, extra, newData, helpers) {
   return {
     extra: extra ? concat(extra, data.extra && data.extra || []) : data.extra || [],
     path: newData ? concat(data.path,[newData] || []) : data.path || [data],
-    helpers: concat(data.helpers || [], newData && helpers && [helpers] || [{}]),
+    helpers: helpers ? concat(data.helpers || [], newData && [helpers] || [{}]) : data.helpers || []
   };
 };
 
