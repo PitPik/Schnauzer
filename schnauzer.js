@@ -267,16 +267,15 @@ function section(_this, fn, name, vars, unEscaped, isNot) {
     _data = type === 'unless' ? !_data : objData ? getKeys(_data, []) : _data;
     if (_isArray || objData) {
       if (isNot) return !_data.length ? fn[0](_data) : '';
-      for (var n = 0, l = _data.length, out = '', loopData; n < l; n++) {
-        loopData = _isArray ? _data[n] : objData[_data[n]];
-        data = getSource(data, undefined, loopData,
-          addToHelper({ '@index': '' + n, '@last': n === l - 1, '@first': !n,
-            '.': loopData, 'this': loopData, '@key': _isArray ? n : _data[n] },
-            keys, _isArray ? n : _data[n], loopData));
+      data.path.unshift({}); data.helpers.unshift({});
+      for (var n = 0, l = _data.length, out = ''; n < l; n++) {
+        data.path[0] = _isArray ? _data[n] : objData[_data[n]];
+        data.helpers[0] = addToHelper({ '@index': '' + n, '@last': n === l - 1, '@first': !n,
+            '.': data.path[0], 'this': data.path[0], '@key': _isArray ? n : _data[n] },
+            keys, _isArray ? n : _data[n], data.path[0]);
         out = out + fn[0](data);
-        data.path.shift(); // jump back out of scope-level for next iteration
-        data.helpers.shift();
       }
+      data.path.shift(); data.helpers.shift(); // jump back out of scope-level
       return out;
     }
     var _fn = (!name.strict && _this.options.helpers[name.name]) || (isFunction(_data) && _data);
