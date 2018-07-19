@@ -101,7 +101,7 @@ function concat(array, newArray) { // way faster then [].concat
 
 function getSource(data, extra, newData, helpers) {
   return {
-    extra: concat(extra || [], data.extra && concat(data.extra, []) || []),
+    extra: extra ? concat(extra, data.extra && concat(data.extra, []) || []) : data.extra || [],
     path: concat(data.path || [data], newData && concat([newData], []) || []),
     helpers: concat(data.helpers || [], newData && helpers && concat([helpers], []) || [{}]),
   };
@@ -269,7 +269,7 @@ function section(_this, fn, name, vars, unEscaped, isNot) {
       if (isNot) return !_data.length ? fn[0](_data) : '';
       for (var n = 0, l = _data.length, out = '', loopData; n < l; n++) {
         loopData = _isArray ? _data[n] : objData[_data[n]];
-        data = getSource(data, data.extra, loopData,
+        data = getSource(data, undefined, loopData,
           addToHelper({ '@index': '' + n, '@last': n === l - 1, '@first': !n,
             '.': loopData, 'this': loopData, '@key': _isArray ? n : _data[n] },
             keys, _isArray ? n : _data[n], loopData));
@@ -284,7 +284,7 @@ function section(_this, fn, name, vars, unEscaped, isNot) {
       return _fn.apply(tools(_this, data, vars, fn[0], fn[1]), vars.vars);
     }
     if (isNot && !_data || !isNot && _data) { // regular replace
-      return fn[0](type === 'unless' || type === 'if' ? data : getSource(data, data.extra, _data,
+      return fn[0](type === 'unless' || type === 'if' ? data : getSource(data, undefined, _data,
         addToHelper({ '.': _data, 'this': _data, '@key': name.name }, keys, name.name, _data)));
     }
    return fn[1] && fn[1](data); // else
@@ -307,6 +307,8 @@ function sizzleTemplate(_this, html) {
   }
   html = inline(_this, html, sections);
 
-  return function executor(data, extra) { return html(getSource(data, extra)) };
+  return function executor(data, extra) {
+    return html(getSource(data, extra && (isArray(extra) && extra || [extra])));
+  };
 }
 }));
