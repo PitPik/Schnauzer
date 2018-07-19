@@ -5,7 +5,7 @@
     function () { return factory(root); });
   else root.Schnauzer = factory(root);
 }(this, function SchnauzerFactory(root, undefined) { 'use strict';
-// Schnauzer 5.08 KB, 2.24 KB, Mustage 5.50 KB, 2.27 KB, Handlebars 74.20 KB, 21.86 KB
+// Schnauzer 5.18 KB, 2.26 KB, Mustage 5.50 KB, 2.27 KB, Handlebars 74.20 KB, 21.86 KB
 var Schnauzer = function(template, options) {
     this.version = '1.2.0';
     this.options = {
@@ -92,11 +92,18 @@ function switchTags(_this, tags) {
   _this.elseSplitter = new RegExp(_tags[0] + 'else' + _tags[1]);
 }
 
+function concat(array, newArray) { // way faster then [].concat
+  for (var n = 0, l = array.length; n < l; n++) {
+    newArray[newArray.length] = array[n];
+  }
+  return newArray;
+}
+
 function getSource(data, extra, newData, helpers) {
   return {
-    extra: [].concat(data.extra || [], extra || []),
-    path: [].concat(newData || [], data.path || data),
-    helpers: [].concat(newData && helpers || {}, data.helpers || [])
+    extra: concat(extra || [], data.extra && concat(data.extra, []) || []),
+    path: concat(data.path || [data], newData && concat([newData], []) || []),
+    helpers: concat(data.helpers || [], newData && helpers && concat([helpers], []) || [{}]),
   };
 };
 
