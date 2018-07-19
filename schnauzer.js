@@ -247,7 +247,8 @@ function inline(_this, html, sections) {
 
 function section(_this, fn, name, vars, unEscaped, isNot) {
   var type = name;
-  name = getVar(vars.length && /^(each|with|if|unless)/.test(name) ? vars.shift() : name);
+  name = getVar(vars.length && (name === 'if' || name === 'each' ||
+    name === 'with' || name === 'unless') ? vars.shift() : name);
   var keys = vars[0] === 'as' && [vars[1], vars[2]];
   vars = splitVars(_this, vars, getVar(name.name), unEscaped, '');
 
