@@ -34,7 +34,7 @@ var Schnauzer = function(template, options) {
       _this.options[option] = options[option];
     }
     options = _this.options;
-    _this.entityRegExp = new RegExp('[' + getKeys(options.entityMap).join('') + ']', 'g');
+    _this.entityRegExp = new RegExp('[' + getKeys(options.entityMap, []).join('') + ']', 'g');
     switchTags(_this, options.tags);
     _this.partials = {};
     for (var name in options.partials) {
