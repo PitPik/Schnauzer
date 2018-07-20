@@ -251,7 +251,7 @@ function inline(_this, html, sections) {
       } else {
         _out = findData(data, part.name, part.keys, part.depth);
         _fn = !part.strict && _this.options.helpers[part.name] || isFunction(_out) && _out;
-        _out = _fn ? tools(_this, _fn, part.name, part.vars, data, vars) :
+        _out = _fn ? tools(_this, _fn, part.name, part.vars, data, part) :
           _out && (part.isUnescaped ? _out : escapeHtml(_out, _this));
       }
       if (_out !== undefined) out = out + _out;
@@ -262,12 +262,12 @@ function inline(_this, html, sections) {
 
 function createHelper(value, key, len, n) {
   return {
-    '@index': '' + (n + ''),
-    '@last': len && n === len - 1,
+    '@index': '' + (n !== undefined ? n : ''),
+    '@last': len && n === len - 1 || '',
     '@first': n !== undefined && !n || '',
     '.': value,
     'this': value,
-    '@key': key
+    '@key': key,
   }
 }
 
