@@ -87,7 +87,7 @@ Below is a quick example how to use schnauzer.js:
 ```js
 var view = {
   title: "Joe",
-  calc: function (text, $1) {
+  calc: function ($1) {
     return parseFloat($1) * 0.9;
   }
 };
