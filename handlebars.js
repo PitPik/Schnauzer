@@ -29,8 +29,8 @@ var Handlebars = function() {
     }
   });
 
-  this.helpers = this.schnauzer.options.helpers;
-  this.partials = this.schnauzer.partials;
+  this.helpers = schnauzer.options.helpers;
+  this.partials = schnauzer.partials;
   this.decorators = {};
 };
 
