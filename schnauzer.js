@@ -281,7 +281,8 @@ function section(_this, fn, name, vars, unEscaped, isNot) {
   return function fastLoop(data) {
     var _data = findData(data, name.name, name.keys, name.depth);
     var helper = _this.options.helpers[name.name] || isFunction(_data) && _data;
-    var helperValue = helper && tools(_this, helper, name.name, vars.vars, data, vars, fn[0], fn[1]);
+    var helperValue = helper && !name.strict &&
+      tools(_this, helper, name.name, vars.vars, data, vars, fn[0], fn[1]);
     var _isArray = isArray(_data);
     var objData = type === 'each' && !_isArray && typeof _data === 'object' && _data;
 
