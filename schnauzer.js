@@ -25,7 +25,8 @@ var Schnauzer = function(template, options) {
       partials: {},
       recursion: 'self',
       characters: '$"<>%-=@',
-      splitter: '|##|'
+      splitter: '|##|',
+      tools: undefined,
     };
     init(this, options || {}, template);
   },
@@ -172,17 +173,19 @@ function escapeHtml(string, _this) {
   });
 }
 
-function tools(_this, data, parts, body, altBody) {
-  return {
-    getData: function getData(key) {
-      key = parts.rawParts[key] || { value: key, keys: [key], depth: 0 };
-      return key.isString ? key.value : findData(data, key.value, key.keys, key.depth);
-    },
-    escapeHtml: function escape(string) { return escapeHtml(string, _this) },
-    getBody: function() { return body && body(data) || '' },
-    gatAltBody: function() { return altBody && altBody(data) || '' },
-    data: data.path[0]
-  }
+function tools(_this, fn, name, params, data, parts, body, altBody) {
+  return _this.options.tools ?
+    _this.options.tools(_this, findData, fn, name, params, data, parts, body, altBody) :
+    fn.apply({
+      getData: function getData(key) {
+        key = parts.rawParts[key] || { value: key, keys: [key], depth: 0 };
+        return key.isString ? key.value : findData(data, key.value, key.keys, key.depth);
+      },
+      escapeHtml: function escape(string) { return escapeHtml(string, _this) },
+      getBody: function() { return body && body(data) || '' },
+      gatAltBody: function() { return altBody && altBody(data) || '' },
+      data: data.path[0]
+    }, params);
 }
 
 function addToHelper(helpers, keys, name, value) {
@@ -248,13 +251,24 @@ function inline(_this, html, sections) {
       } else {
         _out = findData(data, part.name, part.keys, part.depth);
         _fn = !part.strict && _this.options.helpers[part.name] || isFunction(_out) && _out;
-        _out = _fn ? _fn.apply(tools(_this, data, part), part.vars) :
+        _out = _fn ? tools(_this, _fn, part.name, part.vars, data, vars) :
           _out && (part.isUnescaped ? _out : escapeHtml(_out, _this));
       }
       if (_out !== undefined) out = out + _out;
     }
     return out;
   };
+}
+
+function createHelper(value, key, len, n) {
+  return {
+    '@index': '' + (n + ''),
+    '@last': len && n === len - 1,
+    '@first': n !== undefined && !n || '',
+    '.': value,
+    'this': value,
+    '@key': key
+  }
 }
 
 function section(_this, fn, name, vars, unEscaped, isNot) {
@@ -266,30 +280,36 @@ function section(_this, fn, name, vars, unEscaped, isNot) {
 
   return function fastLoop(data) {
     var _data = findData(data, name.name, name.keys, name.depth);
+    var helper = _this.options.helpers[name.name] || isFunction(_data) && _data;
+    var helperValue = helper && tools(_this, helper, name.name, vars.vars, data, vars, fn[0], fn[1]);
     var _isArray = isArray(_data);
     var objData = type === 'each' && !_isArray && typeof _data === 'object' && _data;
 
+    if (!name.strict && helper) { // helpers or inline functions
+      data.helpers[0] = addToHelper(createHelper(helperValue, name.name), keys, name.name, _data)
+      if (type === 'if') return helperValue ? fn[0](data) : fn[1] && fn[1](data);
+      else if (type === 'unless') return !helperValue ? fn[0](data) : fn[1] && fn[1](data);
+      else {
+        _data = helperValue;
+        _isArray = isArray(_data);
+      }
+    }
     _data = type === 'unless' ? !_data : objData ? getKeys(_data, []) : _data;
     if (_isArray || objData) {
       if (isNot) return !_data.length ? fn[0](_data) : '';
       data.path.unshift({}); data.helpers.unshift({});
       for (var n = 0, l = _data.length, out = ''; n < l; n++) {
         data.path[0] = _isArray ? _data[n] : objData[_data[n]];
-        data.helpers[0] = addToHelper({ '@index': '' + n, '@last': n === l - 1, '@first': !n,
-            '.': data.path[0], 'this': data.path[0], '@key': _isArray ? n : _data[n] },
+        data.helpers[0] = addToHelper(createHelper(data.path[0], _isArray ? n : _data[n], l, n),
             keys, _isArray ? n : _data[n], data.path[0]);
         out = out + fn[0](data);
       }
       data.path.shift(); data.helpers.shift(); // jump back out of scope-level
       return out;
     }
-    var _fn = (!name.strict && _this.options.helpers[name.name]) || (isFunction(_data) && _data);
-    if (_fn) { // helpers or inline functions
-      return _fn.apply(tools(_this, data, vars, fn[0], fn[1]), vars.vars);
-    }
     if (isNot && !_data || !isNot && _data) { // regular replace
       return fn[0](type === 'unless' || type === 'if' ? data : getSource(data, undefined, _data,
-        addToHelper({ '.': _data, 'this': _data, '@key': name.name }, keys, name.name, _data)));
+        addToHelper(createHelper(_data, name.name), keys, name.name, _data)));
     }
    return fn[1] && fn[1](data); // else
   }
@@ -305,7 +325,7 @@ function sizzleTemplate(_this, html) {
       text = text.split(_this.elseSplitter);
       sections.push(section(_this, [inline(_this, text[0], sections),
         text[1] && inline(_this, text[1], sections)],
-        name, vars && vars.replace(/\|/g, '').split(/\s+/) || [], start === '{{{', type === '^'));
+        name, vars && vars.replace(/[(|)]/g, '').split(/\s+/) || [], start === '{{{', type === '^'));
       return (tags[0] + '-section- ' + (sections.length - 1) + tags[1]);
     });
   }
