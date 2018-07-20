@@ -105,6 +105,7 @@ function getSource(data, extra, newData, helpers) {
   var isNew = !data.__schnauzerData;
   var _extra = hasNewData && !isNew && data.extra || [];
   var _helpers = !isNew && data.helpers || [];
+
   return {
     extra: extra ? concat(extra, _extra) : _extra,
     path: isNew ? [data] : hasNewData ? concat(data.path, [newData]) : data.path,
@@ -272,13 +273,12 @@ function section(_this, fn, name, vars, unEscaped, isNot) {
 
   return function fastLoop(data) {
     var _data = findData(data, name.name, name.keys, name.depth);
-    var helper = _this.options.helpers[name.name] || isFunction(_data) && _data;
-    var helperValue = helper && !name.strict &&
-      tools(_this, helper, name.name, vars.vars, data, vars, fn[0], fn[1]);
+    var helper = !name.strict && (_this.options.helpers[name.name] || isFunction(_data) && _data);
+    var helperValue = helper && tools(_this, helper, name.name, vars.vars, data, vars, fn[0], fn[1]);
     var _isArray = isArray(_data);
     var objData = type === 'each' && !_isArray && typeof _data === 'object' && _data;
 
-    if (!name.strict && helper) { // helpers or inline functions
+    if (helper) { // helpers or inline functions
       data.helpers[0] = createHelper(helperValue, name.name, keys);
       if (type === 'if') return helperValue ? fn[0](data) : fn[1] && fn[1](data);
       else if (type === 'unless') return !helperValue ? fn[0](data) : fn[1] && fn[1](data);
