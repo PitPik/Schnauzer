@@ -188,11 +188,6 @@ function tools(_this, fn, name, params, data, parts, body, altBody) {
     }, params);
 }
 
-function addToHelper(helpers, keys, name, value) {
-  if (keys) { helpers[keys[0]] = value;  helpers[keys[1]] = name; }
-  return helpers;
-}
-
 function splitVars(_this, vars, _data, unEscaped, char0) {
   var options = _this.options;
   var parts = {};
@@ -260,15 +255,12 @@ function inline(_this, html, sections) {
   };
 }
 
-function createHelper(value, key, len, n) {
-  return {
-    '@index': '' + (n !== undefined ? n : ''),
-    '@last': len && n === len - 1 || '',
-    '@first': n !== undefined && !n || '',
-    '.': value,
-    'this': value,
-    '@key': key,
-  }
+function createHelper(value, name, keys, len, n) {
+  var helpers = { '@index': '' + (n !== undefined ? n : ''), '@last': len && n === len - 1 || '',
+    '@first': n !== undefined && !n || '', '.': value, 'this': value, '@key': name }
+
+  if (keys) { helpers[keys[0]] = value;  helpers[keys[1]] = name; }
+  return helpers;
 }
 
 function section(_this, fn, name, vars, unEscaped, isNot) {
@@ -287,7 +279,7 @@ function section(_this, fn, name, vars, unEscaped, isNot) {
     var objData = type === 'each' && !_isArray && typeof _data === 'object' && _data;
 
     if (!name.strict && helper) { // helpers or inline functions
-      data.helpers[0] = addToHelper(createHelper(helperValue, name.name), keys, name.name, _data)
+      data.helpers[0] = createHelper(helperValue, name.name, keys);
       if (type === 'if') return helperValue ? fn[0](data) : fn[1] && fn[1](data);
       else if (type === 'unless') return !helperValue ? fn[0](data) : fn[1] && fn[1](data);
       else {
@@ -301,8 +293,7 @@ function section(_this, fn, name, vars, unEscaped, isNot) {
       data.path.unshift({}); data.helpers.unshift({});
       for (var n = 0, l = _data.length, out = ''; n < l; n++) {
         data.path[0] = _isArray ? _data[n] : objData[_data[n]];
-        data.helpers[0] = addToHelper(createHelper(data.path[0], _isArray ? n : _data[n], l, n),
-            keys, _isArray ? n : _data[n], data.path[0]);
+        data.helpers[0] = createHelper(data.path[0], _isArray ? n : _data[n], keys, l, n);
         out = out + fn[0](data);
       }
       data.path.shift(); data.helpers.shift(); // jump back out of scope-level
@@ -310,7 +301,7 @@ function section(_this, fn, name, vars, unEscaped, isNot) {
     }
     if (isNot && !_data || !isNot && _data) { // regular replace
       return fn[0](type === 'unless' || type === 'if' ? data : getSource(data, undefined, _data,
-        addToHelper(createHelper(_data, name.name), keys, name.name, _data)));
+        createHelper(_data, name.name, keys)));
     }
    return fn[1] && fn[1](data); // else
   }
