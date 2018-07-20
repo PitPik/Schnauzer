@@ -60,15 +60,15 @@ do the same in Schnauzer although the API is totally different. See below on how
 
 ## handlebars.js
 
-You can use handlebars.js to mimic Handlebars. When first loading schnauzer.js and adter that handlebars.js (or UMD load) you will get a Handlebars object that you can use almost like Handlebars itself.
+You can use handlebars.js to mimic Handlebars. When first loading schnauzer.js and after that handlebars.js (or UMD load) you will get a Handlebars object that you can use almost like Handlebars itself.
 This comes in handy if you have a Handlebars project or a lot of Hadlebars helpers and just want to step over to Schnauzer. Use it then just like used from Handlebars:
 
 ```javascript
 var data = // your data
 var container = // your DOM container
-var template = // your Schnauzer template
-var partial = // your Schnauzer partial
-var helper = // your Schnauzer helper
+var template = // your Handlebars template
+var partial = // your Handlebars partial
+var helper = // your Handlebars helper
 
 Handlebars.registerPartial('partial', partial);
 Handlebars.registerHelper('helper', helper);
@@ -77,6 +77,8 @@ var handlebars = Handlebars.compile(template);
 container.innerHTML = handlebars(data);
 
 ```
+
+Handlebars.compile() will then run approximately 12 to 15 times faster.
 
 ## Usage
 
