@@ -135,6 +135,10 @@ function crawlObjectUp(data, keys) { // faster than while
 }
 
 function findData(data, key, keys, pathDepth) {
+  if (!keys) { // empty data;
+    return;
+  }
+
   var _data = data.path[pathDepth] || {};
   var helpers = data.helpers[pathDepth] || {};
   var value = helpers[key] !== undefined ? helpers[key] : crawlObjectUp(helpers, keys);
@@ -157,6 +161,10 @@ function findData(data, key, keys, pathDepth) {
 }
 
 function getVar(text) {
+  if (!text) { // speeds up parsing and live findData()
+    return {};
+  }
+
   var parts = text.split(/\s*=\s*/);
   var value = parts.length > 1 ? parts[1] : parts[0];
   var isString = value.charAt(0) === '"' || value.charAt(0) === "'";
@@ -208,7 +216,7 @@ function escapeHtml(string, _this) {
   });
 }
 
-function tools(_this, fn, name, params, data, parts, body, altBody, out) {
+function tools(_this, fn, name, params, data, parts, body, altBody) {
   return _this.options.tools ?
     _this.options.tools(_this, findData, getSource, fn, name, params, data, parts, body, altBody) :
     fn.apply({
