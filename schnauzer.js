@@ -22,6 +22,7 @@ var Schnauzer = function(template, options) {
       },
       doEscape: true,
       helpers: {},
+      decorators: {},
       partials: {},
       recursion: 'self',
       characters: '$"<>%-=@',
@@ -67,6 +68,12 @@ Schnauzer.prototype = {
   },
   unregisterHelper: function(name) {
     delete this.options.helpers[name];
+  },
+  registerDecorator: function(name, fn) {
+    this.options.decorators[name] = fn;
+  },
+  unregisterDecorator: function(name, fn) {
+    delete this.options.decorators[name];
   },
   registerPartial: function(name, html) {
     return this.partials[name] = sizzleTemplate(this, html);
@@ -141,6 +148,7 @@ function getVar(text) {
   var parts = text.split(/\s*=\s*/);
   var value = parts.length > 1 ? parts[1] : parts[0];
   var isString = value.charAt(0) === '"' || value.charAt(0) === "'";
+  var isInline = false;
   var depth = 0;
   var keys = [];
   var path = [];
@@ -157,7 +165,11 @@ function getVar(text) {
     name = name.replace(/^(?:\.|this)\//, function() { strict = true; return ''; });
     keys = value.split(/[\.\/]/);
 
-    value = value.replace(/^(?:\.\/|this\.|this\/)/, function() {
+    value = value.replace(/^(\.\/|this\.|this\/|\*)/, function(all, $1) {
+      if ($1 === '*') {
+        isInline = true;
+        return '';
+      }
       strict = true; keys[0] = '.'; return '';
     }).replace(/(?:^\[|\]$)/g, '');
   }
@@ -166,6 +178,7 @@ function getVar(text) {
     name: parts.length > 1 ? parts[0] : value,
     value: value,
     isString: isString,
+    isInline: isInline,
     strict: strict,
     keys: keys,
     depth: depth,
@@ -178,7 +191,7 @@ function escapeHtml(string, _this) {
   });
 }
 
-function tools(_this, fn, name, params, data, parts, body, altBody) {
+function tools(_this, fn, name, params, data, parts, body, altBody, out) {
   return _this.options.tools ?
     _this.options.tools(_this, findData, getSource, fn, name, params, data, parts, body, altBody) :
     fn.apply({
@@ -190,7 +203,7 @@ function tools(_this, fn, name, params, data, parts, body, altBody) {
       getBody: function() { return body && body(data) || '' },
       gatAltBody: function() { return altBody && altBody(data) || '' },
       data: data.path[0]
-    }, params);
+    }, parts.isInline ? [function() { return body || '' }] : params);
 }
 
 function splitVars(_this, vars, _data, unEscaped, char0) {
@@ -209,6 +222,7 @@ function splitVars(_this, vars, _data, unEscaped, char0) {
     parts: parts,
     rawParts: rawParts,
     partial: char0 === '>' && (_this.partials[_data.name] || _this.partials[options.recursion]),
+    isInline: _data.isInline,
     isUnescaped: !options.doEscape || char0 === '&' || unEscaped,
     depth: _data.depth,
     strict: _data.strict,
@@ -248,6 +262,11 @@ function inline(_this, html, sections) {
       out = out + html[n];
       part = keys[n];
       if (part === undefined) continue; // no other functions, just html
+      if (part.isInline) {
+        out = tools(_this, _this.options.decorators[part.name || part.vars[0]],
+          part.name, part.vars, data, part, out) || out;
+        out = isFunction(out) ? out() : out; // TODO: optimise
+      }
       if (part.section) { out += sections[part.section](data) || ''; continue; }
       if (part.partial) { // partial -> executor
         newData = {}; // create new scope (but keep functions in scope)

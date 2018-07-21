@@ -17,25 +17,28 @@ var Handlebars = function() {
           key.value : findData(data, key.value, key.keys, key.depth);
       }
 
-      value = fn.apply(data.path[0], params.concat({
-        name: name,
-        hash: hash,
-        fn: function(_data) {
-          _data = _data !== data.path[0] ? getSource(data, undefined, _data, {}) : data;
-          return body && body(_data);
-        },
-        inverse: function(_data) {
-          _data = _data !== data.path[0] ? getSource(data, undefined, _data, {}) : data;
-          return altBody && altBody(_data);
-        },
-        data: { root: data.path[0] },
-      }));
+      value = parts.isInline ?
+        fn.apply(_this, [function() { return body || '' }]) :
+        fn.apply(data.path[0], params.concat({
+          name: name,
+          hash: hash,
+          fn: function(_data) {
+            _data = _data !== data.path[0] ? getSource(data, undefined, _data, {}) : data;
+            return body && body(_data);
+          },
+          inverse: function(_data) {
+            _data = _data !== data.path[0] ? getSource(data, undefined, _data, {}) : data;
+            return altBody && altBody(_data);
+          },
+          data: { root: data.path[0] },
+        }));
 
-      return typeof value === 'function' ? value() : value; // SafeString()
+      return typeof value === 'function' && !parts.isInline ? value() : value; // SafeString()
     }
   });
 
   this.helpers = schnauzer.options.helpers;
+  this.decorators = schnauzer.options.decorators;
   this.partials = schnauzer.partials;
   this.decorators = {};
 };
@@ -47,6 +50,8 @@ Handlebars.prototype = {
   unregisterPartial: function(name) { this.schnauzer.unregisterPartial(name) },
   registerHelper: function(name, fn) { this.schnauzer.registerHelper(name, fn) },
   unregisterHelper: function(name, fn) { this.schnauzer.unregisterHelper(name) },
+  registerDecorator: function(name, fn) { this.schnauzer.registerDecorator(name, fn) },
+  unregisterDecorator: function(name, fn) { this.schnauzer.unregisterDecorator(name) },
   compile: function(template) {
     var schnauzer = this.schnauzer;
 
