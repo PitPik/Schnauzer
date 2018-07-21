@@ -18,7 +18,12 @@ var Handlebars = function() {
       }
 
       value = parts.isInline ?
-        fn.apply(_this, [function() { return body || '' }]) :
+        fn.apply(_this, [function() { return body || '' }, {}, this, {
+          args: [],
+          name: name,
+          hash: hash,
+          data: { root: data.path[0] },
+        }]) :
         fn.apply(data.path[0], params.concat({
           name: name,
           hash: hash,

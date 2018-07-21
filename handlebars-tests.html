@@ -346,6 +346,82 @@ context = {
 handlebars = Handlebars.compile(template);
 container.innerHTML += handlebars(context);
 
+container.innerHTML += '<div>------ decorators 1 (should be empty) ------</div>';
+
+template = `
+	loud
+	
+	{{* shhh foo="ggg"}}`;
+
+Handlebars.registerDecorator('shhh', function(program, props, container, context) {
+    var isLoud = program().trim() === 'loud';
+    if (isLoud) {
+        return function() { return ''; };
+    } else {
+        return program;
+    }
+});
+
+handlebars = Handlebars.compile(template);
+container.innerHTML += handlebars({});
+
+container.innerHTML += '<div>------ decorators 2 ------</div>';
+
+template = `
+	{{* activateFormatter}}
+
+	Starting amount: {{formatMoneyHelper this.start}}
+	Ending amount: {{formatMoneyHelper this.end}}
+	Profit/Loss: {{formatMoneyHelper this.net}}`;
+
+context = {
+    start: 12.30,
+    end: 15.30,
+    net: 3.00,
+    format: 'USD'
+};
+
+function formatUSD(value) {
+    return new Handlebars.SafeString('$' + value + 'USD');
+}
+
+function formatEUR(value) {
+    return new Handlebars.SafeString('€' + value + 'EUR');
+}
+
+Handlebars.registerHelper('formatMoneyHelper', function(value, currency) {
+    switch(currency) {
+        case 'USD':
+            return new Handlebars.SafeString('$' + value + 'USD');
+        case 'EUR':
+            return new Handlebars.SafeString('€' + value + 'EUR');
+    }
+});
+
+Handlebars.registerDecorator('activateFormatter', function(program, props, container, context) {
+    var moneyHelper,
+        format = context.args[0] || context.data.root.format;
+
+    switch(format) {
+        case "USD":
+            moneyHelper = formatUSD;
+            break;
+        case "EUR":
+            moneyHelper = formatEUR;
+            break;
+        default:
+            console.log('Money format not set. Please set before rendering template.');
+            moneyHelper = function() {};
+    }
+
+    container.helpers = {
+        formatMoneyHelper: moneyHelper
+    };
+});
+
+handlebars = Handlebars.compile(template);
+container.innerHTML += handlebars(context);
+
 </script>
 </body>
 </html>
