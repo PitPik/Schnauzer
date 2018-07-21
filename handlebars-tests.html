@@ -368,7 +368,7 @@ container.innerHTML += handlebars({});
 container.innerHTML += '<div>------ decorators 2 ------</div>';
 
 template = `
-	{{* activateFormatter}}
+	{{* activateFormatter "EUR"}}
 
 	Starting amount: {{formatMoneyHelper this.start}}
 	Ending amount: {{formatMoneyHelper this.end}}

@@ -253,6 +253,7 @@ function inline(_this, html, sections) {
     }
     if (char0 === '!' || char0 === '=') return '';
     vars = vars.split(/\s+/); // split variables
+    if (name === '*') { name = name + vars.shift(); }
     keys.push(splitVars(_this, vars, getVar(name), start === '{{{', char0));
     return splitter;
   }).split(splitter);
