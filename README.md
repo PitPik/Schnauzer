@@ -18,11 +18,6 @@ Schnauzer and Handlebars do almost the same thing and use almost the same syntax
 Schnauzer does not throw errors when markup is not valid, it only just doesn't process it at all.
 There are no checks for "ownProperty" therefore even faster and better usable for Web UI components. In case you need to check for objects' own properties you can create your own helper.
 
-### The ```else``` inside built-in helpers
-
-```if```, ```with``` and ```each``` helpers in Handlebars can contain an ```else```.
-In Schnauzer this is also possible with regular sections.
-
 ### The ```as``` in ```with``` and ```each``` helpers
 
 ```as``` works similar to Handlebar's ```as``` except that if you nest blocks, the variables don't get pushed to the next scope. So you would have to use ```../``` for a previous scoped variable:
@@ -60,8 +55,8 @@ do the same in Schnauzer although the API is totally different. See below on how
 
 ## handlebars.js
 
-You can use handlebars.js to mimic Handlebars. When first loading schnauzer.js and after that handlebars.js (or UMD load) you will get a Handlebars object that you can use almost like Handlebars itself.
-This comes in handy if you have a Handlebars project or a lot of Hadlebars helpers and just want to step over to Schnauzer. Use it then just like used from Handlebars:
+You can use handlebars.js to mimic Handlebars. When loading schnauzer.js and handlebars.js (or UMD load) you will get a Handlebars object that can be used almost like Handlebars itself.
+This comes in handy if you have a Handlebars project or a lot of Hadlebars helpers and just want to step over to Schnauzer. Use it then just like Handlebars (even inline partials and decorators are supported):
 
 ```javascript
 var data = // your data
@@ -125,6 +120,8 @@ new Schnauzer(template /*String*/, options /*Object*/ {
 .parse(text /*String*/)
 .registerHelper(name /*String*/, func  /*Function*/)
 .unregisterHelper(name /*String*/)
+.registerDecorator(name /*String*/, func  /*Function*/)
+.unregisterDecorator(name /*String*/)
 .registerPartial(name /*String*/, html  /*String*/)
 .unregisterPartial(name /*String*/)
 .setTags(tags /*Array*/)
