@@ -27,7 +27,7 @@ var Schnauzer = function(template, options) {
       recursion: 'self',
       characters: '$"<>%-=@',
       splitter: '|##|',
-      tools: undefined,
+      tools: undefined, // hook for helpers/decorators
     };
     init(this, options || {}, template);
   },
@@ -66,8 +66,8 @@ Schnauzer.prototype = {
   render: function(data, extra) {
     return this.partials[this.options.recursion](data, extra);
   },
-  parse: function(html) {
-    return this.registerPartial(this.options.recursion, html);
+  parse: function(text) {
+    return this.registerPartial(this.options.recursion, text);
   },
   registerHelper: function(name, fn) {
     this.helpers[name] = fn;
@@ -81,8 +81,8 @@ Schnauzer.prototype = {
   unregisterDecorator: function(name, fn) {
     delete this.decorators[name];
   },
-  registerPartial: function(name, html) {
-    return this.partials[name] = sizzleTemplate(this, html);
+  registerPartial: function(name, text) {
+    return this.partials[name] = sizzleTemplate(this, text);
   },
   unregisterPartial: function(name) {
     delete this.partials[name];
@@ -106,7 +106,7 @@ function switchTags(_this, tags) {
   _this.elseSplitter = new RegExp(_tags[0] + 'else' + _tags[1]);
 }
 
-function concat(array, newArray) { // way faster then [].concat
+function concat(array, newArray) { // way faster than [].concat
   for (var n = 0, l = array.length; n < l; n++) {
     newArray[newArray.length] = array[n];
   }
@@ -233,7 +233,6 @@ function tools(_this, fn, name, params, data, parts, body, altBody, out) {
 }
 
 function splitVars(_this, vars, _data, unEscaped, char0) {
-  var options = _this.options;
   var parts = {};
   var rawParts = {};
 
@@ -247,16 +246,17 @@ function splitVars(_this, vars, _data, unEscaped, char0) {
     vars: vars,
     parts: parts,
     rawParts: rawParts,
-    partial: char0 === '>' && (_this.partials[_data.name] || _this.partials[options.recursion]),
+    partial: char0 === '>' &&
+      (_this.partials[_data.name] || _this.partials[_this.options.recursion]),
     isInline: _data.isInline,
-    isUnescaped: !options.doEscape || char0 === '&' || unEscaped,
+    isUnescaped: !_this.options.doEscape || char0 === '&' || unEscaped,
     depth: _data.depth,
     strict: _data.strict,
     keys: _data.keys,
   };
 }
 
-function createHelper(value, name, keys, len, n) {
+function createHelper(value, name, helperData, len, n) {
   var helpers = len ? {
     '@index': n,
     '@last': n === len - 1,
@@ -266,18 +266,18 @@ function createHelper(value, name, keys, len, n) {
   helpers['@key'] = name;
   helpers['.'] = helpers['this'] = value;
 
-  if (keys) {
-    helpers[keys[0]] = value;
-    helpers[keys[1]] = name;
+  if (helperData) {
+    helpers[helperData[0]] = value;
+    helpers[helperData[1]] = name;
   }
   return helpers;
 }
 
-function inline(_this, html, sections) {
+function inline(_this, text, sections) {
   var keys = [];
   var splitter = _this.options.splitter;
 
-  html = html.replace(_this.variableRegExp, function(all, start, type, name, vars) {
+  text = text.replace(_this.variableRegExp, function(all, start, type, name, vars) {
     var char0 = type && type.charAt(0) || '';
 
     if (name === '-section-') {
@@ -304,10 +304,14 @@ function inline(_this, html, sections) {
     var newData = {};
     var part = {};
 
-    for (var n = 0, l = html.length; n < l; n++) {
-      out = out + html[n];
+    for (var n = 0, l = text.length; n < l; n++) {
+      out = out + text[n];
       part = keys[n];
-      if (part === undefined) { // no other functions, just html
+      if (part === undefined) { // no other functions, just text
+        continue;
+      }
+      if (part.section) { // from sizzleTemplate; -section-
+        out += sections[part.section](data) || '';
         continue;
       }
       if (part.isInline) { // decorator
@@ -316,9 +320,6 @@ function inline(_this, html, sections) {
         if (isFunction(out)) {
           out = out();
         }
-      }
-      if (part.section) { // from sizzleTemplate; -section-
-        out += sections[part.section](data) || '';
         continue;
       }
       if (part.partial) { // partial -> executor
@@ -352,11 +353,11 @@ function inline(_this, html, sections) {
 
 function section(_this, fn, name, vars, unEscaped, isNot) {
   var type = name;
-  var keys = [];
+  var helperData = [];
 
   name = getVar(vars.length && (name === 'if' || name === 'each' ||
     name === 'with' || name === 'unless') ? vars.shift() : name);
-  keys = vars[0] === 'as' && [vars[1], vars[2]];
+  helperData = vars[0] === 'as' && [vars[1], vars[2]];
   vars = splitVars(_this, vars, getVar(name.name), unEscaped, '');
 
   return function fastLoop(data) {
@@ -368,7 +369,7 @@ function section(_this, fn, name, vars, unEscaped, isNot) {
     var out = '';
 
     if (helper) { // helpers or inline functions
-      data.helpers[0] = createHelper(helperValue, name.name, keys);
+      data.helpers[0] = createHelper(helperValue, name.name, helperData);
       if (type === 'if') {
         return helperValue ? fn[0](data) : fn[1] && fn[1](data);
       } else if (type === 'unless') {
@@ -391,7 +392,7 @@ function section(_this, fn, name, vars, unEscaped, isNot) {
       data.helpers.unshift({});
       for (var n = 0, l = _data.length; n < l; n++) {
         data.path[0] = _isArray ? _data[n] : objData[_data[n]];
-        data.helpers[0] = createHelper(data.path[0], _isArray ? n : _data[n], keys, l, n);
+        data.helpers[0] = createHelper(data.path[0], _isArray ? n : _data[n], helperData, l, n);
         out = out + fn[0](data);
       }
       data.path.shift(); // jump back out of scope-level
@@ -401,37 +402,37 @@ function section(_this, fn, name, vars, unEscaped, isNot) {
     if (isNot && !_data || !isNot && _data) { // regular replace
       return helper && typeof _data === 'string' ? _data : // comes from helper
         fn[0](type === 'unless' || type === 'if' ? data :
-          getSource(data, undefined, _data, createHelper(_data, name.name, keys)));
+          getSource(data, undefined, _data, createHelper(_data, name.name, helperData)));
     }
 
     return fn[1] && fn[1](data); // else
   }
 }
 
-function sizzleTemplate(_this, html) {
-  var _html = '';
+function sizzleTemplate(_this, text) {
+  var _text = '';
   var sections = [];
   var tags = _this.options.tags;
 
-  while (_html !== html && (_html = html)) {
-    html = html.replace(_this.sectionRegExp, function(all, start, type, name, vars, end, text) {
+  while (_text !== text && (_text = text)) {
+    text = text.replace(_this.sectionRegExp, function(all, start, type, name, vars, end, rest) {
       if (type === '#*') {
-        _this.registerPartial(vars.replace(/(?:^['"]|['"]$)/g, ''), text);
+        _this.registerPartial(vars.replace(/(?:^['"]|['"]$)/g, ''), rest);
         return '';
       }
-      text = text.split(_this.elseSplitter);
-      sections.push(section(_this, [inline(_this, text[0], sections),
-        text[1] && inline(_this, text[1], sections)],
+      rest = rest.split(_this.elseSplitter);
+      sections.push(section(_this,
+        [inline(_this, rest[0], sections), rest[1] && inline(_this, rest[1], sections)],
         name, vars && vars.replace(/[(|)]/g, '').split(/\s+/) || [],
         start === '{{{', type === '^'));
 
       return (tags[0] + '-section- ' + (sections.length - 1) + tags[1]);
     });
   }
-  html = inline(_this, html, sections);
+  text = inline(_this, text, sections);
 
   return function executor(data, extra) {
-    return html(getSource(data, extra && (isArray(extra) && extra || [extra])));
+    return text(getSource(data, extra && (isArray(extra) && extra || [extra])));
   };
 }
 
