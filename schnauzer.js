@@ -86,8 +86,8 @@ function switchTags(_this, tags) {
   var chars = _this.options.characters + '\\][';
 
   _this.variableRegExp = new RegExp('(' + _tags[0] + ')' +
-    '([>!&=])*([\\w\\'+ chars + '\\.]+)\\s*([\\w' + chars + '\\.\\s]*)' + _tags[1], 'g');
-  _this.sectionRegExp = new RegExp('(' + _tags[0] + ')([#^])([\\w' + chars + ']*)' +
+    '([>!&=])*\\s*([\\w\\'+ chars + '\\.]+)\\s*([\\w' + chars + '\\.\\s]*)' + _tags[1], 'g');
+  _this.sectionRegExp = new RegExp('(' + _tags[0] + ')([#^*]*)\\s*([\\w' + chars + ']*)' +
     '(?:\\s+([\\w$\\s|./' + chars + ']*))*(' + _tags[1] + ')((?:(?!\\1[#^])[\\S\\s])*?)' +
     '\\1\\/\\3\\5', 'g');
   _this.elseSplitter = new RegExp(_tags[0] + 'else' + _tags[1]);
@@ -257,7 +257,10 @@ function inline(_this, html, sections) {
           newData[key] = _data.isString ? _data.value :
             findData(data, _data.value, _data.keys, _data.depth);
         }
-        _out = part.partial(getSource(newData));
+        newData = getSource(newData);
+        newData.helpers = [data.helpers[0]];
+        newData.extra = [data.extra[0]];
+        _out = part.partial(newData);
       } else {
         _out = findData(data, part.name, part.keys, part.depth);
         _fn = !part.strict && _this.options.helpers[part.name] || isFunction(_out) && _out;
@@ -321,6 +324,9 @@ function sizzleTemplate(_this, html) {
 
   while (_html !== html && (_html = html)) {
     html = html.replace(_this.sectionRegExp, function(all, start, type, name, vars, end, text) {
+      if (type === '#*') {
+        return _this.registerPartial(vars.replace(/(?:^['"]|['"]$)/g, ''), text) && '';
+      }
       text = text.split(_this.elseSplitter);
       sections.push(section(_this, [inline(_this, text[0], sections),
         text[1] && inline(_this, text[1], sections)],
