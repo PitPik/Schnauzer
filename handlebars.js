@@ -6,7 +6,7 @@
 }(this, function HandlebarsFactory(root, Schnauzer, undefined) { 'use strict';
 var Handlebars = function() {
   var schnauzer = this.schnauzer = new Schnauzer('', {
-    tools: function(_this, findData, fn, name, params, data, parts, body, altBody) {
+    tools: function(_this, findData, getSource, fn, name, params, data, parts, body, altBody) {
       var key = {};
       var hash = {};
       var value;
@@ -20,8 +20,14 @@ var Handlebars = function() {
       value = fn.apply(data.path[0], params.concat({
         name: name,
         hash: hash,
-        fn: function(_data) { return body && (data.path[0] = _data) && body(data) },
-        inverse: function(_data) { return altBody && (data.path[0] = _data) && altBody(data) },
+        fn: function(_data) {
+          _data = _data !== data.path[0] ? getSource(data, undefined, _data, {}) : data;
+          return body && body(_data);
+        },
+        inverse: function(_data) {
+          _data = _data !== data.path[0] ? getSource(data, undefined, _data, {}) : data;
+          return altBody && altBody(_data);
+        },
         data: { root: data.path[0] },
       }));
 
@@ -44,6 +50,7 @@ Handlebars.prototype = {
   compile: function(template) {
     var schnauzer = this.schnauzer;
 
+    schnauzer.partials[schnauzer.options.recursion] = null; // need to reset; old instance...
     schnauzer.parse(template);
     return function(data) { return schnauzer.render.call(schnauzer, data) }
   }

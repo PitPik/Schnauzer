@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+
+	<style type="text/css">
+		body {
+		    color: rgba(0, 0, 0, 0.87);
+		    font-family: "Whitney", helvetica, arial, sans-serif;
+		    font-size: 16px;
+		    font-weight: 400;
+		    line-height: 1.5;
+		}
+		h1, h2, h3, h4, h5, h6, p, label {
+		    padding-bottom: 0;
+		    margin-top: 0;
+		    margin-bottom: 0;
+		}
+
+		h1 {
+		    font-size: 16px;
+		    font-weight: 700;
+		    line-height: 1.25;
+		}
+		h2 {
+		    font-size: 20px;
+		    padding: 5px;
+		    margin-bottom: 5px;
+		    color: #582a00;
+		    width: 100%;
+		    -moz-box-sizing: border-box;
+		    -webkit-box-sizing: border-box;
+		    -ms-box-sizing: border-box;
+		    box-sizing: border-box;
+		}
+		a {
+		    color: #6666cc;
+		    text-decoration: none;
+		}
+	</style>
+
+	<script type="text/javascript" src="schnauzer.js"></script>
+	<script type="text/javascript" src="handlebars.js"></script>
+	<title>Tree Test</title>
+</head>
+<body>
+<h1>The following examples are taken from <a href="http://tryhandlebarsjs.com/">http://tryhandlebarsjs.com/</a></h1>
+<br>
+<div id="container"></div>
+
+<script type="text/javascript">
+var template = '';
+var context = {};
+var handlebars = function() {};
+var container = document.querySelector('#container');
+
+
+container.innerHTML += '<div>------ handlebar expression ------</div>';
+
+template = `<div class="entry">
+  <h1>{{title}}</h1>
+  <div class="body">
+    {{body}}
+  </div>
+</div>`;
+
+context = {
+  title: "My New Post",
+  body: "This is my first post!"
+};
+
+handlebars = Handlebars.compile(template);
+container.innerHTML += handlebars(context);
+
+container.innerHTML += '<div>------ expression with raw html ------</div>';
+
+template = `<div class="entry">
+  <h1>{{title}}</h1>
+  <div class="body">
+    {{{body}}}
+  </div>
+</div>`;
+
+
+context = {
+  title: "All about <p> Tags",
+  body: "<p>This is a post about &lt;p&gt; tags</p>"
+};
+
+handlebars = Handlebars.compile(template);
+container.innerHTML += handlebars(context);
+
+container.innerHTML += '<div>------ block expressions ------</div>';
+
+template = `{{#list people}}{{firstName}} {{lastName}}{{/list}}`;
+
+context = {
+  people : [
+    { firstName: "Peter", lastName: "Dematté" },
+    { firstName: "Tom", lastName: "Cooper" },
+    { firstName: "Alan", lastName: "Jefferson" }
+  ]
+};
+
+Handlebars.registerHelper('list', function(items, options) {
+  var out = "<ul>";
+
+  for(var i=0, l=items.length; i<l; i++) {
+    out = out + "<li>" + options.fn(items[i]) + "</li>";
+  }
+  out = out + "</ul>";
+  return out;
+});
+handlebars = Handlebars.compile(template);
+container.innerHTML += handlebars(context);
+
+container.innerHTML += '<div>------ each block helper ------</div>';
+
+template = `<ul class="people_list">
+  {{#each people}}
+    <li>{{this}}</li>
+  {{/each}}
+</ul>`;
+
+context = {
+  people: [
+    "Peter Dematté",
+    "Tom Cooper",
+    "Alan Jefferson"
+  ]
+};
+
+handlebars = Handlebars.compile(template);
+container.innerHTML += handlebars(context);
+
+container.innerHTML += '<div>------ if block helper (empty context) ------</div>';
+
+template = `<div class="entry">
+  {{#if author}}
+    <h1>{{firstName}} {{lastName}}</h1>
+  {{/if}}
+</div>`;
+
+context = {};
+
+handlebars = Handlebars.compile(template);
+container.innerHTML += handlebars(context);
+
+container.innerHTML += '<div>------ if block helper (truthy context) ------</div>';
+
+template = `<div class="entry">
+  {{#if author}}
+    <h1>{{firstName}} {{lastName}}</h1>
+  {{/if}}
+</div>`;
+
+context = {
+  author: true,
+  firstName: 'eric',
+  lastName: 'blair'
+};
+
+handlebars = Handlebars.compile(template);
+container.innerHTML += handlebars(context);
+
+container.innerHTML += '<div>------ if/else ------</div>';
+
+template = `<div class="entry">
+  {{#if author}}
+    <h1>{{firstName}} {{lastName}}</h1>
+  {{else}}
+    <h1>Unknown Author</h1>
+  {{/if}}
+</div>`;
+
+context = {};
+
+handlebars = Handlebars.compile(template);
+container.innerHTML += handlebars(context);
+
+container.innerHTML += '<div>------ unless (falsy) ------</div>';
+
+template = `<div class="entry">
+  {{#unless license}}
+    <h3 class="warning">WARNING: This entry does not have a license!</h3>
+  {{/unless}}
+</div>`;
+
+context = {};
+
+handlebars = Handlebars.compile(template);
+container.innerHTML += handlebars(context);
+
+container.innerHTML += '<div>------ unless (truthy) ------</div>';
+
+template = `<div class="entry">
+  {{#unless license}}
+    <h3 class="warning">WARNING: This entry does not have a license!</h3>
+  {{/unless}}
+  <h3>License Exists!</h3>
+</div>`;
+
+context = { license: true };
+
+handlebars = Handlebars.compile(template);
+container.innerHTML += handlebars(context);
+
+container.innerHTML += '<div>------ paths - simple/mustache ------</div>';
+
+template = '<p>{{name}}</p>';
+
+context = { name: 'John Denver' };
+
+handlebars = Handlebars.compile(template);
+container.innerHTML += handlebars(context);
+
+container.innerHTML += '<div>------ paths - nested ------</div>';
+
+template = `<div class="entry">
+  <h1>{{title}}</h1>
+  <h2>By {{author/name}}</h2>
+
+  <div class="body">
+    {{body}}
+  </div>
+</div>`;
+
+context = {
+  title: "My First Blog Post!",
+  author: {
+    id: 47,
+    name: "Peter Dematté"
+  },
+  body: "My first post. Wheeeee!"
+};
+
+handlebars = Handlebars.compile(template);
+container.innerHTML += handlebars(context);
+
+container.innerHTML += '<div>------ paths - ../ ------</div>';
+
+template = `<h1>Comments</h1>
+
+<div id="comments">
+  {{#each comments}}
+    <h2><a href="/posts/{{../permalink}}#{{id}}">{{title}}</a></h2>
+    <div>{{body}}</div>
+  {{/each}}
+</div>`;
+
+context = {
+  comments: [
+    { id: 1, title: 'wow what a great site'},
+    { id: 2, title: 'i really love handlebars js'}
+  ],
+
+  body: "Try Schnauzer JS!",
+  permalink: "try-handlebars-js-today",
+};
+
+handlebars = Handlebars.compile(template);
+container.innerHTML += handlebars(context);
+
+container.innerHTML += '<div>------ paths - brackets ------</div>';
+
+template = `<p>{{this.content}}</p>
+<p>{{this.[10]}}</p>`;
+
+context = { content: 'how can i access a numeric key?', '10':'with brackets!' };
+
+handlebars = Handlebars.compile(template);
+container.innerHTML += handlebars(context);
+
+container.innerHTML += '<div>------ helpers ------</div>';
+
+template = `<div class="post">
+  <h1>By {{fullName author}}</h1>
+  <div class="body">{{body}}</div>
+
+  <h1>Comments</h1>
+
+  {{#each comments}}
+    <h2>By {{fullName author}}</h2>
+    <div class="body">{{body}}</div>
+  {{/each}}
+</div>`;
+
+context = {
+  author: {firstName: "Alan", lastName: "Jefferson"},
+  body: "I Love Schnauzer",
+  comments: [{
+    author: {firstName: "Peter", lastName: "Dematté"},
+    body: "Me too!"
+  }]
+};
+
+Handlebars.registerHelper('fullName', function(person) {
+  return person.firstName + " " + person.lastName;
+});
+
+handlebars = Handlebars.compile(template);
+container.innerHTML += handlebars(context);
+
+container.innerHTML += '<div>------ helpers (this context) ------</div>';
+
+template = `<ul>
+  {{#each items}}
+    {{{agree_button}}}
+  {{/each}}
+</ul>`;
+
+context = {
+  items: [
+    {name: "Schnauzer", emotion: "love"},
+    {name: "Mustache", emotion: "enjoy"},
+    {name: "SproutCore", emotion: "want to learn"}
+  ]
+};
+
+Handlebars.registerHelper('agree_button', function() {
+  return "<button>I agree. I " + this.emotion + " " + this.name + "</button>";
+});
+
+handlebars = Handlebars.compile(template);
+container.innerHTML += handlebars(context);
+
+</script>
+</body>
+</html>

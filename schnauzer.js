@@ -83,7 +83,7 @@ return Schnauzer;
 
 function switchTags(_this, tags) {
   var _tags = tags[0] === '{{' ? ['{{2,3}', '}{2,3}'] : tags;
-  var chars = _this.options.characters;
+  var chars = _this.options.characters + '\\][';
 
   _this.variableRegExp = new RegExp('(' + _tags[0] + ')' +
     '([>!&=])*([\\w\\'+ chars + '\\.]+)\\s*([\\w' + chars + '\\.\\s]*)' + _tags[1], 'g');
@@ -156,8 +156,12 @@ function getVar(text) {
     }
     name = name.replace(/^(?:\.|this)\//, function() { strict = true; return ''; });
     keys = value.split(/[\.\/]/);
-    value = value.replace(/^\.\//, function() { strict = true; keys[0] = '.'; return ''; });
+
+    value = value.replace(/^(?:\.\/|this\.|this\/)/, function() {
+      strict = true; keys[0] = '.'; return '';
+    }).replace(/(?:^\[|\]$)/g, '');
   }
+
   return {
     name: parts.length > 1 ? parts[0] : value,
     value: value,
@@ -176,7 +180,7 @@ function escapeHtml(string, _this) {
 
 function tools(_this, fn, name, params, data, parts, body, altBody) {
   return _this.options.tools ?
-    _this.options.tools(_this, findData, fn, name, params, data, parts, body, altBody) :
+    _this.options.tools(_this, findData, getSource, fn, name, params, data, parts, body, altBody) :
     fn.apply({
       getData: function getData(key) {
         key = parts.rawParts[key] || { value: key, keys: [key], depth: 0 };
@@ -210,6 +214,16 @@ function splitVars(_this, vars, _data, unEscaped, char0) {
     strict: _data.strict,
     keys: _data.keys,
   };
+}
+
+function createHelper(value, name, keys, len, n) {
+  var helpers = len ? { '@index': n, '@last': n === len - 1, '@first': n === 0 } : {};
+
+  helpers['@key'] = name;
+  helpers['.'] = helpers['this'] = value;
+
+  if (keys) { helpers[keys[0]] = value;  helpers[keys[1]] = name; }
+  return helpers;
 }
 
 function inline(_this, html, sections) {
@@ -256,14 +270,6 @@ function inline(_this, html, sections) {
   };
 }
 
-function createHelper(value, name, keys, len, n) {
-  var helpers = { '@index': '' + (n !== undefined ? n : ''), '@last': len && n === len - 1 || '',
-    '@first': n !== undefined && !n || '', '.': value, 'this': value, '@key': name }
-
-  if (keys) { helpers[keys[0]] = value;  helpers[keys[1]] = name; }
-  return helpers;
-}
-
 function section(_this, fn, name, vars, unEscaped, isNot) {
   var type = name;
   name = getVar(vars.length && (name === 'if' || name === 'each' ||
@@ -290,7 +296,7 @@ function section(_this, fn, name, vars, unEscaped, isNot) {
     _data = type === 'unless' ? !_data : objData ? getKeys(_data, []) : _data;
     if (_isArray || objData) {
       if (isNot) return !_data.length ? fn[0](_data) : '';
-      data.path.unshift({}); data.helpers.unshift({});
+      data.path.unshift({}); data.helpers.unshift({}); // faster then getSource()
       for (var n = 0, l = _data.length, out = ''; n < l; n++) {
         data.path[0] = _isArray ? _data[n] : objData[_data[n]];
         data.helpers[0] = createHelper(data.path[0], _isArray ? n : _data[n], keys, l, n);
@@ -300,7 +306,8 @@ function section(_this, fn, name, vars, unEscaped, isNot) {
       return out;
     }
     if (isNot && !_data || !isNot && _data) { // regular replace
-      return fn[0](type === 'unless' || type === 'if' ? data : getSource(data, undefined, _data,
+      return helper && typeof _data === 'string' ? _data : // comes from helper
+        fn[0](type === 'unless' || type === 'if' ? data : getSource(data, undefined, _data,
         createHelper(_data, name.name, keys)));
     }
    return fn[1] && fn[1](data); // else
