@@ -42,12 +42,10 @@ var Handlebars = function() {
     }
   });
 
-  this.helpers = schnauzer.options.helpers;
-  this.decorators = schnauzer.options.decorators;
+  this.helpers = schnauzer.helpers;
+  this.decorators = schnauzer.decorators;
   this.partials = schnauzer.partials;
-  this.decorators = {};
 };
-
 
 Handlebars.prototype = {
   constructor: Handlebars,
@@ -60,7 +58,6 @@ Handlebars.prototype = {
   compile: function(template) {
     var schnauzer = this.schnauzer;
 
-    schnauzer.partials[schnauzer.options.recursion] = null; // need to reset; old instance...
     schnauzer.parse(template);
     return function(data) { return schnauzer.render.call(schnauzer, data) }
   }
