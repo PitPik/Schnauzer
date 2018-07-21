@@ -98,7 +98,7 @@ function switchTags(_this, tags) {
   var _tags = tags[0] === '{{' ? ['{{2,3}', '}{2,3}'] : tags;
   var chars = _this.options.characters + '\\][';
 
-  _this.variableRegExp = new RegExp('(' + _tags[0] + ')' +
+  _this.inlineRegExp = new RegExp('(' + _tags[0] + ')' +
     '([>!&=])*\\s*([\\w\\'+ chars + '\\.]+)\\s*([\\w' + chars + '\\.\\s]*)' + _tags[1], 'g');
   _this.sectionRegExp = new RegExp('(' + _tags[0] + ')([#^*]*)\\s*([\\w' + chars + ']*)' +
     '(?:\\s+([\\w$\\s|./' + chars + ']*))*(' + _tags[1] + ')((?:(?!\\1[#^])[\\S\\s])*?)' +
@@ -186,7 +186,7 @@ function getVar(text) {
         return '';
       }
       strict = true;
-      keys[0] = '.';
+      keys[0] = '.'; // findData() -> explicit
       return '';
     }).replace(/(?:^\[|\]$)/g, '');
   }
@@ -277,7 +277,7 @@ function inline(_this, text, sections) {
   var keys = [];
   var splitter = _this.options.splitter;
 
-  text = text.replace(_this.variableRegExp, function(all, start, type, name, vars) {
+  text = text.replace(_this.inlineRegExp, function(all, start, type, name, vars) {
     var char0 = type && type.charAt(0) || '';
 
     if (name === '-section-') {
@@ -363,19 +363,19 @@ function section(_this, fn, name, vars, unEscaped, isNot) {
   return function fastLoop(data) {
     var _data = findData(data, name.name, name.keys, name.depth);
     var helper = !name.strict && (_this.helpers[name.name] || isFunction(_data) && _data);
-    var helperValue = helper && tools(_this, helper, name.name, vars.vars, data, vars, fn[0], fn[1]);
+    var helperOut = helper && tools(_this, helper, name.name, vars.vars, data, vars, fn[0], fn[1]);
     var _isArray = isArray(_data);
     var objData = type === 'each' && !_isArray && typeof _data === 'object' && _data;
     var out = '';
 
     if (helper) { // helpers or inline functions
-      data.helpers[0] = createHelper(helperValue, name.name, helperData);
+      data.helpers[0] = createHelper(helperOut, name.name, helperData);
       if (type === 'if') {
-        return helperValue ? fn[0](data) : fn[1] && fn[1](data);
+        return helperOut ? fn[0](data) : fn[1] && fn[1](data);
       } else if (type === 'unless') {
-        return !helperValue ? fn[0](data) : fn[1] && fn[1](data);
+        return !helperOut ? fn[0](data) : fn[1] && fn[1](data);
       } else {
-        _data = helperValue;
+        _data = helperOut;
         _isArray = isArray(_data);
       }
     }
