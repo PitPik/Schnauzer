@@ -414,9 +414,7 @@ Handlebars.registerDecorator('activateFormatter', function(program, props, conta
             moneyHelper = function() {};
     }
 
-    container.helpers = {
-        formatMoneyHelper: moneyHelper
-    };
+    container.helpers['formatMoneyHelper'] = moneyHelper;
 });
 
 handlebars = Handlebars.compile(template);
