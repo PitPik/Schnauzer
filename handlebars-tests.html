@@ -5,37 +5,35 @@
 
 	<style type="text/css">
 		body {
-				color: rgba(0, 0, 0, 0.87);
-				font-family: "Whitney", helvetica, arial, sans-serif;
-				font-size: 16px;
-				font-weight: 400;
-				line-height: 1.5;
+			color: rgba(0, 0, 0, 0.87);
+			font: normal normal normal .90em/1.6em "Trebuchet MS", Arial, Helvetica, sans-serif;
+			padding: 1em;
 		}
-		h1, h2, h3, h4, h5, h6, p, label {
-				padding-bottom: 0;
-				margin-top: 0;
-				margin-bottom: 0;
-		}
-
 		h1 {
-				font-size: 16px;
-				font-weight: 700;
-				line-height: 1.25;
+			font-size: 20px;
+			font-weight: 700;
+			line-height: 1.25;
 		}
 		h2 {
-				font-size: 20px;
-				padding: 5px;
-				margin-bottom: 5px;
-				color: #582a00;
-				width: 100%;
-				-moz-box-sizing: border-box;
-				-webkit-box-sizing: border-box;
-				-ms-box-sizing: border-box;
-				box-sizing: border-box;
+			font-size: 16px;
+			margin-bottom: 5px;
+			color: #582a00;
 		}
 		a {
-				color: #6666cc;
-				text-decoration: none;
+			color: #6666cc;
+			text-decoration: none;
+		}
+		a:hover {
+			text-decoration: underline;
+		}
+		.break-line {
+			margin: 2em 0 1em;
+			color: #404092;
+		}
+		button {
+			font: normal normal normal .90em/1.6em "Trebuchet MS", Arial, Helvetica, sans-serif;
+			border-radius: 3px;
+			padding: .4em;
 		}
 	</style>
 
@@ -55,7 +53,7 @@ var handlebars = function() {};
 var container = document.querySelector('#container');
 
 
-container.innerHTML += '<div>------ handlebar expression ------</div>';
+container.innerHTML += '<div class="break-line">------ handlebar expression ------</div>';
 
 template = `<div class="entry">
 	<h1>{{title}}</h1>
@@ -72,7 +70,7 @@ context = {
 handlebars = Handlebars.compile(template);
 container.innerHTML += handlebars(context);
 
-container.innerHTML += '<div>------ expression with raw html ------</div>';
+container.innerHTML += '<div class="break-line">------ expression with raw html ------</div>';
 
 template = `<div class="entry">
 	<h1>{{title}}</h1>
@@ -90,7 +88,7 @@ context = {
 handlebars = Handlebars.compile(template);
 container.innerHTML += handlebars(context);
 
-container.innerHTML += '<div>------ block expressions ------</div>';
+container.innerHTML += '<div class="break-line">------ block expressions ------</div>';
 
 template = `{{#list people}}{{firstName}} {{lastName}}{{/list}}`;
 
@@ -114,7 +112,7 @@ Handlebars.registerHelper('list', function(items, options) {
 handlebars = Handlebars.compile(template);
 container.innerHTML += handlebars(context);
 
-container.innerHTML += '<div>------ each block helper ------</div>';
+container.innerHTML += '<div class="break-line">------ each block helper ------</div>';
 
 template = `<ul class="people_list">
 	{{#each people}}
@@ -133,7 +131,7 @@ context = {
 handlebars = Handlebars.compile(template);
 container.innerHTML += handlebars(context);
 
-container.innerHTML += '<div>------ if block helper (empty context) ------</div>';
+container.innerHTML += '<div class="break-line">------ if block helper (empty context) ------</div>';
 
 template = `<div class="entry">
 	{{#if author}}
@@ -146,7 +144,7 @@ context = {};
 handlebars = Handlebars.compile(template);
 container.innerHTML += handlebars(context);
 
-container.innerHTML += '<div>------ if block helper (truthy context) ------</div>';
+container.innerHTML += '<div class="break-line">------ if block helper (truthy context) ------</div>';
 
 template = `<div class="entry">
 	{{#if author}}
@@ -163,7 +161,7 @@ context = {
 handlebars = Handlebars.compile(template);
 container.innerHTML += handlebars(context);
 
-container.innerHTML += '<div>------ if/else ------</div>';
+container.innerHTML += '<div class="break-line">------ if/else ------</div>';
 
 template = `<div class="entry">
 	{{#if author}}
@@ -178,7 +176,7 @@ context = {};
 handlebars = Handlebars.compile(template);
 container.innerHTML += handlebars(context);
 
-container.innerHTML += '<div>------ unless (falsy) ------</div>';
+container.innerHTML += '<div class="break-line">------ unless (falsy) ------</div>';
 
 template = `<div class="entry">
 	{{#unless license}}
@@ -191,7 +189,7 @@ context = {};
 handlebars = Handlebars.compile(template);
 container.innerHTML += handlebars(context);
 
-container.innerHTML += '<div>------ unless (truthy) ------</div>';
+container.innerHTML += '<div class="break-line">------ unless (truthy) ------</div>';
 
 template = `<div class="entry">
 	{{#unless license}}
@@ -205,7 +203,7 @@ context = { license: true };
 handlebars = Handlebars.compile(template);
 container.innerHTML += handlebars(context);
 
-container.innerHTML += '<div>------ paths - simple/mustache ------</div>';
+container.innerHTML += '<div class="break-line">------ paths - simple/mustache ------</div>';
 
 template = '<p>{{name}}</p>';
 
@@ -214,7 +212,7 @@ context = { name: 'John Denver' };
 handlebars = Handlebars.compile(template);
 container.innerHTML += handlebars(context);
 
-container.innerHTML += '<div>------ paths - nested ------</div>';
+container.innerHTML += '<div class="break-line">------ paths - nested ------</div>';
 
 template = `<div class="entry">
 	<h1>{{title}}</h1>
@@ -237,7 +235,7 @@ context = {
 handlebars = Handlebars.compile(template);
 container.innerHTML += handlebars(context);
 
-container.innerHTML += '<div>------ paths - ../ ------</div>';
+container.innerHTML += '<div class="break-line">------ paths - ../ ------</div>';
 
 template = `<h1>Comments</h1>
 
@@ -261,7 +259,7 @@ context = {
 handlebars = Handlebars.compile(template);
 container.innerHTML += handlebars(context);
 
-container.innerHTML += '<div>------ paths - brackets ------</div>';
+container.innerHTML += '<div class="break-line">------ paths - brackets ------</div>';
 
 template = `<p>{{this.content}}</p>
 <p>{{this.[10]}}</p>`;
@@ -271,7 +269,7 @@ context = { content: 'how can i access a numeric key?', '10':'with brackets!' };
 handlebars = Handlebars.compile(template);
 container.innerHTML += handlebars(context);
 
-container.innerHTML += '<div>------ helpers ------</div>';
+container.innerHTML += '<div class="break-line">------ helpers ------</div>';
 
 template = `<div class="post">
 	<h1>By {{fullName author}}</h1>
@@ -301,13 +299,13 @@ Handlebars.registerHelper('fullName', function(person) {
 handlebars = Handlebars.compile(template);
 container.innerHTML += handlebars(context);
 
-container.innerHTML += '<div>------ helpers (this context) ------</div>';
+container.innerHTML += '<div class="break-line">------ helpers (this context) ------</div>';
 
-template = `<ul>
+template = `<div>
 	{{#each items}}
 		{{{agree_button}}}
 	{{/each}}
-</ul>`;
+</div>`;
 
 context = {
 	items: [
@@ -326,7 +324,7 @@ container.innerHTML += handlebars(context);
 
 
 container.innerHTML += '<h2> Some additional tests </h2>';
-container.innerHTML += '<div>------ inline partials ------</div>';
+container.innerHTML += '<div class="break-line">------ inline partials ------</div>';
 
 template = `{{#* inline "iterationCount"}}
 		<li>I'm iteration #{{value}}, key: {{@key}}, index: {{@index}}</li>
@@ -346,7 +344,7 @@ context = {
 handlebars = Handlebars.compile(template);
 container.innerHTML += handlebars(context);
 
-container.innerHTML += '<div>------ decorators 1 (should be empty) ------</div>';
+container.innerHTML += '<div class="break-line">------ decorators 1 (should be empty) ------</div>';
 
 template = `
 	loud
@@ -365,7 +363,7 @@ Handlebars.registerDecorator('shhh', function(program, props, container, context
 handlebars = Handlebars.compile(template);
 container.innerHTML += handlebars({});
 
-container.innerHTML += '<div>------ decorators 2 ------</div>';
+container.innerHTML += '<div class="break-line">------ decorators 2 ------</div>';
 
 template = `
 	{{* activateFormatter "EUR"}}
