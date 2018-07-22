@@ -249,11 +249,11 @@ template = `<h1>Comments</h1>
 context = {
 	comments: [
 		{ id: 1, title: 'wow what a great site'},
-		{ id: 2, title: 'i really love handlebars js'}
+		{ id: 2, title: 'i really love Schnauzer js'}
 	],
 
 	body: "Try Schnauzer JS!",
-	permalink: "try-handlebars-js-today",
+	permalink: "try-schnauzer-js-today",
 };
 
 handlebars = Handlebars.compile(template);
@@ -323,7 +323,7 @@ handlebars = Handlebars.compile(template);
 container.innerHTML += handlebars(context);
 
 
-container.innerHTML += '<h2> Some additional tests </h2>';
+container.innerHTML += '<h2>------ Some additional tests ------</h2>';
 container.innerHTML += '<div class="break-line">------ inline partials ------</div>';
 
 template = `{{#* inline "iterationCount"}}
