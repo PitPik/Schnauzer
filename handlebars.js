@@ -58,6 +58,7 @@ Handlebars.prototype = {
   compile: function(template) {
     var schnauzer = this.schnauzer;
 
+    delete schnauzer.partials[schnauzer.options.recursion];
     schnauzer.parse(template);
     return function(data) { return schnauzer.render.call(schnauzer, data) }
   }
