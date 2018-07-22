@@ -64,28 +64,28 @@ Handlebars.prototype = {
 };
 
 function create() {
-  var hb = new Handlebars();
+  var hbs = new Handlebars();
 
-  hb.createFrame = function(obj) {
+  hbs.createFrame = function(obj) {
     var frame = Object.extend({}, obj);
 
     frame._parent = obj;
     return frame;
   };
-  hb.escapeExpression = function(string) {
-    return String(string).replace(hb.schnauzer.entityRegExp, function(char) {
-      return hb.schnauzer.options.entityMap[char];
+  hbs.escapeExpression = function(string) {
+    return String(string).replace(hbs.schnauzer.entityRegExp, function(char) {
+      return hbs.schnauzer.options.entityMap[char];
     });
   };
-  hb.SafeString = function(string) { return function() { return string } };
-  hb.create = create;
-  hb.default = hb;
-  hb.Utils = {
-    createFrame: hb.createFrame,
-    escapeExpression: hb.escapeExpression,
+  hbs.SafeString = function(string) { return function() { return string } };
+  hbs.create = create;
+  hbs.default = hbs;
+  hbs.Utils = {
+    createFrame: hbs.createFrame,
+    escapeExpression: hbs.escapeExpression,
   };
 
-  return hb;
+  return hbs;
 }
 
 return create();
