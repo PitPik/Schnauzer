@@ -102,7 +102,7 @@ function switchTags(_this, tags) {
 
   _this.inlineRegExp = new RegExp('(' + _tags[0] + ')' +
     '([>!&=])*\\s*([\\w\\'+ chars + '\\.]+)\\s*([\\w' + chars + '\\.\\s]*)' + _tags[1], 'g');
-  _this.sectionRegExp = new RegExp('(' + _tags[0] + ')([#^*]*)\\s*([\\w' + chars + ']*)' +
+  _this.sectionRegExp = new RegExp('(' + _tags[0] + ')([#^*%]*)\\s*([\\w' + chars + ']*)' +
     '(?:\\s+([\\w$\\s|./' + chars + ']*))*(' + _tags[1] + ')((?:(?!\\1[#^])[\\S\\s])*?)' +
     '\\1\\/\\3\\5', 'g');
   _this.elseSplitter = new RegExp(_tags[0] + 'else' + _tags[1]);
@@ -246,12 +246,12 @@ function render(_this, part, data, fn, preHtml, html, postHtml) {
       name: part.name,
       data: data,
       fn: fn,
-      html: html,
+      html: (html || ''),
       preHtml: preHtml,
       postHtml: postHtml
     }], data, part, fn);
   }
-  return preHtml + html;
+  return preHtml + (html || '');
 }
 
 function splitVars(_this, vars, _data, unEscaped, char0) {
