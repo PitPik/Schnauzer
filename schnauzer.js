@@ -28,6 +28,7 @@ var Schnauzer = function(template, options) {
       characters: '$"<>%-=@',
       splitter: '|##|',
       tools: undefined, // hook for helpers/decorators
+      render: undefined, // hook for shadow-DOM engines
     };
     init(this, options || {}, template);
   },
@@ -227,7 +228,7 @@ function tools(_this, fn, name, params, data, parts, body, altBody) {
         return key.isString ? key.value : findData(data, key.value, key.keys, key.depth);
       },
       escapeHtml: function escape(string) {
-        return escapeHtml(string, _this)
+        return escapeHtml(string, _this);
       },
       getBody: function() {
         return body && body(data) || '';
@@ -239,11 +240,26 @@ function tools(_this, fn, name, params, data, parts, body, altBody) {
     }, parts.isInline ? [function() { return body || '' }, parts.parts, _this] : params);
 }
 
+function render(_this, part, data, fn, preHtml, html, postHtml) {
+  if (_this.options.render) {
+   return tools(_this, _this.options.render, part.name, [{
+      name: part.name,
+      data: data,
+      fn: fn,
+      html: html,
+      preHtml: preHtml,
+      postHtml: postHtml
+    }], data, part, fn);
+  }
+  return preHtml + html;
+}
+
 function splitVars(_this, vars, _data, unEscaped, char0) {
   var parts = {};
   var rawParts = {};
 
   for (var n = vars.length, tmp = {}; n--; ) {
+    if (vars[n] === '') continue;
     tmp = getVar(vars[n]);
     parts[tmp.name] = tmp;
     rawParts[vars[n]] = tmp; // for tools.getData()
@@ -283,27 +299,27 @@ function createHelper(value, name, helperData, len, n) {
 function inline(_this, text, sections) {
   var keys = [];
   var splitter = _this.options.splitter;
+  var outFn = {};
 
   text = text.replace(_this.inlineRegExp, function(all, start, type, name, vars) {
     var char0 = type && type.charAt(0) || '';
 
-    if (name === '-section-') {
-      keys.push({ section : vars });
-      return splitter;
-    }
     if (char0 === '!' || char0 === '=') {
       return '';
     }
     vars = vars.split(/\s+/); // split variables
+    if (name === '-section-') {
+      keys.push({ section : vars[0], name: vars[1] });
+      return splitter;
+    }
     if (name === '*') {
       name = name + vars.shift();
     }
     keys.push(splitVars(_this, vars, getVar(name), start === '{{{', char0));
-
     return splitter;
   }).split(splitter);
 
-  return function fastReplace(data) {
+  return outFn = function fastReplace(data) {
     var out = '';
     var _out = '';
     var _fn = null;
@@ -318,7 +334,7 @@ function inline(_this, text, sections) {
         continue;
       }
       if (part.section) { // from sizzleTemplate; -section-
-        out += sections[part.section](data) || '';
+        out = render(_this, part, data, _fn = sections[part.section], out, _fn(data), text[n + 1]);
         continue;
       }
       if (part.isInline) { // decorator
@@ -350,7 +366,7 @@ function inline(_this, text, sections) {
           _out && (part.isUnescaped ? _out : escapeHtml(_out, _this));
       }
       if (_out !== undefined) {
-        out = out + _out;
+        out = render(_this, part, data, outFn, out, _out, text[n + 1]);
       }
     }
 
@@ -364,7 +380,7 @@ function section(_this, fn, name, vars, unEscaped, isNot) {
 
   name = getVar(vars.length && (name === 'if' || name === 'each' ||
     name === 'with' || name === 'unless') ? vars.shift() : name);
-  helperData = vars[0] === 'as' && [vars[1], vars[2]];
+  helperData = vars[0] === 'as' && [vars[1], vars[2]]; // TODO: as can be anywhere
   vars = splitVars(_this, vars, getVar(name.name), unEscaped, '');
 
   return function fastLoop(data) {
@@ -413,7 +429,7 @@ function section(_this, fn, name, vars, unEscaped, isNot) {
     }
 
     return fn[1] && fn[1](data); // else
-  }
+  };
 }
 
 function sizzleTemplate(_this, text) {
@@ -433,7 +449,7 @@ function sizzleTemplate(_this, text) {
         name, vars && vars.replace(/[(|)]/g, '').split(/\s+/) || [],
         start === '{{{', type === '^'));
 
-      return (tags[0] + '-section- ' + (sections.length - 1) + tags[1]);
+      return (tags[0] + '-section- ' + (sections.length - 1) + ' ' + vars + tags[1]);
     });
   }
   text = inline(_this, text, sections);
