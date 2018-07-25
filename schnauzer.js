@@ -101,7 +101,7 @@ function switchTags(_this, tags) {
   var chars = _this.options.characters + '\\][';
 
   _this.inlineRegExp = new RegExp('(' + _tags[0] + ')' +
-    '([>!&=])*\\s*([\\w\\'+ chars + '\\.]+)\\s*([\\w' + chars + '\\.\\s]*)' + _tags[1], 'g');
+    '([>!&=])*\\s*([\\w\\'+ chars + '\\.]+)\\s*([\\w' + chars + '|\\.\\s]*)' + _tags[1], 'g');
   _this.sectionRegExp = new RegExp('(' + _tags[0] + ')([#^*%]*)\\s*([\\w' + chars + ']*)' +
     '(?:\\s+([\\w$\\s|./' + chars + ']*))*(' + _tags[1] + ')((?:(?!\\1[#^])[\\S\\s])*?)' +
     '\\1\\/\\3\\5', 'g');
@@ -241,17 +241,18 @@ function tools(_this, fn, name, params, data, parts, body, altBody) {
 }
 
 function render(_this, part, data, fn, preHtml, html, postHtml) {
+  html = (html !== undefined ? html : '');
   if (_this.options.render) {
    return tools(_this, _this.options.render, part.name, [{
       name: part.name,
       data: data,
       fn: fn,
-      html: (html || ''),
+      html: html,
       preHtml: preHtml,
       postHtml: postHtml
     }], data, part, fn);
   }
-  return preHtml + (html || '');
+  return preHtml + html;
 }
 
 function splitVars(_this, vars, _data, unEscaped, char0) {
@@ -449,7 +450,7 @@ function sizzleTemplate(_this, text) {
         name, vars && vars.replace(/[(|)]/g, '').split(/\s+/) || [],
         start === '{{{', type === '^'));
 
-      return (tags[0] + '-section- ' + (sections.length - 1) + ' ' + vars + tags[1]);
+      return (tags[0] + '-section- ' + (sections.length - 1) + ' ' + (vars || name) + tags[1]);
     });
   }
   text = inline(_this, text, sections);
