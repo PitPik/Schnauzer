@@ -240,19 +240,15 @@ function tools(_this, fn, name, params, data, parts, body, altBody) {
     }, parts.isInline ? [function() { return body || '' }, parts.parts, _this] : params);
 }
 
-function render(_this, part, data, fn, preHtml, html, postHtml) {
-  html = (html !== undefined ? html : '');
-  if (_this.options.render) {
-   return tools(_this, _this.options.render, part.name, [{
-      name: part.name,
-      data: data,
-      fn: fn,
-      html: html,
-      preHtml: preHtml,
-      postHtml: postHtml
-    }], data, part, fn);
-  }
-  return preHtml + html;
+function render(_this, part, data, fn, text, value) {
+  value = (value !== undefined ? value : '');
+  return _this.options.render ? tools(_this, _this.options.render, part.name, [{
+    name: part.name,
+    data: data,
+    fn: fn,
+    text: text,
+    value: value,
+  }], data, part, fn) : text + value;
 }
 
 function splitVars(_this, vars, _data, unEscaped, char0) {
@@ -335,7 +331,7 @@ function inline(_this, text, sections) {
         continue;
       }
       if (part.section) { // from sizzleTemplate; -section-
-        out = render(_this, part, data, _fn = sections[part.section], out, _fn(data), text[n + 1]);
+        out = render(_this, part, data, _fn = sections[part.section], out, _fn(data));
         continue;
       }
       if (part.isInline) { // decorator
@@ -366,9 +362,7 @@ function inline(_this, text, sections) {
         _out = _fn ? tools(_this, _fn, part.name, part.vars, data, part) :
           _out && (part.isUnescaped ? _out : escapeHtml(_out, _this));
       }
-      if (_out !== undefined) {
-        out = render(_this, part, data, outFn, out, _out, text[n + 1]);
-      }
+      out = render(_this, part, data, outFn, out, _out);
     }
 
     return out;
