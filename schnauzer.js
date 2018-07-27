@@ -136,6 +136,10 @@ function crawlObjectUp(data, keys) { // faster than while
   return data;
 }
 
+function check(data, altData) {
+  return data !== undefined ? data : altData;
+}
+
 function findData(data, key, keys, pathDepth) {
   if (!keys) { // empty data;
     return;
@@ -143,19 +147,16 @@ function findData(data, key, keys, pathDepth) {
 
   var _data = data.path[pathDepth] || {};
   var helpers = data.helpers[pathDepth] || {};
-  var value = helpers[key] !== undefined ? helpers[key] : crawlObjectUp(helpers, keys);
+  var value = check(helpers[key], crawlObjectUp(helpers, keys));
 
   if (value === undefined || keys[0] === '.') {
-    value = _data[key] !== undefined ? _data[key] : crawlObjectUp(_data, keys);
+    value = check(_data[key], crawlObjectUp(_data, keys));
   }
   if (value !== undefined) {
     return value;
   }
   for (var n = data.extra.length; n--; ) {
-    if (data.extra[n][key] !== undefined) {
-      return data.extra[n][key];
-    }
-    value = crawlObjectUp(data.extra[n], keys);
+    value = check(data.extra[n][key], crawlObjectUp(data.extra[n], keys));
     if (value !== undefined) {
       return value;
     }
@@ -218,7 +219,7 @@ function escapeHtml(string, _this) {
   });
 }
 
-function tools(_this, fn, name, params, data, parts, body, altBody) {
+function apply(_this, fn, name, params, data, parts, body, altBody) {
   return _this.options.tools ?
     _this.options.tools(_this, findData, getSource, fn, name, params, data, parts, body, altBody) :
     fn.apply({
@@ -240,14 +241,15 @@ function tools(_this, fn, name, params, data, parts, body, altBody) {
     }, parts.isInline ? [function() { return body || '' }, parts.parts, _this] : params);
 }
 
-function render(_this, part, data, fn, text, value) {
-  value = (value !== undefined ? value : '');
-  return _this.options.render ? tools(_this, _this.options.render, part.name, [{
+function render(_this, part, data, fn, text, value, type) {
+  value = check(value, '');
+  return _this.options.render ? apply(_this, _this.options.render, part.name, [{
     name: part.name,
     data: data,
     fn: fn,
     text: text,
     value: value,
+    type: type,
   }], data, part, fn) : text + value;
 }
 
@@ -259,7 +261,7 @@ function splitVars(_this, vars, _data, unEscaped, char0) {
     if (vars[n] === '') continue;
     tmp = getVar(vars[n]);
     parts[tmp.name] = tmp;
-    rawParts[vars[n]] = tmp; // for tools.getData()
+    rawParts[vars[n]] = tmp; // for apply.getData()
   }
   return {
     name: _data.name,
@@ -293,10 +295,9 @@ function createHelper(value, name, helperData, len, n) {
   return helpers;
 }
 
-function inline(_this, text, sections) {
-  var keys = [];
+function inline(_this, text, sections, extType) {
+  var parts = [];
   var splitter = _this.options.splitter;
-  var outFn = {};
 
   text = text.replace(_this.inlineRegExp, function(all, start, type, name, vars) {
     var char0 = type && type.charAt(0) || '';
@@ -306,17 +307,17 @@ function inline(_this, text, sections) {
     }
     vars = vars.split(/\s+/); // split variables
     if (name === '-section-') {
-      keys.push({ section : vars[0], name: vars[1] });
+      parts.push({ section : vars[0], name: vars[1] });
       return splitter;
     }
     if (name === '*') {
       name = name + vars.shift();
     }
-    keys.push(splitVars(_this, vars, getVar(name), start === '{{{', char0));
+    parts.push(splitVars(_this, vars, getVar(name), start === '{{{', char0));
     return splitter;
   }).split(splitter);
 
-  return outFn = function fastReplace(data) {
+  return function fastReplace(data) {
     var out = '';
     var _out = '';
     var _fn = null;
@@ -326,16 +327,16 @@ function inline(_this, text, sections) {
 
     for (var n = 0, l = text.length; n < l; n++) {
       out = out + text[n];
-      part = keys[n];
+      part = parts[n];
       if (part === undefined) { // no other functions, just text
         continue;
       }
       if (part.section) { // from sizzleTemplate; -section-
-        out = render(_this, part, data, _fn = sections[part.section], out, _fn(data));
+        out = render(_this, part, data, _fn = sections[part.section], out, _fn(data), extType);
         continue;
       }
       if (part.isInline) { // decorator
-        out = tools(_this, _this.decorators[part.name || part.vars[0]],
+        out = apply(_this, _this.decorators[part.name || part.vars[0]],
           part.name, part.vars, data, part, out) || out;
         if (isFunction(out)) {
           out = out();
@@ -359,10 +360,10 @@ function inline(_this, text, sections) {
       } else { // helpers and regular stuff
         _out = findData(data, part.name, part.keys, part.depth);
         _fn = !part.strict && _this.helpers[part.name] || isFunction(_out) && _out;
-        _out = _fn ? tools(_this, _fn, part.name, part.vars, data, part) :
+        _out = _fn ? apply(_this, _fn, part.name, part.vars, data, part) :
           _out && (part.isUnescaped ? _out : escapeHtml(_out, _this));
       }
-      out = render(_this, part, data, outFn, out, _out);
+      out = render(_this, part, data, fastReplace, out, _out, extType);
     }
 
     return out;
@@ -381,7 +382,7 @@ function section(_this, fn, name, vars, unEscaped, isNot) {
   return function fastLoop(data) {
     var _data = findData(data, name.name, name.keys, name.depth);
     var helper = !name.strict && (_this.helpers[name.name] || isFunction(_data) && _data);
-    var helperOut = helper && tools(_this, helper, name.name, vars.vars, data, vars, fn[0], fn[1]);
+    var helperOut = helper && apply(_this, helper, name.name, vars.vars, data, vars, fn[0], fn[1]);
     var _isArray = isArray(_data);
     var objData = type === 'each' && !_isArray && typeof _data === 'object' && _data;
     var out = '';
@@ -438,9 +439,9 @@ function sizzleTemplate(_this, text) {
         _this.registerPartial(vars.replace(/(?:^['"]|['"]$)/g, ''), rest);
         return '';
       }
-      rest = rest.split(_this.elseSplitter);
+      rest = rest.split(_this.elseSplitter); // .replace(/[\n\r]\s*$/, '')
       sections.push(section(_this,
-        [inline(_this, rest[0], sections), rest[1] && inline(_this, rest[1], sections)],
+        [inline(_this, rest[0], sections, name), rest[1] && inline(_this, rest[1], sections, name)],
         name, vars && vars.replace(/[(|)]/g, '').split(/\s+/) || [],
         start === '{{{', type === '^'));
 
