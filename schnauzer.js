@@ -222,7 +222,7 @@ function escapeHtml(string, _this) {
 function apply(_this, fn, name, params, data, parts, body, altBody) {
   return _this.options.tools ?
     _this.options.tools(_this, findData, getSource, fn, name, params, data, parts, body, altBody) :
-    fn.apply({
+    fn[isArray(params) || parts.isInline ? 'apply' : 'call']({
       getData: function getData(key) {
         key = parts.rawParts[key] || { value: key, keys: [key], depth: 0 };
 
@@ -243,7 +243,7 @@ function apply(_this, fn, name, params, data, parts, body, altBody) {
 
 function render(_this, part, data, fn, text, value, type) {
   value = check(value, '');
-  return _this.options.render ? apply(_this, _this.options.render, part.name, [{
+  return _this.options.render ? apply(_this, _this.options.render, part.name, {
     name: part.name,
     data: data,
     varInfo: part,
@@ -251,7 +251,7 @@ function render(_this, part, data, fn, text, value, type) {
     text: text,
     value: value,
     type: type,
-  }], data, part, fn) : text + value;
+  }, data, part, fn) : text + value;
 }
 
 function splitVars(_this, vars, _data, unEscaped, char0) {
