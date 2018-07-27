@@ -149,7 +149,7 @@ function findData(data, key, keys, pathDepth) {
   var helpers = data.helpers[pathDepth] || {};
   var value = check(helpers[key], crawlObjectUp(helpers, keys));
 
-  if (value === undefined || keys[0] === '.') {
+  if (value === undefined || keys[0] === './') {
     value = check(_data[key], crawlObjectUp(_data, keys));
   }
   if (value !== undefined) {
@@ -197,7 +197,7 @@ function getVar(text) {
         return '';
       }
       strict = true;
-      keys[0] = '.'; // findData() -> explicit
+      keys[0] = './'; // findData() -> explicit
       return '';
     }).replace(/(?:^\[|\]$)/g, '');
   }
@@ -246,6 +246,7 @@ function render(_this, part, data, fn, text, value, type) {
   return _this.options.render ? apply(_this, _this.options.render, part.name, [{
     name: part.name,
     data: data,
+    varInfo: part,
     fn: fn,
     text: text,
     value: value,
