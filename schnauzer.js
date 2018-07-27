@@ -168,7 +168,7 @@ function getVar(text) {
     return {};
   }
 
-  var parts = text.split(/\s*=\s*/);
+  var parts = text.split('=');
   var value = parts.length > 1 ? parts[1] : parts[0];
   var isString = value.charAt(0) === '"' || value.charAt(0) === "'";
   var isInline = false;
