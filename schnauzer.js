@@ -237,7 +237,7 @@ function apply(_this, fn, name, params, data, parts, body, altBody) {
       gatAltBody: function() {
         return altBody && altBody(data) || '';
       },
-      data: data.path[0]
+      // data: data.path[0]
     }, parts.isInline ? [function() { return body || '' }, parts.parts, _this] : params);
 }
 
@@ -246,11 +246,11 @@ function render(_this, part, data, fn, text, value, type) {
   return _this.options.render ? apply(_this, _this.options.render, part.name, {
     name: part.name,
     data: data,
-    varInfo: part,
+    section: !!part.section,
     fn: fn,
     text: text,
     value: value,
-    type: type,
+    type: type || '',
   }, data, part, fn) : text + value;
 }
 
@@ -295,7 +295,7 @@ function createHelper(value, name, helperData, len, n) {
   helpers['@key'] = name;
   helpers['.'] = helpers['this'] = value;
 
-  if (helperData) {
+  if (helperData.length !== 0) {
     helpers[helperData[0]] = value;
     helpers[helperData[1]] = name;
   }
