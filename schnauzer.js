@@ -262,7 +262,8 @@ function splitVars(_this, vars, _data, unEscaped, char0) {
   for (var n = 0, l = vars.length, tmp = {}; n < l; n++) {
     if (vars[n] === '') continue;
     if (vars[n] === 'as') {
-      helpers = [vars[n + 1], vars[n + 2]];
+      vars.splice(n, 1); // remove as from vars pool
+      helpers = [vars.splice(n, 1)[n], vars.splice(n, 1)[n]];
       break;
     }
     tmp = getVar(vars[n]);
