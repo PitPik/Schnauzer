@@ -102,7 +102,7 @@ function switchTags(_this, tags) {
 
   _this.inlineRegExp = new RegExp('(' + _tags[0] + ')' +
     '([>!&=])*\\s*([\\w\\'+ chars + '\\.]+)\\s*([\\w' + chars + '|\\.\\s]*)' + _tags[1], 'g');
-  _this.sectionRegExp = new RegExp('(' + _tags[0] + ')([#^*%]*)\\s*([\\w' + chars + ']*)' +
+  _this.sectionRegExp = new RegExp('(' + _tags[0] + ')([#^][*%]*)\\s*([\\w' + chars + ']*)' +
     '(?:\\s+([\\w$\\s|./' + chars + ']*))*(' + _tags[1] + ')((?:(?!\\1[#^])[\\S\\s])*?)' +
     '\\1\\/\\3\\5', 'g');
   _this.elseSplitter = new RegExp(_tags[0] + 'else' + _tags[1]);
@@ -257,9 +257,14 @@ function render(_this, part, data, fn, text, value, type) {
 function splitVars(_this, vars, _data, unEscaped, char0) {
   var parts = {};
   var rawParts = {};
+  var helpers = [];
 
-  for (var n = vars.length, tmp = {}; n--; ) {
+  for (var n = 0, l = vars.length, tmp = {}; n < l; n++) {
     if (vars[n] === '') continue;
+    if (vars[n] === 'as') {
+      helpers = [vars[n + 1], vars[n + 2]];
+      break;
+    }
     tmp = getVar(vars[n]);
     parts[tmp.name] = tmp;
     rawParts[vars[n]] = tmp; // for apply.getData()
@@ -276,6 +281,7 @@ function splitVars(_this, vars, _data, unEscaped, char0) {
     depth: _data.depth,
     strict: _data.strict,
     keys: _data.keys,
+    helpers: helpers,
   };
 }
 
@@ -373,11 +379,9 @@ function inline(_this, text, sections, extType) {
 
 function section(_this, fn, name, vars, unEscaped, isNot) {
   var type = name;
-  var helperData = [];
 
   name = getVar(vars.length && (name === 'if' || name === 'each' ||
     name === 'with' || name === 'unless') ? vars.shift() : name);
-  helperData = vars[0] === 'as' && [vars[1], vars[2]]; // TODO: as can be anywhere
   vars = splitVars(_this, vars, getVar(name.name), unEscaped, '');
 
   return function fastLoop(data) {
@@ -389,7 +393,7 @@ function section(_this, fn, name, vars, unEscaped, isNot) {
     var out = '';
 
     if (helper) { // helpers or inline functions
-      data.helpers[0] = createHelper(helperOut, name.name, helperData);
+      data.helpers[0] = createHelper(helperOut, name.name, vars.helpers);
       if (type === 'if') {
         return helperOut ? fn[0](data) : fn[1] && fn[1](data);
       } else if (type === 'unless') {
@@ -412,7 +416,7 @@ function section(_this, fn, name, vars, unEscaped, isNot) {
       data.helpers.unshift({});
       for (var n = 0, l = _data.length; n < l; n++) {
         data.path[0] = _isArray ? _data[n] : objData[_data[n]];
-        data.helpers[0] = createHelper(data.path[0], _isArray ? n : _data[n], helperData, l, n);
+        data.helpers[0] = createHelper(data.path[0], _isArray ? n : _data[n], vars.helpers, l, n);
         out = out + fn[0](data);
       }
       data.path.shift(); // jump back out of scope-level
@@ -422,7 +426,7 @@ function section(_this, fn, name, vars, unEscaped, isNot) {
     if (isNot && !_data || !isNot && _data) { // regular replace
       return helper && typeof _data === 'string' ? _data : // comes from helper
         fn[0](type === 'unless' || type === 'if' ? data :
-          getSource(data, undefined, _data, createHelper(_data, name.name, helperData)));
+          getSource(data, undefined, _data, createHelper(_data, name.name, vars.helpers)));
     }
 
     return fn[1] && fn[1](data); // else
