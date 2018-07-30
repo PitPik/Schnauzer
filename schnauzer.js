@@ -242,16 +242,21 @@ function apply(_this, fn, name, params, data, parts, body, altBody) {
 }
 
 function render(_this, part, data, fn, text, value, type) {
+  var name = part.name;
+
   value = check(value, '');
-  return _this.options.render ? apply(_this, _this.options.render, part.name, {
-    name: part.name,
+  return _this.options.render ? apply(_this, _this.options.render, name, {
+    name: name,
     data: data,
     section: !!part.section,
     partial: !!part.partial,
     fn: fn,
     text: text,
     value: value,
-    type: type || (_this.helpers[part.name] && 'helper') || '',
+    type: type ||
+      (_this.helpers[name] && 'helper') ||
+      (_this.decorators[name] && 'decorator') ||
+      (_this.partials[name] && 'partial') || '',
   }, data, part, fn) : text + value;
 }
 
