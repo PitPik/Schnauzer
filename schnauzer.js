@@ -251,7 +251,7 @@ function render(_this, part, data, fn, text, value, type) {
     fn: fn,
     text: text,
     value: value,
-    type: type || '',
+    type: type || (_this.helpers[part.name] && 'helper') || '',
   }, data, part, fn) : text + value;
 }
 
