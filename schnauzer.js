@@ -247,6 +247,7 @@ function render(_this, part, data, fn, text, value, type) {
     name: part.name,
     data: data,
     section: !!part.section,
+    partial: !!part.partial,
     fn: fn,
     text: text,
     value: value,
@@ -334,11 +335,12 @@ function inline(_this, text, sections, extType) {
     var part = {};
 
     for (var n = 0, l = text.length; n < l; n++) {
-      out = out + text[n];
       part = parts[n];
       if (part === undefined) { // no other functions, just text
+        out = extType ? render(_this, {}, data, _fn, out, text[n], extType) : out + text[n];
         continue;
       }
+      out = out + text[n];
       if (part.section) { // from sizzleTemplate; -section-
         out = render(_this, part, data, _fn = sections[part.section], out, _fn(data), extType);
         continue;
