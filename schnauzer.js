@@ -254,9 +254,9 @@ function render(_this, part, data, fn, text, value, type) {
     text: text,
     value: value,
     type: type ||
-      (_this.helpers[name] && 'helper') ||
-      (_this.decorators[name] && 'decorator') ||
-      (_this.partials[name] && 'partial') || '',
+      (part.isInline && _this.decorators[name] && 'decorator') ||
+      (part.partial && _this.partials[name] && 'partial') ||
+      (_this.helpers[name] && 'helper') || '',
   }, data, part, fn) : text + value;
 }
 
