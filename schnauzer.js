@@ -247,16 +247,15 @@ function render(_this, part, data, fn, text, value, type) {
   value = check(value, '');
   return _this.options.render ? apply(_this, _this.options.render, name, {
     name: name,
-    data: data,
+    // data: data,
     section: !!part.section,
     partial: !!part.partial,
     fn: fn,
     text: text,
     value: value,
-    type: type ||
-      (part.isInline && _this.decorators[name] && 'decorator') ||
+    type: (part.isInline && _this.decorators[name] && 'decorator') ||
       (part.partial && _this.partials[name] && 'partial') ||
-      (_this.helpers[name] && 'helper') || '',
+      (_this.helpers[name] && 'helper') || type || '',
   }, data, part, fn) : text + value;
 }
 
@@ -332,57 +331,61 @@ function inline(_this, text, sections, extType) {
   }).split(splitter);
 
   return function fastReplace(data) {
-    var out = '';
-    var _out = '';
-    var _fn = null;
-    var _data = {};
-    var newData = {};
-    var part = {};
-
-    for (var n = 0, l = text.length; n < l; n++) {
-      part = parts[n];
-      if (part === undefined) { // no other functions, just text
-        out = extType ? render(_this, {}, data, _fn, out, text[n], extType) : out + text[n];
-        continue;
-      }
-      out = out + text[n];
-      if (part.section) { // from sizzleTemplate; -section-
-        out = render(_this, part, data, _fn = sections[part.section], out, _fn(data), extType);
-        continue;
-      }
-      if (part.isInline) { // decorator
-        out = apply(_this, _this.decorators[part.name || part.vars[0]],
-          part.name, part.vars, data, part, out) || out;
-        if (isFunction(out)) {
-          out = out();
-        }
-        continue;
-      }
-      if (part.partial) { // partial -> executor
-        newData = {}; // create new scope (but keep functions in scope)
-        for (var item in data.path[0]) {
-          newData[item] = data.path[0][item];
-        }
-        for (var key in part.parts) {
-          _data = part.parts[key];
-          newData[key] = _data.isString ?
-            _data.value : findData(data, _data.value, _data.keys, _data.depth);
-        }
-        newData = getSource(newData);
-        newData.helpers = [data.helpers[0]];
-        newData.extra = [data.extra[0]];
-        _out = part.partial(newData);
-      } else { // helpers and regular stuff
-        _out = findData(data, part.name, part.keys, part.depth);
-        _fn = !part.strict && _this.helpers[part.name] || isFunction(_out) && _out;
-        _out = _fn ? apply(_this, _fn, part.name, part.vars, data, part) :
-          _out && (part.isUnescaped ? _out : escapeHtml(_out, _this));
-      }
-      out = render(_this, part, data, fastReplace, out, _out, extType);
-    }
-
-    return out;
+    return replace(_this, data, text, sections, extType, parts, fastReplace);
   };
+}
+
+function replace(_this, data, text, sections, extType, parts, fastReplace) {
+  var out = '';
+  var _out = '';
+  var _fn = null;
+  var _data = {};
+  var newData = {};
+  var part = {};
+
+  for (var n = 0, l = text.length; n < l; n++) {
+    part = parts[n];
+    if (part === undefined) { // no other functions, just text
+      out = extType ? render(_this, {}, data, _fn, out, text[n], extType) : out + text[n];
+      continue;
+    }
+    out = out + text[n];
+    if (part.section) { // from sizzleTemplate; -section-
+      out = render(_this, part, data, _fn = sections[part.section], out, _fn(data), extType);
+      continue;
+    }
+    if (part.isInline) { // decorator
+      out = apply(_this, _this.decorators[part.name || part.vars[0]],
+        part.name, part.vars, data, part, out) || out;
+      if (isFunction(out)) {
+        out = out();
+      }
+      continue;
+    }
+    if (part.partial) { // partial -> executor
+      newData = {}; // create new scope (but keep functions in scope)
+      for (var item in data.path[0]) {
+        newData[item] = data.path[0][item];
+      }
+      for (var key in part.parts) {
+        _data = part.parts[key];
+        newData[key] = _data.isString ?
+          _data.value : findData(data, _data.value, _data.keys, _data.depth);
+      }
+      newData = getSource(newData);
+      newData.helpers = [data.helpers[0]];
+      newData.extra = [data.extra[0]];
+      _out = part.partial(newData);
+    } else { // helpers and regular stuff
+      _out = findData(data, part.name, part.keys, part.depth);
+      _fn = !part.strict && _this.helpers[part.name] || isFunction(_out) && _out;
+      _out = _fn ? apply(_this, _fn, part.name, part.vars, data, part) :
+        _out && (part.isUnescaped ? _out : escapeHtml(_out, _this));
+    }
+    out = render(_this, part, data, fastReplace, out, _out, extType);
+  }
+
+  return out;
 }
 
 function section(_this, fn, name, vars, unEscaped, isNot) {
@@ -393,52 +396,56 @@ function section(_this, fn, name, vars, unEscaped, isNot) {
   vars = splitVars(_this, vars, getVar(name.name), unEscaped, '');
 
   return function fastLoop(data) {
-    var _data = findData(data, name.name, name.keys, name.depth);
-    var helper = !name.strict && (_this.helpers[name.name] || isFunction(_data) && _data);
-    var helperOut = helper && apply(_this, helper, name.name, vars.vars, data, vars, fn[0], fn[1]);
-    var _isArray = isArray(_data);
-    var objData = type === 'each' && !_isArray && typeof _data === 'object' && _data;
-    var out = '';
-
-    if (helper) { // helpers or inline functions
-      data.helpers[0] = createHelper(helperOut, name.name, vars.helpers);
-      if (type === 'if') {
-        return helperOut ? fn[0](data) : fn[1] && fn[1](data);
-      } else if (type === 'unless') {
-        return !helperOut ? fn[0](data) : fn[1] && fn[1](data);
-      } else {
-        _data = helperOut;
-        _isArray = isArray(_data);
-      }
-    }
-    if (type === 'unless') {
-      _data = !_data;
-    } else if (objData) {
-      _data = getKeys(_data, []);
-    }
-    if (_isArray || objData) {
-      if (isNot) {
-        return !_data.length ? fn[0](_data) : '';
-      }
-      data.path.unshift({}); // faster then getSource()
-      data.helpers.unshift({});
-      for (var n = 0, l = _data.length; n < l; n++) {
-        data.path[0] = _isArray ? _data[n] : objData[_data[n]];
-        data.helpers[0] = createHelper(data.path[0], _isArray ? n : _data[n], vars.helpers, l, n);
-        out = out + fn[0](data);
-      }
-      data.path.shift(); // jump back out of scope-level
-      data.helpers.shift();
-      return out;
-    }
-    if (isNot && !_data || !isNot && _data) { // regular replace
-      return helper && typeof _data === 'string' ? _data : // comes from helper
-        fn[0](type === 'unless' || type === 'if' ? data :
-          getSource(data, undefined, _data, createHelper(_data, name.name, vars.helpers)));
-    }
-
-    return fn[1] && fn[1](data); // else
+    return _fastLoop(_this, data, fn, name, vars, isNot, type);
   };
+}
+
+function _fastLoop(_this, data, fn, name, vars, isNot, type) {
+  var _data = findData(data, name.name, name.keys, name.depth);
+  var helper = !name.strict && (_this.helpers[name.name] || isFunction(_data) && _data);
+  var helperOut = helper && apply(_this, helper, name.name, vars.vars, data, vars, fn[0], fn[1]);
+  var _isArray = isArray(_data);
+  var objData = type === 'each' && !_isArray && typeof _data === 'object' && _data;
+  var out = '';
+
+  if (helper) { // helpers or inline functions
+    data.helpers[0] = createHelper(helperOut, name.name, vars.helpers);
+    if (type === 'if') {
+      return helperOut ? fn[0](data) : fn[1] && fn[1](data);
+    } else if (type === 'unless') {
+      return !helperOut ? fn[0](data) : fn[1] && fn[1](data);
+    } else {
+      _data = helperOut;
+      _isArray = isArray(_data);
+    }
+  }
+  if (type === 'unless') {
+    _data = !_data;
+  } else if (objData) {
+    _data = getKeys(_data, []);
+  }
+  if (_isArray || objData) {
+    if (isNot) {
+      return !_data.length ? fn[0](_data) : '';
+    }
+    data.path.unshift({}); // faster then getSource()
+    data.helpers.unshift({});
+    for (var n = 0, l = _data.length; n < l; n++) {
+      data.path[0] = _isArray ? _data[n] : objData[_data[n]];
+      data.helpers[0] = createHelper(data.path[0], _isArray ? n : _data[n], vars.helpers, l, n);
+      out = out + fn[0](data);
+    }
+    data.path.shift(); // jump back out of scope-level
+    data.helpers.shift();
+    return out;
+  }
+  if (isNot && !_data || !isNot && _data) { // regular replace
+    return helper && typeof _data === 'string' ? _data : // comes from helper
+      fn[0](type === 'unless' || type === 'if' ? data :
+        getSource(data, undefined, _data, createHelper(_data, name.name, vars.helpers)));
+  }
+
+  return fn[1] && fn[1](data); // else
 }
 
 function sizzleTemplate(_this, text) {
