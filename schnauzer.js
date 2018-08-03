@@ -176,10 +176,13 @@ function getVar(text) {
   var keys = [];
   var path = [];
   var strict = false;
+  var active = value.charAt(0) === '%';
+
 
   if (isString) {
     value = value.replace(/(?:^['"]|['"]$)/g, '');
   } else {
+    value = active ? value.substr(1) : value;
     path = value.split('../');
     if (path.length > 1) {
       value = (path[0] === '@' && '@' || '') + path.pop();
@@ -205,6 +208,7 @@ function getVar(text) {
   return {
     name: parts.length > 1 ? parts[0] : value,
     value: value,
+    isActive: active,
     isString: isString,
     isInline: isInline,
     strict: strict,
@@ -247,9 +251,9 @@ function render(_this, part, data, fn, text, value, type) {
   value = check(value, '');
   return _this.options.render ? apply(_this, _this.options.render, name, {
     name: name,
-    // data: data,
     section: !!part.section,
     partial: !!part.partial,
+    isActive: part.isActive,
     fn: fn,
     text: text,
     value: value,
@@ -284,6 +288,7 @@ function splitVars(_this, vars, _data, unEscaped, char0) {
       (_this.partials[_data.name] || _this.partials[_this.options.recursion]),
     isInline: _data.isInline,
     isUnescaped: !_this.options.doEscape || char0 === '&' || unEscaped,
+    isActive: _data.isActive,
     depth: _data.depth,
     strict: _data.strict,
     keys: _data.keys,
@@ -320,7 +325,9 @@ function inline(_this, text, sections, extType) {
     }
     vars = vars.split(/\s+/); // split variables
     if (name === '-section-') {
-      parts.push({ section : vars[0], name: vars[1] });
+      name = getVar(vars[1]);
+      name.section = vars[0];
+      parts.push(name);
       return splitter;
     }
     if (name === '*') {
