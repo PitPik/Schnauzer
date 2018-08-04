@@ -251,6 +251,7 @@ function render(_this, part, data, fn, text, value, type) {
   value = check(value, '');
   return _this.options.render ? apply(_this, _this.options.render, name, {
     name: name,
+    data: data,
     section: !!part.section,
     partial: !!part.partial,
     isActive: part.isActive,
@@ -336,6 +337,7 @@ function inline(_this, text, sections, extType) {
     parts.push(splitVars(_this, vars, getVar(name), start === '{{{', char0));
     return splitter;
   }).split(splitter);
+  extType = getVar(extType).name; // remove %
 
   return function fastReplace(data) {
     return replace(_this, data, text, sections, extType, parts, fastReplace);
