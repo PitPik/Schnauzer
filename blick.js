@@ -116,7 +116,7 @@ function render(_this, container, helperContainer, fragment) {
 }
 
 function checkSectionChild(node, child, sections, options) {
-  if (sections.length !== 0) {
+  if (node && sections.length !== 0) {
     for (var n = sections.length; n--; ) {
       sections[n].children.push({
         unregister: (function(item) {
@@ -172,8 +172,7 @@ function resolveReferences(_this, memory, html, container, fragment) {
         }
       })(foundNode, foundNode.ownerElement, foundNode.name, search, foundNode.textContent, part);
       registerProperty(part.name, part.replacer, part.data.path[0], foundNode);
-      openSections = foundNode.ownerElement.previousSibling &&
-        checkSectionChild(foundNode.ownerElement.previousSibling,
+      openSections = checkSectionChild(foundNode.ownerElement.previousSibling,
           part, openSections, options);
       part.replacer();
     } else if (!checkSection(part, foundNode)) { // inline var - inline section
