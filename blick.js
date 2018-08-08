@@ -12,8 +12,14 @@ var Blick = function(template, options) {
       registerProperty: dummy,
       unregisterProperty: dummy,
       attributes: {
-        disabled: disableAttribute,
         value: updateValue,
+        disabled: disableAttribute,
+        checked: disableAttribute,
+        autocomplete: disableAttribute,
+        contenteditable: disableAttribute,
+        readonly: disableAttribute,
+        required: disableAttribute,
+        selected: disableAttribute, // and many more
       }
     };
     init(this, options || {}, template);
@@ -34,7 +40,7 @@ var Blick = function(template, options) {
   dump = [],
   dummy = function(){},
   disableAttribute = function(element, name, value) {
-    if (value === true || value === 'true') {
+    if (value === true || value !== 'false') {
       element.setAttribute(name, '');
     } else {
       element.removeAttribute(name);
