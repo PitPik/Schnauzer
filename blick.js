@@ -33,16 +33,16 @@ var Blick = function(template, options) {
   },
   dump = [],
   dummy = function(){},
-  disableAttribute = function(node, ownerElement, value, name) {
+  disableAttribute = function(element, name, value) {
     if (value === true || value === 'true') {
-      ownerElement.setAttribute(name, '');
+      element.setAttribute(name, '');
     } else {
-      ownerElement.removeAttribute(name);
+      element.removeAttribute(name);
     }
   },
-  updateValue = function(node, ownerElement, value, name) {
-    node.textContent = value;
-    ownerElement.value = value;
+  updateValue = function(element, name, value) {
+    element.setAttribute('value', value);
+    element.value = value;
   },
   tester = document.createElement('tbody');
 
@@ -158,14 +158,15 @@ function resolveReferences(_this, memory, html, container, fragment) {
     foundNode = findNode(helperContainer, first);
 
     if (!foundNode) { // error
-
+      window.console && console.warn('There might be an error in the SCHNAUZER template');
     } else if (foundNode.ownerElement) { // attribute
       part.replacer = (function(elm, ownerElement, name, search, orig, item) { // TODO: no part.replacer...
         return function updateAttribute() { // TODO: respect attributes' behaviours
           var value = item.fn(item.data);
           if (value === undefined) value = '';
           if (options.attributes[name]) {
-            options.attributes[name](elm, ownerElement, value, name);
+            elm = null;
+            options.attributes[name](ownerElement, name, value);
           } else if (value !== undefined) {
             elm.textContent = orig.replace(search, value);
           }
