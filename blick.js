@@ -43,8 +43,7 @@ var Blick = function(template, options) {
   updateValue = function(element, name, value) {
     element.setAttribute('value', value);
     element.value = value;
-  },
-  tester = document.createElement('tbody');
+  };
 
 Blick.prototype = {
   render: function(data, extra) {
