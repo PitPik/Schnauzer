@@ -164,7 +164,6 @@ function resolveReferences(_this, memory, html, container, fragment) {
         return function updateAttribute() { // TODO: respect attributes' behaviours
           var value = item.fn(item.data);
           if (value === undefined) value = '';
-
           if (options.attributes[name]) {
             options.attributes[name](elm, ownerElement, value, name);
           } else if (value !== undefined) {
@@ -203,6 +202,7 @@ function resolveReferences(_this, memory, html, container, fragment) {
           if (item.children) for (var n = item.children.length; n--; ) {
             item.children[n].unregister();
           }
+          elm.textContent = '';
           newMemory = resolveReferences(_this, dump, item.fn(item.data), elm, fragment);
           item.children = clearMemory(newMemory); // possible new children to be deleted...
         }
