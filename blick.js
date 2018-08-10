@@ -4,7 +4,7 @@
   else if (typeof define === 'function' && define.amd) define('blick', ['schnauzer'],
     function (Schnauzer) { return factory(root, Schnauzer); });
   else root.Blick = factory(root, root.Schnauzer);
-}(this, function BlickFactory(root, Schnauzer) { 'use strict';
+}(this, function BlickFactory(root, Schnauzer, undefined) { 'use strict';
 
 var Blick = function(template, options) {
     this.version = '0.0.1';
@@ -53,6 +53,9 @@ var Blick = function(template, options) {
 
 Blick.prototype = {
   render: function(data, extra) {
+    return this.schnauzer.render(data, extra);
+  },
+  renderHTML: function(data, extra) {
     var fragment = document.createDocumentFragment();
     var html = this.schnauzer.render(data, extra);
 
