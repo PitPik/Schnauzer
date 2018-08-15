@@ -176,13 +176,12 @@ function getVar(text) {
   var keys = [];
   var path = [];
   var strict = false;
-  var active = value.charAt(0) === '%';
-
+  var active = value.charAt(1) === '%' ? 2 : value.charAt(0) === '%' ? 1 : 0;
 
   if (isString) {
     value = value.replace(/(?:^['"]|['"]$)/g, '');
   } else {
-    value = active ? value.substr(1) : value;
+    value = active ? value.substr(active) : value;
     path = value.split('../');
     if (path.length > 1) {
       value = (path[0] === '@' && '@' || '') + path.pop();
@@ -258,6 +257,7 @@ function render(_this, part, data, fn, text, value, type) {
     fn: fn,
     text: text,
     value: value,
+    // keys: part,
     type: (part.isInline && _this.decorators[name] && 'decorator') ||
       (part.partial && _this.partials[name] && 'partial') ||
       (_this.helpers[name] && 'helper') || type || '',
