@@ -131,6 +131,7 @@ function getSource(data, extra, newData, helpers) {
 
 function crawlObjectUp(data, keys) { // faster than while
   for (var n = 0, m = keys.length; n < m; n++) {
+    if (keys[n] === './') continue; // TODO: check if deeper
     data = data && data[keys[n]];
   }
   return data;
@@ -149,8 +150,8 @@ function findData(data, key, keys, pathDepth) {
   var helpers = data.helpers[pathDepth] || {};
   var value = check(helpers[key], crawlObjectUp(helpers, keys));
 
-  if (value === undefined || keys[0] === './') {
-    value = check(_data[key], crawlObjectUp(_data, keys));
+  if (value === undefined) {
+    value = crawlObjectUp(_data, keys);
   }
   if (value !== undefined) {
     return value;
@@ -257,7 +258,7 @@ function render(_this, part, data, fn, text, value, type) {
     fn: fn,
     text: text,
     value: value,
-    // keys: part,
+    parent: part.parent,
     type: (part.isInline && _this.decorators[name] && 'decorator') ||
       (part.partial && _this.partials[name] && 'partial') ||
       (_this.helpers[name] && 'helper') || type || '',
@@ -297,11 +298,12 @@ function splitVars(_this, vars, _data, unEscaped, char0) {
   };
 }
 
-function createHelper(value, name, helperData, len, n) {
+function createHelper(value, name, parent, helperData, len, n) {
   var helpers = len ? {
     '@index': n,
     '@last': n === len - 1,
     '@first': n === 0,
+    '_parent': parent && [parent.name, n],
   } : {};
 
   helpers['@key'] = name;
@@ -386,6 +388,7 @@ function replace(_this, data, text, sections, extType, parts) {
       newData.extra = [data.extra[0]];
       _out = part.partial(newData);
     } else { // helpers and regular stuff
+      part.parent = crawlObjectUp(data.helpers, [0, '_parent']);
       _fn = _replace(_this, part);
       _out = _fn(data);
     }
@@ -396,8 +399,8 @@ function replace(_this, data, text, sections, extType, parts) {
 }
 
 function _replace(_this, part) {
-  return function(data) {
-    var out = findData(data, part.name, part.keys, part.depth);
+  return function(data, keys) {
+    var out = findData(data, part.name, keys || part.keys, part.depth);
     var fn = !part.strict && _this.helpers[part.name] || isFunction(out) && out;
 
     out = fn ? apply(_this, fn, part.name, part.vars, data, part) :
@@ -427,7 +430,7 @@ function loop(_this, data, fn, name, vars, isNot, type) {
   var out = '';
 
   if (helper) { // helpers or inline functions
-    data.helpers[0] = createHelper(helperOut, name.name, vars.helpers);
+    data.helpers[0] = createHelper(helperOut, name.name, undefined, vars.helpers);
     if (type === 'if') {
       return helperOut ? fn[0](data) : fn[1] && fn[1](data);
     } else if (type === 'unless') {
@@ -450,7 +453,7 @@ function loop(_this, data, fn, name, vars, isNot, type) {
     data.helpers.unshift({});
     for (var n = 0, l = _data.length; n < l; n++) {
       data.path[0] = _isArray ? _data[n] : objData[_data[n]];
-      data.helpers[0] = createHelper(data.path[0], _isArray ? n : _data[n], vars.helpers, l, n);
+      data.helpers[0] = createHelper(data.path[0], _isArray ? n : _data[n], name, vars.helpers, l, n);
       out = out + fn[0](data);
     }
     data.path.shift(); // jump back out of scope-level
@@ -460,7 +463,7 @@ function loop(_this, data, fn, name, vars, isNot, type) {
   if (isNot && !_data || !isNot && _data) { // regular replace
     return helper && typeof _data === 'string' ? _data : // comes from helper
       fn[0](type === 'unless' || type === 'if' ? data :
-        getSource(data, undefined, _data, createHelper(_data, name.name, vars.helpers)));
+        getSource(data, undefined, _data, createHelper(_data, name.name, undefined, vars.helpers)));
   }
 
   return fn[1] && fn[1](data); // else
