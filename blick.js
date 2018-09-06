@@ -6,6 +6,29 @@
   else root.Blick = factory(root, root.Schnauzer);
 }(this, function BlickFactory(root, Schnauzer, undefined) { 'use strict';
 
+function parseHtml(tags, search) {
+  for (var tag in tags) tags[tag] = document.createElement(tags[tag]);
+  parseHtml = function(html) {
+    var tag = (html.match(search) || [])[1];
+    var helper = (tags[tag] || tags['_default']);
+
+    helper.innerHTML = html || '';
+    return helper;
+  }
+}
+parseHtml({
+  option: 'select',
+  legend: 'fieldset',
+  area: 'map',
+  param: 'object',
+  thead: 'table',
+  tr: 'tbody',
+  col: 'colgroup',
+  td: 'td',
+  '_default': 'div',
+}, /<\s*(\w*)\s*[\s\S]*?>/);
+
+
 var Blick = function(template, options) {
     this.version = '0.0.1';
     this.options = {
@@ -20,7 +43,7 @@ var Blick = function(template, options) {
         readonly: disableAttribute,
         required: disableAttribute,
         selected: disableAttribute, // and many more
-      }
+      },
     };
     init(this, options || {}, template);
   },
@@ -40,6 +63,7 @@ var Blick = function(template, options) {
         part.isActive, part.parent, foundNode);
     };
     options.render = renderHook;
+    _this.search = new RegExp('{{#\\d+}}[\\S\\s]*{{/\\d+}}');
     _this.schnauzer = new Schnauzer(template, options);
   },
   dump = [],
@@ -147,8 +171,8 @@ function checkSectionChild(node, child, sections, options) {
 }
 
 function resolveReferences(_this, memory, html, container, fragment) {
-  var search = new RegExp('{{#\\d+}}[\\S\\s]*{{/\\d+}}');
-  var helperContainer = document.createElement('tbody');
+  var search = _this.search;
+  var helperContainer = parseHtml(html);
   var first = '';
   var last = '';
   var part = {};
@@ -160,8 +184,6 @@ function resolveReferences(_this, memory, html, container, fragment) {
   var newMemory = [];
   var openSections = [];
   var out;
-
-  helperContainer.innerHTML = html || '';
 
   for (var n = memory.length; n--; ) { // must revers
     first = '{{#' + n + '}}';

@@ -84,7 +84,7 @@ Schnauzer.prototype = {
   },
   registerPartial: function(name, text) {
     return this.partials[name] =
-      (this.partials[name] || sizzleTemplate(this, text));
+      (this.partials[name] || sizzleTemplate(this, text, []));
   },
   unregisterPartial: function(name) {
     delete this.partials[name];
@@ -286,8 +286,7 @@ function splitVars(_this, vars, _data, unEscaped, char0) {
     vars: vars,
     parts: parts,
     rawParts: rawParts,
-    partial: char0 === '>' &&
-      (_this.partials[_data.name] || _this.partials[_this.options.recursion]),
+    partial: char0 === '>',
     isInline: _data.isInline,
     isUnescaped: !_this.options.doEscape || char0 === '&' || unEscaped,
     isActive: _data.isActive,
@@ -351,7 +350,6 @@ function replace(_this, data, text, sections, extType, parts) {
   var _out = '';
   var _fn = null;
   var _data = {};
-  var newData = {};
   var part = {};
 
   for (var n = 0, l = text.length; n < l; n++) {
@@ -374,19 +372,7 @@ function replace(_this, data, text, sections, extType, parts) {
       continue;
     }
     if (part.partial) { // partial -> executor
-      newData = {}; // create new scope (but keep functions in scope)
-      for (var item in data.path[0]) {
-        newData[item] = data.path[0][item];
-      }
-      for (var key in part.parts) {
-        _data = part.parts[key];
-        newData[key] = _data.isString ?
-          _data.value : findData(data, _data.value, _data.keys, _data.depth);
-      }
-      newData = getSource(newData);
-      newData.helpers = [data.helpers[0]];
-      newData.extra = [data.extra[0]];
-      _out = part.partial(newData);
+      _out = _this.partials[part.name](data);
     } else { // helpers and regular stuff
       part.parent = crawlObjectUp(data.helpers, [0, '_parent']);
       _fn = _replace(_this, part);
@@ -401,7 +387,8 @@ function replace(_this, data, text, sections, extType, parts) {
 function _replace(_this, part) {
   return function(data, keys) {
     var out = findData(data, part.name, keys || part.keys, part.depth);
-    var fn = !part.strict && _this.helpers[part.name] || isFunction(out) && out;
+    var fn = !part.strict && (_this.helpers[part.name] ||
+      _this.partials[part.name]) || isFunction(out) && out;
 
     out = fn ? apply(_this, fn, part.name, part.vars, data, part) :
       out && (part.isUnescaped ? out : escapeHtml(out, _this));
@@ -469,15 +456,16 @@ function loop(_this, data, fn, name, vars, isNot, type) {
   return fn[1] && fn[1](data); // else
 }
 
-function sizzleTemplate(_this, text) {
+function sizzleTemplate(_this, text, sections) {
   var _text = '';
-  var sections = [];
   var tags = _this.options.tags;
 
   while (_text !== text && (_text = text)) {
     text = text.replace(_this.sectionRegExp, function(all, start, type, name, vars, end, rest) {
       if (type === '#*') {
-        _this.registerPartial(vars.replace(/(?:^['"]|['"]$)/g, ''), rest);
+        var partialName = vars.replace(/(?:^['"]|['"]$)/g, '');
+        _this.partials[partialName] = _this.partials[partialName] ||
+          sizzleTemplate(_this, rest, sections);
         return '';
       }
       rest = rest.split(_this.elseSplitter); // .replace(/[\n\r]\s*$/, '')
