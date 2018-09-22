@@ -84,7 +84,8 @@ Schnauzer.prototype = {
   },
   registerPartial: function(name, text) {
     return this.partials[name] =
-      (this.partials[name] || sizzleTemplate(this, text, []));
+      (this.partials[name] || typeof text === 'function' ?
+        text : sizzleTemplate(this, text, []));
   },
   unregisterPartial: function(name) {
     delete this.partials[name];
@@ -351,6 +352,8 @@ function replace(_this, data, text, sections, extType, parts) {
   var _fn = null;
   var _data = {};
   var part = {};
+  var helper = {};
+  var atom;
 
   for (var n = 0, l = text.length; n < l; n++) {
     part = parts[n];
@@ -372,7 +375,16 @@ function replace(_this, data, text, sections, extType, parts) {
       continue;
     }
     if (part.partial) { // partial -> executor
+      helper = {};
+      atom = undefined;
+      for (var key in part.parts) { // TODO: find better approach
+        atom = part.parts[key];
+        helper[key] = atom.keys.length && findData(data, atom.name, atom.keys, atom.depth) ||
+          atom.value || atom.name;
+      }
+      atom && data.helpers.push(helper);
       _out = _this.partials[part.name](data);
+      atom && data.helpers.shift();
     } else { // helpers and regular stuff
       part.parent = crawlObjectUp(data.helpers, [0, '_parent']);
       _fn = _replace(_this, part);
