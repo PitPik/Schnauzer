@@ -173,13 +173,14 @@ function getVar(text) {
 
   var parts = text.split('=');
   var value = parts.length > 1 ? parts[1] : parts[0];
-  var isString = value.charAt(0) === '"' || value.charAt(0) === "'";
+  var valueCharAt0 = value.charAt(0);
+  var isString = valueCharAt0 === '"' || valueCharAt0 === "'";
   var isInline = false;
   var depth = 0;
   var keys = [];
   var path = [];
   var strict = false;
-  var active = value.charAt(1) === '%' ? 2 : value.charAt(0) === '%' ? 1 : 0;
+  var active = value.charAt(1) === '%' ? 2 : valueCharAt0 === '%' ? 1 : 0;
 
   if (isString) {
     value = value.replace(/(?:^['"]|['"]$)/g, '');
