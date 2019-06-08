@@ -643,6 +643,27 @@ var model = {
 </li>
 ```
 
+### Inline Partials (partials on the fly)
+
+Partials don't need to be imported from other files, they can also be created on the fly for example to be re-used.
+
+```handlebars
+{{#* inline "author-image"}}
+    <img{{#image}} src="{{.}}"{{/image}} class="{{#if isAdmin}}admin {{else}}user {{/if}}{{class}}" alt="" />
+{{/inline}}
+
+```
+
+```handlebars
+{{#user}}
+  {{>author-image}} {{name}}
+{{/user}}
+
+```
+
+Variables are treated like in te scope from where they were called.
+
+
 ### Custom Delimiters
 
 Custom delimiters can be used in place of `{{` and `}}` by setting the new values in JavaScript.
