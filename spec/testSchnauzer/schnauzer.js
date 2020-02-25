@@ -195,14 +195,9 @@ function splitVars(text, collection) {
 }
 
 function parseScope(text, name) {
-  var parts = [];
-  var pathParts = [];
-
-  if (typeof text !== 'string') return {
-    name: name, value: text, path: [], parentDepth: 0
-  };
-  parts = text.split('../');
-  pathParts = parts.pop().split(/[.\/]/);
+  var isString = typeof text === 'string';
+  var parts = isString ? text.split('../') : [];
+  var pathParts = isString ? parts.pop().split(/[.\/]/) : [text];
 
   return {
     name: name,
