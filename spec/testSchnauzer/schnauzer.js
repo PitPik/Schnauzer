@@ -142,24 +142,24 @@ function getScope(data, tag) {
   };
 }
 
-function renderInline(_this, tag, model, glues) {
-  if (tag.isPartial) { // partial // TODO: previous function??
+function renderInline(_this, tagData, model) {
+  if (tagData.isPartial) { // partial // TODO: previous function??
 
   } // else helpers and regular stuff
 
-  console.log(999, tag.scope, model);
+  console.log(999, tagData.scope, model);
   return model.result || '';
 }
 
-function renderBlock(_this, tag, model, bodyFns) {
+function renderBlock(_this, tagData, model, bodyFns) {
   var resultData = model.result;
-  var ifHelper = tag.helper === 'if' || tag.helper === 'unless';
+  var ifHelper = tagData.helper === 'if' || tagData.helper === 'unless';
   var bodyFn = bodyFns[resultData ? 0 : 1];
 
-  // console.log(tag.scope, model);
+  // console.log(tagData.scope, model);
   if (ifHelper) {
     return bodyFn ? bodyFn(model) : '';
-  } else if (tag.helper) {
+  } else if (tagData.helper) {
     return bodyFn ? bodyFn(model) : '';
   }
   if (isArray(model.data) || typeof model.data === 'object') {
@@ -207,7 +207,7 @@ function parseScope(text) {
 function getVar(item, isAlias) {
   var out = {
     name: '',
-    isAlias: !!isAlias,
+    isAlias: isAlias,
     aliasKey: '',
     value: {},
     active: 0,
@@ -252,12 +252,10 @@ function processVars(vars, collection) {
 }
 
 function getTagData(scope, vars, type, start) {
-  var intHelper = /if|each|with|unless/.test(scope) ? scope : '';
+  var helper = /if|each|with|unless/.test(scope) ? scope : '';
   var varsArr = splitVars(vars, []);
-  var active = 0;
+  var active = getActiveState(scope = helper ? varsArr.shift() : scope);
 
-  scope = intHelper ? varsArr.shift() : scope;
-  active = getActiveState(scope);
   scope = scope.substr(active);
 
   return scope === '-block-' ? { blockIndex: +varsArr[0] } : {
@@ -265,7 +263,7 @@ function getTagData(scope, vars, type, start) {
     isNot: type === '^',
     isEscaped: start !== '{{{',
     hasAlias: varsArr[0] === 'as',
-    helper: intHelper,
+    helper: helper,
     scope: parseScope(scope),
     vars: processVars(varsArr, []),
     active: active,
@@ -274,30 +272,30 @@ function getTagData(scope, vars, type, start) {
 
 // ---- sizzle inlines
 
-function loopInlines(_this, tagData, glues, blocks, data) {
-  for (var n = 0, l = glues.length, tag = {}, out = ''; n < l; n++) {
+function loopInlines(_this, tags, glues, blocks, data) {
+  for (var n = 0, l = glues.length, out = ''; n < l; n++) {
     out += glues[n];
-    if (!(tag = tagData[n])) continue;
+    if (!tags[n]) continue;
 
-    out += tag.blockIndex > -1 ? blocks[tag.blockIndex](data) :
-      renderInline(_this, tag, getScope(data, tag), glues);
+    out += tags[n].blockIndex > -1 ? blocks[tags[n].blockIndex](data) :
+      renderInline(_this, tags[n], getScope(data, tags[n]));
   }
 
   return out;
 }
 
-function sizzleInlines(_this, text, blocks, tagData) {
+function sizzleInlines(_this, text, blocks, tags) {
   var glues = text.replace(
     _this.inlineRegExp,
     function(all, start, type, scope, vars) {
       return /^(?:!|=)/.test(type || '') ? '' :
-        tagData.push(getTagData(scope, vars, type || '', start)),
+        tags.push(getTagData(scope, vars, type || '', start)),
         _this.options.splitter;
     }
   ).split(_this.options.splitter);
 
   return function executeInlines(data) {
-    return loopInlines(_this, tagData, glues, blocks, data);
+    return loopInlines(_this, tags, glues, blocks, data);
   }
 }
 
@@ -307,7 +305,7 @@ function replaceBlock(_this, blocks, start, type, scope, vars, body) {
   var tags = _this.options.tags;
   var partialName = '';
   var parts = [];
-  var tag = {};
+  var tagData = {};
 
   if (type === '#*') {
     partialName = vars.replace(/['"]/g, '');
@@ -319,9 +317,9 @@ function replaceBlock(_this, blocks, start, type, scope, vars, body) {
   parts = body.split(_this.elseSplitter);
   parts = [ sizzleInlines(_this, parts[0], blocks, []),
     parts[1] && sizzleInlines(_this, parts[1], blocks, []) || null ];
-  tag = getTagData(scope, vars, type || '', start);
+  tagData = getTagData(scope, vars, type || '', start);
   blocks.push(function executeBlock(data) {
-    return renderBlock(_this, tag, getScope(data, tag), parts);
+    return renderBlock(_this, tagData, getScope(data, tagData), parts);
   });
 
   return (tags[0] + '-block- ' + (blocks.length - 1) + tags[1]);
