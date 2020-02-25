@@ -136,7 +136,7 @@ function getScope(data, tag) {
   }
 
   return {
-    result: scopes[0].scope[tagScope.name],
+    result: scopes[0].scope[tagScope.value],
     extra: data.extra,
     scopes: concat([data.scopes[0]], scopes.splice(0, 1)),
   };
@@ -303,17 +303,13 @@ function sizzleInlines(_this, text, blocks, tags) {
 
 function replaceBlock(_this, blocks, start, type, scope, vars, body) {
   var tags = _this.options.tags;
-  var partialName = '';
   var parts = [];
   var tagData = {};
 
   if (type === '#*') {
-    partialName = vars.replace(/['"]/g, '');
-    _this.partials[partialName] = _this.partials[partialName] ||
-      sizzleBlocks(_this, body, []); // or blocks??
+    _this.partials[vars.replace(/['"]/g, '')] = sizzleBlocks(_this, body, []);
     return '';
   }
-
   parts = body.split(_this.elseSplitter);
   parts = [ sizzleInlines(_this, parts[0], blocks, []),
     parts[1] && sizzleInlines(_this, parts[1], blocks, []) || null ];
