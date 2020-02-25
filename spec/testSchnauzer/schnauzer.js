@@ -294,8 +294,9 @@ function sizzleInlines(_this, text, blocks, tags) {
     }
   ).split(_this.options.splitter);
 
-  return function executeInlines(data) {
-    return loopInlines(_this, tags, glues, blocks, data);
+  return function executeInlines(data, extra) {
+    return loopInlines(_this, tags, glues, blocks, extra ?
+      getScope(data, extra || []) : data);
   }
 }
 
@@ -322,17 +323,13 @@ function replaceBlock(_this, blocks, start, type, scope, vars, body) {
 }
 
 function sizzleBlocks(_this, text, blocks) {
-  var finalInlinesFn = {};
   var replaceCb = function(all, start, type, scope, vars, end, body) {
     return replaceBlock(_this, blocks, start, type, scope, vars, body);
   };
 
   while (text !== (text = text.replace(_this.sectionRegExp, replaceCb)));
-  finalInlinesFn = sizzleInlines(_this, text, blocks, []);
 
-  return function executeAll(data, extra) {
-    return finalInlinesFn(getScope(data, extra || []));
-  };
+  return sizzleInlines(_this, text, blocks, []);
 }
 
 }));
