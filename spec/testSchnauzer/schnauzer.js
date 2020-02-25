@@ -311,7 +311,7 @@ function replaceBlock(_this, blocks, start, type, scope, vars, body) {
   if (type === '#*') {
     partialName = vars.replace(/['"]/g, '');
     _this.partials[partialName] = _this.partials[partialName] ||
-      sizzleBlocks(_this, body, blocks);
+      sizzleBlocks(_this, body, []); // or blocks??
     return '';
   }
 
