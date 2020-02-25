@@ -173,12 +173,13 @@ function getActiveState(text) {
   return text.charAt(1) === '%' ? 2 : text.charAt(0) === '%' ? 1 : 0;
 }
 
-function extractString(text, obj) {
+function convertString(text, obj) {
   if (text.charAt(0) === '"') { // || text.charAt(0) === "'"
     obj.isString = true;
-    text = text.substr(1, text.length - 2);
+    return text.substr(1, text.length - 2);
   }
-  return text;
+  return text === 'true' ? true : text === 'false' ? false :
+    isNaN(text) ? text : +text;
 }
 
 function cleanText(text) {
@@ -193,12 +194,16 @@ function splitVars(text, collection) {
   return collection;
 }
 
-function parseScope(text) {
+function parseScope(text, name) {
+  if (typeof text !== 'string') return {
+    name: name, value: text, path: [], parentDepth: 0
+  };
   var parts = text.split('../');
   var pathParts = parts.pop().split(/[.\/]/);
 
   return {
-    name: pathParts.pop(),
+    name: name,
+    value: pathParts.pop(),
     path: pathParts,
     parentDepth: parts.length,
   }
@@ -206,12 +211,11 @@ function parseScope(text) {
 
 function getVar(item, isAlias) {
   var out = {
-    name: '',
+    variable: '',
     isAlias: isAlias,
     aliasKey: '',
-    value: {},
     active: 0,
-    isString: false, // if value else name
+    isString: false, // if value else variable
     innerScope: {},
   };
   var split = [];
@@ -224,8 +228,9 @@ function getVar(item, isAlias) {
     return out;
   }
   split = item.split('=');
-  out.name = extractString(split[0], out);
-  out.value = split[1] ? parseScope(extractString(split[1], out)) : {};
+  out.variable = split[1] ?
+    parseScope(convertString(split[1], out), split[0]) :
+    parseScope(convertString(split[0], out), '');
 
   return out;
 }
