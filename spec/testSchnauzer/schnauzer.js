@@ -251,7 +251,7 @@ function processVars(vars, collection) {
   return collection;
 }
 
-function processTagData(scope, vars, type, start) {
+function getTagData(scope, vars, type, start) {
   var intHelper = /if|each|with|unless/.test(scope) ? scope : '';
   var varsArr = splitVars(vars, []);
   var active = 0;
@@ -291,7 +291,7 @@ function sizzleInlines(_this, text, blocks, tagData) {
     _this.inlineRegExp,
     function(all, start, type, scope, vars) {
       return /^(?:!|=)/.test(type || '') ? '' :
-        tagData.push(processTagData(scope, vars, type || '', start)),
+        tagData.push(getTagData(scope, vars, type || '', start)),
         _this.options.splitter;
     },
   ).split(_this.options.splitter);
@@ -319,7 +319,7 @@ function replaceBlock(_this, blocks, start, type, scope, vars, body) {
   blocks.push(function(data, tag) { // tag = undefined
     return renderBlock(
       _this,
-      tag = processTagData(scope, vars, type || '', start),
+      tag = getTagData(scope, vars, type || '', start),
       getScope(data, tag), // (tag) convenience for renderBlock
       [ sizzleInlines(_this, parts[0], blocks, []),
         parts[1] && sizzleInlines(_this, parts[1], blocks, []) || null ]
