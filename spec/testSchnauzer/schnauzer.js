@@ -7,10 +7,10 @@
 }(this, function(root, undefined) { 'use strict';
 
 var isFunction = function(obj) {
-  return obj && obj.constructor === Function;
+  return !!obj && obj.constructor === Function;
 };
 var isArray = Array.isArray || function(obj) {
-  return obj && obj.constructor === Array;
+  return !!obj && obj.constructor === Array;
 };
 var getKeys = Object.keys || function(obj) {
   var keys = [];
@@ -33,7 +33,6 @@ var Schnauzer = function(template, options) {
       '`': '&#x60;',
       '=': '&#x3D;'
     },
-    doEscape: true,
     helpers: {},
     partials: {},
     self: 'self',
@@ -49,7 +48,6 @@ var initSchnauzer = function(_this, options, template) {
   }
   options = _this.options;
   switchTags(_this, options.tags);
-  _this.helperRegExp = /if|each|with|unless/;
   _this.entityRegExp = new RegExp(
     '[' + getKeys(options.entityMap).join('') + ']', 'g'
   );
@@ -57,7 +55,7 @@ var initSchnauzer = function(_this, options, template) {
   for (var name in options.partials) {
     _this.registerPartial(name, options.partials[name]);
   }
-  if (template) _this.registerPartial(options.self, template);
+  if (template) _this.parse(template);
 };
 
 Schnauzer.prototype = {
@@ -96,7 +94,7 @@ function switchTags(_this, tags) {
   _this.sectionRegExp = new RegExp('(' + _tags[0] + ')([#^][*%]*)\\s*([\\w' +
     chars + ']*)(?:\\s+([\\w$\\s|./' + chars + ']*))*(' +
     _tags[1] + ')((?:(?!' + _tags[0] + '[#^])[\\S\\s])*?)\\1\\/\\3\\5', 'g');
-  _this.elseSplitter = new RegExp(_tags[0] + 'else' + _tags[1]);
+  _this.elseSplitter = new RegExp(_tags[0] + '(?:else|^)' + _tags[1]);
 }
 
 // ---- render helpers
@@ -107,23 +105,93 @@ function escapeHtml(string, _this) {
   });
 }
 
-function getScope(data, extra) {
-  return data;
+function concat(array, host) { // way faster than [].concat
+  for (var n = 0, l = array.length; n < l; n++) {
+    host[host.length] = array[n];
+  }
+  return host;
+}
+
+function findScope(scope, path) {
+  for (var n = 0, l = path.length, out = [scope]; n < l; n++) {
+    out.unshift(scope = scope[path[n]]);
+  }
+  return out;
+}
+
+function getScope(data, tag) {
+  var tagScope = tag.scope;
+  var scopes = [];
+
+  if (tagScope === undefined || tagScope.name === undefined) {
+    return { result: undefined, extra: tag, scopes: [{
+      scope: data,
+      helpers: [],
+    }]};
+  }
+
+  scopes = findScope(data.scopes[0].scope, tagScope.path);
+  for (var n = 0, l = scopes.length; n < l; n++) { // TODO: inside findScope
+    scopes[n] = { scope: scopes[n], helpers: [] };
+  }
+
+  return {
+    result: scopes[0].scope[tagScope.name],
+    extra: data.extra,
+    scopes: concat([data.scopes[0]], scopes.splice(0, 1)),
+  };
+}
+
+function renderInline(_this, tag, model, glues) {
+  if (tag.isPartial) { // partial // TODO: previous function??
+
+  } // else helpers and regular stuff
+
+  console.log(999, tag.scope, model);
+  return model.result || '';
+}
+
+function renderBlock(_this, tag, model, bodyFns) {
+  var resultData = model.result;
+  var ifHelper = tag.helper === 'if' || tag.helper === 'unless';
+  var bodyFn = bodyFns[resultData ? 0 : 1];
+
+  // console.log(tag.scope, model);
+  if (ifHelper) {
+    return bodyFn ? bodyFn(model) : '';
+  } else if (tag.helper) {
+    return bodyFn ? bodyFn(model) : '';
+  }
+  if (isArray(model.data) || typeof model.data === 'object') {
+    
+  }
 }
 
 // ---- parse (pre-render) helpers
 
-function stripString(text, obj, key) {
-  if (text.charAt(0) === "'" || text.charAt(0) === '"') {
-    obj[key] = true;
+function extractString(text, obj) {
+  if (text.charAt(0) === '"') { // || text.charAt(0) === "'"
+    obj.isString = true;
     text = text.substr(1, text.length - 2);
   }
   return text;
 }
 
+function cleanText(text) {
+  return text.replace(/^(?:this|\.)?\//, '').replace(/[[\]|]/g, '');
+}
+
+function splitVars(text, collection) {
+  if (!text) return collection;
+  text.replace(/\(.*?\)|(?:\S*?"(?:\\.|[^\"])*\")|\S+/g, function(match) {
+    if (match) collection.push(match);
+  });
+  return collection;
+}
+
 function parseScope(text) {
-  var parts = text.replace('this.', '').split('../');
-  var pathParts = parts.pop().split('.');
+  var parts = text.split('../');
+  var pathParts = parts.pop().split(/[.\/]/);
 
   return {
     name: pathParts.pop(),
@@ -135,29 +203,30 @@ function parseScope(text) {
 function getVar(item, isAlias) {
   var out = {
     name: '',
-    value: [],
-    valueIsNumber: false,
-    valueIsString: false,
-    active: false,
-    isString: false,
     isAlias: !!isAlias,
     aliasKey: '',
+    value: {},
+    active: false,
+    isString: false, // if value else name
+    innerScope: {},
   };
-  var splitItem = [];
+  var split = [];
 
   out.active = item.charAt(1) === '%' ? 2 : item.charAt(0) === '%' ? 1 : 0;
   item = item.substr(out.active);
-  item = stripString(item, out, 'isString');
-  splitItem = item.split('=');
-  out.value = parseScope(stripString(splitItem[1] || '', out, 'valueIsString'));
-  out.valueIsNumber = out.value ? out.value == +out.value : false;
-  out.name = splitItem[0];
+  if (item.charAt(0) === '(') {
+    item = item.substr(1, item.length - 2);
+    out.innerScope = processVars(splitVars(item, []), []);
+    return out;
+  }
+  split = item.split('=');
+  out.name = extractString(split[0], out);
+  out.value = split[1] ? parseScope(extractString(split[1], out)) : {};
 
   return out;
 }
 
-function processVars(vars, simple) {
-  var collection = [];
+function processVars(vars, collection) {
   var out = {};
   var isAs = false;
   var aliasKey = '';
@@ -165,102 +234,75 @@ function processVars(vars, simple) {
 
   for (var n = 0, l = vars.length; n < l; n++) {
     isAs = vars[n] === 'as';
-    if (isAs) {
-      n++;
-      aliasKey = vars[n + 1] || '';
+    if (isAs && ++n) {
+      aliasKey = (vars[n + 1] || '');
       hasAliasKey = aliasKey.charAt(aliasKey.length - 1) === '|';
     }
-    vars[n] = vars[n].replace(/\|/g, '');
-    out = simple ? { name: vars[n] } : getVar(vars[n], isAs);
-    out.aliasKey = aliasKey.replace('|', '');
+    vars[n] = cleanText(vars[n]);
+    out = getVar(vars[n], isAs);
+    out.aliasKey = hasAliasKey && ++n ? cleanText(aliasKey) : '';
     collection.push(out);
-
-    if (isAs) { // skip 'as' and 'aliasKey'
-      if (hasAliasKey) n++;
-      continue;
-    }
   }
+
   return collection;
 }
 
-function processTagData(_this, scope, vars, type, start) {
-  var helper = scope.match(_this.helperRegExp) ? scope : '';
-  var varsArr = vars ? vars.split(/\s+/) : [];
+function processTagData(scope, vars, type, start) {
+  var intHelper = /if|each|with|unless/.test(scope) ? scope : '';
+  var varsArr = splitVars(vars, []);
   var active = 0;
-  var isHelper = false;
-  var isPartial = false;
-  var isBlock = false;
 
-  scope = helper ? varsArr.shift() : scope;
+  scope = intHelper ? varsArr.shift() : scope;
   active = scope.charAt(1) === '%' ? 2 : scope.charAt(0) === '%' ? 1 : 0;
   scope = scope.substr(active);
-  isBlock = scope === '-block-';
-  isHelper = !!_this.helpers[scope];
-  isPartial = type === '>' && !!_this.partials[scope];
 
-  return { // tag description
-    isHelper: isHelper,
-    isPartial: isPartial,
-    isBlock: isBlock,
+  return scope === '-block-' ? { blockIndex: +varsArr[0] } : {
+    isPartial: type === '>',
     isNot: type === '^',
     isEscaped: start !== '{{{',
     hasAlias: varsArr[0] === 'as',
-
-    helper: helper,
+    helper: intHelper,
     scope: parseScope(scope),
-    vars: processVars(varsArr, isBlock || isHelper || isPartial),
-    blockIndex: isBlock ? +varsArr[0] : -1,
+    vars: processVars(varsArr, []),
     active: active,
   };
 }
 
-// ---- inlines
+// ---- sizzle inlines
 
-function renderInline(_this, tagdData, glues, blocks, data, extra) {
-  for (var n = 0, l = glues.length; n < l; n++) {
-    if (!tagdData[n]) continue;
+function loopInlines(_this, tagData, glues, blocks, data) {
+  for (var n = 0, l = glues.length, tag = {}, out = ''; n < l; n++) {
+    out += glues[n];
+    if (!(tag = tagData[n])) continue;
 
-    // console.log(tagdData);
-    if (tagdData[n].isBlock) {
-      blocks[tagdData[n].blockIndex](data, extra);
-    }
+    out += tag.blockIndex > -1 ? blocks[tag.blockIndex](data) :
+      renderInline(_this, tag, getScope(data, tag), glues);
   }
-  return 'renderInline';
+
+  return out;
 }
 
-function replaceInline(_this, start, type, scope, vars, tagdData) {
-  var _type = type || '';
-  var skip = /^(?:!|=)/.test(_type);
-
-  !skip && tagdData.push(processTagData(_this, scope, vars, _type, start));
-
-  return skip ? '' : _this.options.splitter;
-}
-
-function sizzleInlines(_this, text, blocks, tagdData) {
+function sizzleInlines(_this, text, blocks, tagData) {
   var glues = text.replace(
     _this.inlineRegExp,
     function(all, start, type, scope, vars) {
-      return replaceInline(_this, start, type, scope, vars, tagdData);
+      return /^(?:!|=)/.test(type || '') ? '' :
+        tagData.push(processTagData(scope, vars, type || '', start)),
+        _this.options.splitter;
     },
   ).split(_this.options.splitter);
 
-  return function(data, extra) {
-    return renderInline(_this, tagdData, glues, blocks, data, extra);
+  return function(data) {
+    return loopInlines(_this, tagData, glues, blocks, data);
   }
 }
 
-// ---- blocks
-
-function renderBlock(_this, tagdData, bodyFns, data, extra) {
-  console.log(tagdData);
-  return bodyFns[0](data, extra);
-}
+// ---- sizzle blocks
 
 function replaceBlock(_this, blocks, start, type, scope, vars, body) {
   var tags = _this.options.tags;
   var partialName = '';
-  var bodyParts = [];
+  var parts = [];
 
   if (type === '#*') {
     partialName = vars.replace(/['"]/g, '');
@@ -269,15 +311,14 @@ function replaceBlock(_this, blocks, start, type, scope, vars, body) {
     return '';
   }
 
-  bodyParts = body.split(_this.elseSplitter);
-  blocks.push(function(data, extra) {
+  parts = body.split(_this.elseSplitter);
+  blocks.push(function(data, tag) { // tag = undefined
     return renderBlock(
       _this,
-      processTagData(_this, scope, vars, type || '', start),
-      [ sizzleInlines(_this, bodyParts[0], blocks, []),
-        bodyParts[1] && sizzleInlines(_this, bodyParts[1], blocks, []) ],
-      data,
-      extra
+      tag = processTagData(scope, vars, type || '', start),
+      getScope(data, tag), // (tag) convenience for renderBlock
+      [ sizzleInlines(_this, parts[0], blocks, []),
+        parts[1] && sizzleInlines(_this, parts[1], blocks, []) || null ]
     );
   });
 
@@ -285,19 +326,16 @@ function replaceBlock(_this, blocks, start, type, scope, vars, body) {
 }
 
 function sizzleBlocks(_this, text, blocks) {
-  var tmpResult = '';
-  var final = function() {};
-  var replace = function(all, start, type, scope, vars, end, body) {
+  var finalFn = {};
+  var replaceCb = function(all, start, type, scope, vars, end, body) {
     return replaceBlock(_this, blocks, start, type, scope, vars, body);
   };
 
-  while (tmpResult !== text && (tmpResult = text)) {
-    text = text.replace(_this.sectionRegExp, replace);
-  }
-  final = sizzleInlines(_this, text, blocks, []);
+  while (text !== (text = text.replace(_this.sectionRegExp, replaceCb)));
+  finalFn = sizzleInlines(_this, text, blocks, []);
 
   return function executor(data, extra) {
-    return final(getScope(data, extra && (isArray(extra) && extra || [extra])));
+    return finalFn(getScope(data, extra || []));
   };
 }
 
