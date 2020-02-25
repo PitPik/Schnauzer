@@ -256,15 +256,13 @@ function getTagData(scope, vars, type, start) {
   var varsArr = splitVars(vars, []);
   var active = getActiveState(scope = helper ? varsArr.shift() : scope);
 
-  scope = scope.substr(active);
-
   return scope === '-block-' ? { blockIndex: +varsArr[0] } : {
+    scope: parseScope(scope.substr(active)),
     isPartial: type === '>',
     isNot: type === '^',
     isEscaped: start !== '{{{',
     hasAlias: varsArr[0] === 'as',
     helper: helper,
-    scope: parseScope(scope),
     vars: processVars(varsArr, []),
     active: active,
   };
