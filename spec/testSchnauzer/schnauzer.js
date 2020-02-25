@@ -169,6 +169,10 @@ function renderBlock(_this, tag, model, bodyFns) {
 
 // ---- parse (pre-render) helpers
 
+function getActiveState(text) {
+  return text.charAt(1) === '%' ? 2 : text.charAt(0) === '%' ? 1 : 0;
+}
+
 function extractString(text, obj) {
   if (text.charAt(0) === '"') { // || text.charAt(0) === "'"
     obj.isString = true;
@@ -206,13 +210,13 @@ function getVar(item, isAlias) {
     isAlias: !!isAlias,
     aliasKey: '',
     value: {},
-    active: false,
+    active: 0,
     isString: false, // if value else name
     innerScope: {},
   };
   var split = [];
 
-  out.active = item.charAt(1) === '%' ? 2 : item.charAt(0) === '%' ? 1 : 0;
+  out.active = getActiveState(item);
   item = item.substr(out.active);
   if (item.charAt(0) === '(') {
     item = item.substr(1, item.length - 2);
@@ -253,7 +257,7 @@ function processTagData(scope, vars, type, start) {
   var active = 0;
 
   scope = intHelper ? varsArr.shift() : scope;
-  active = scope.charAt(1) === '%' ? 2 : scope.charAt(0) === '%' ? 1 : 0;
+  active = getActiveState(scope);
   scope = scope.substr(active);
 
   return scope === '-block-' ? { blockIndex: +varsArr[0] } : {
@@ -326,16 +330,16 @@ function replaceBlock(_this, blocks, start, type, scope, vars, body) {
 }
 
 function sizzleBlocks(_this, text, blocks) {
-  var finalFn = {};
+  var finalInlinesFn = {};
   var replaceCb = function(all, start, type, scope, vars, end, body) {
     return replaceBlock(_this, blocks, start, type, scope, vars, body);
   };
 
   while (text !== (text = text.replace(_this.sectionRegExp, replaceCb)));
-  finalFn = sizzleInlines(_this, text, blocks, []);
+  finalInlinesFn = sizzleInlines(_this, text, blocks, []);
 
   return function executor(data, extra) {
-    return finalFn(getScope(data, extra || []));
+    return finalInlinesFn(getScope(data, extra || []));
   };
 }
 
