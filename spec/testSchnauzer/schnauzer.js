@@ -147,7 +147,7 @@ function renderInline(_this, tagData, model) {
 
   } // else helpers and regular stuff
 
-  console.log(999, tagData.scope, model);
+  console.log(999, tagData, model);
   return model.result || '';
 }
 
@@ -259,7 +259,7 @@ function getTagData(scope, vars, type, start) {
   var active = getActiveState(scope = helper ? varsArr.shift() : scope);
 
   return scope === '-block-' ? { blockIndex: +varsArr[0] } : {
-    scope: parseScope(scope.substr(active)),
+    scope: parseScope(scope.substr(active), ''),
     isPartial: type === '>',
     isNot: type === '^',
     isEscaped: start !== '{{{',
