@@ -293,10 +293,10 @@ function sizzleInlines(_this, text, blocks, tagData) {
       return /^(?:!|=)/.test(type || '') ? '' :
         tagData.push(getTagData(scope, vars, type || '', start)),
         _this.options.splitter;
-    },
+    }
   ).split(_this.options.splitter);
 
-  return function(data) {
+  return function executeInlines(data) {
     return loopInlines(_this, tagData, glues, blocks, data);
   }
 }
@@ -307,6 +307,7 @@ function replaceBlock(_this, blocks, start, type, scope, vars, body) {
   var tags = _this.options.tags;
   var partialName = '';
   var parts = [];
+  var tag = {};
 
   if (type === '#*') {
     partialName = vars.replace(/['"]/g, '');
@@ -316,14 +317,11 @@ function replaceBlock(_this, blocks, start, type, scope, vars, body) {
   }
 
   parts = body.split(_this.elseSplitter);
-  blocks.push(function(data, tag) { // tag = undefined
-    return renderBlock(
-      _this,
-      tag = getTagData(scope, vars, type || '', start),
-      getScope(data, tag), // (tag) convenience for renderBlock
-      [ sizzleInlines(_this, parts[0], blocks, []),
-        parts[1] && sizzleInlines(_this, parts[1], blocks, []) || null ]
-    );
+  parts = [ sizzleInlines(_this, parts[0], blocks, []),
+    parts[1] && sizzleInlines(_this, parts[1], blocks, []) || null ];
+  tag = getTagData(scope, vars, type || '', start);
+  blocks.push(function executeBlock(data) {
+    return renderBlock(_this, tag, getScope(data, tag), parts);
   });
 
   return (tags[0] + '-block- ' + (blocks.length - 1) + tags[1]);
@@ -338,7 +336,7 @@ function sizzleBlocks(_this, text, blocks) {
   while (text !== (text = text.replace(_this.sectionRegExp, replaceCb)));
   finalInlinesFn = sizzleInlines(_this, text, blocks, []);
 
-  return function executor(data, extra) {
+  return function executeAll(data, extra) {
     return finalInlinesFn(getScope(data, extra || []));
   };
 }
