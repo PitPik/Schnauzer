@@ -195,11 +195,14 @@ function splitVars(text, collection) {
 }
 
 function parseScope(text, name) {
+  var parts = [];
+  var pathParts = [];
+
   if (typeof text !== 'string') return {
     name: name, value: text, path: [], parentDepth: 0
   };
-  var parts = text.split('../');
-  var pathParts = parts.pop().split(/[.\/]/);
+  parts = text.split('../');
+  pathParts = parts.pop().split(/[.\/]/);
 
   return {
     name: name,
@@ -220,8 +223,7 @@ function getVar(item, isAlias) {
   };
   var split = [];
 
-  out.active = getActiveState(item);
-  item = item.substr(out.active);
+  item = item.substr(out.active = getActiveState(item));
   if (item.charAt(0) === '(') {
     item = item.substr(1, item.length - 2);
     out.innerScope = processVars(splitVars(item, []), []);
