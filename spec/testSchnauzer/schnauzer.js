@@ -331,7 +331,7 @@ function processBodyParts(_this, body, bodyFns, blocks) {
 
   for (var n = 0, l = parts.length; n < l; n += 4) {
     prevTrim = trims[1] || '';
-    if (parts[1 + n]) trims = getTrims(parts[1 + n] || '', parts[3 + n] || '');
+    if (parts[1 + n]) trims = getTrims(parts[1 + n], parts[3 + n]);
     bodyFns.push({
       scope: parts[2 + n] ? (vars = parts[2 + n].split(/\s+/)).shift() : '',
       vars: parts[2 + n] ? processVars(vars, []) : {},
