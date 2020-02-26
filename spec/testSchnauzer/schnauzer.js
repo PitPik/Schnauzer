@@ -337,11 +337,13 @@ function replaceBlock(_this, blocks, start, type, scope, vars, body, end, close)
   }
 
   parts = trimParts(body, whites[0], whites[1]).split(_this.elseSplitter);
-  for (var n = 0, l = parts.length, elseWhites = [], pW = ''; n < l; n += 4) {
-    pW = elseWhites[1] || ''; // previous round
+  for (var n = 0, l = parts.length, elseWhites = [], tmp = [], pW = ''; n < l; n += 4) {
+    pW = elseWhites[1] || ''; // from previous round
     if (parts[1 + n]) elseWhites = getWhites(parts[1 + n] || '', parts[3 + n] || '');
-    if (parts[2 + n]) elseIfVars
-      .push(processVars(parts[2 + n].replace(/if\s*/, '').split(/\s+/), []));
+    if (parts[2 + n]) elseIfVars.push({
+      scope: (tmp = parts[2 + n].split(/\s+/)).shift(),
+      vars: processVars(tmp, []),
+    });
     bodyFns.push(sizzleInlines(_this, trimParts(parts[0 + n], pW, elseWhites[0]), blocks, []));
   }
 
