@@ -177,7 +177,7 @@ function trim(parts, start, end) {
   return parts.replace(new RegExp(regExp, 'g'), '');
 }
 
-function getWhites(start, end) {
+function getTrims(start, end) {
   return [
     start.indexOf('~') !== -1 ? '~' : '',
     end.indexOf('~') !== -1 ? '~' : '',
@@ -299,11 +299,11 @@ function loopInlines(_this, tags, glues, blocks, data) {
 }
 
 function sizzleInlines(_this, text, blocks, tags) {
-  var whites = [];
+  var trims = [];
   var glues = text.replace(
     _this.inlineRegExp,
     function($, start, type, socpe, vars, end) {
-      whites.push(getWhites(start, end));
+      trims.push(getTrims(start, end));
       return /^(?:!|=)/.test(type || '') ? '' :
         tags.push(getTagData(socpe, vars, type || '', start)),
         _this.options.splitter;
@@ -312,8 +312,8 @@ function sizzleInlines(_this, text, blocks, tags) {
 
   for (var n = glues.length; n--; ) glues[n] = trim(
     glues[n],
-    whites[n - 1] ? whites[n - 1][1] : '',
-    whites[n] ? whites[n][0] : ''
+    trims[n - 1] ? trims[n - 1][1] : '',
+    trims[n] ? trims[n][0] : ''
   );
 
   return function executeInlines(data, extra) {
@@ -325,14 +325,17 @@ function sizzleInlines(_this, text, blocks, tags) {
 
 function processBodyParts(_this, body, bodyFns, blocks) {
   var parts = body.split(_this.elseSplitter);
+  var trims = [];
+  var prevTrim = '';
+  var vars = [];
 
-  for (var n = 0, l = parts.length, whites = [], tmp = [], pWhite = ''; n < l; n += 4) {
-    pWhite = whites[1] || '';
-    if (parts[1 + n]) whites = getWhites(parts[1 + n] || '', parts[3 + n] || '');
+  for (var n = 0, l = parts.length; n < l; n += 4) {
+    prevTrim = trims[1] || '';
+    if (parts[1 + n]) trims = getTrims(parts[1 + n] || '', parts[3 + n] || '');
     bodyFns.push({
-      scope: parts[2 + n] ? (tmp = parts[2 + n].split(/\s+/)).shift() : '',
-      vars: parts[2 + n] ? processVars(tmp, []) : {},
-      bodyFn: sizzleInlines(_this, trim(parts[0 + n], pWhite, whites[0]), blocks, []),
+      scope: parts[2 + n] ? (vars = parts[2 + n].split(/\s+/)).shift() : '',
+      vars: parts[2 + n] ? processVars(vars, []) : {},
+      bodyFn: sizzleInlines(_this, trim(parts[0 + n], prevTrim, trims[0]), blocks, []),
     });
   }
 }
@@ -341,13 +344,13 @@ function replaceBlock(_this, blocks, start, type, scope, vars, body, end, close)
   var bodyFns = [];
   var tagData = {};
   var closeParts = close.split(scope);
-  var whites = getWhites(end, closeParts[0]);
+  var trims = getTrims(end, closeParts[0]);
 
   if (type === '#*') {
     _this.partials[vars.replace(/['"]/g, '')] = sizzleBlocks(_this, body, []);
     return '';
   }
-  processBodyParts(_this, trim(body, whites[0], whites[1]), bodyFns, blocks);
+  processBodyParts(_this, trim(body, trims[0], trims[1]), bodyFns, blocks);
   tagData = getTagData(scope, vars, type || '', start);
   blocks.push(function executeBlock(data) {
     return renderBlock(_this, tagData, getScope(data, tagData), bodyFns);
