@@ -323,8 +323,21 @@ function sizzleInlines(_this, text, blocks, tags) {
 
 // ---- sizzle blocks
 
+function processBodyParts(_this, body, elseIfVars, bodyFns, blocks) {
+  var parts = body.split(_this.elseSplitter);
+
+  for (var n = 0, l = parts.length, elseWhites = [], tmp = [], pW = ''; n < l; n += 4) {
+    pW = elseWhites[1] || ''; // from previous round
+    if (parts[1 + n]) elseWhites = getWhites(parts[1 + n] || '', parts[3 + n] || '');
+    if (parts[2 + n]) elseIfVars.push({
+      scope: (tmp = parts[2 + n].split(/\s+/)).shift(),
+      vars: processVars(tmp, []),
+    });
+    bodyFns.push(sizzleInlines(_this, trimParts(parts[0 + n], pW, elseWhites[0]), blocks, []));
+  }
+}
+
 function replaceBlock(_this, blocks, start, type, scope, vars, body, end, close) {
-  var parts = [];
   var bodyFns = [];
   var elseIfVars = [];
   var tagData = {};
@@ -335,18 +348,7 @@ function replaceBlock(_this, blocks, start, type, scope, vars, body, end, close)
     _this.partials[vars.replace(/['"]/g, '')] = sizzleBlocks(_this, body, []);
     return '';
   }
-
-  parts = trimParts(body, whites[0], whites[1]).split(_this.elseSplitter);
-  for (var n = 0, l = parts.length, elseWhites = [], tmp = [], pW = ''; n < l; n += 4) {
-    pW = elseWhites[1] || ''; // from previous round
-    if (parts[1 + n]) elseWhites = getWhites(parts[1 + n] || '', parts[3 + n] || '');
-    if (parts[2 + n]) elseIfVars.push({
-      scope: (tmp = parts[2 + n].split(/\s+/)).shift(),
-      vars: processVars(tmp, []),
-    });
-    bodyFns.push(sizzleInlines(_this, trimParts(parts[0 + n], pW, elseWhites[0]), blocks, []));
-  }
-
+  processBodyParts(_this, trimParts(body, whites[0], whites[1]), elseIfVars, bodyFns, blocks);
   tagData = getTagData(scope, vars, type || '', start);
   blocks.push(function executeBlock(data) {
     return renderBlock(_this, tagData, getScope(data, tagData), bodyFns, elseIfVars);
