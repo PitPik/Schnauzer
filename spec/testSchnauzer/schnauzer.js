@@ -268,7 +268,8 @@ function processVars(vars, collection) {
   return collection;
 }
 
-function getTagData(scope, vars, type, start) {
+function getTagData(_this, scope, vars, type, start) {
+  var tags = _this.options.tags;
   var helper = /if|each|with|unless/.test(scope) ? scope : '';
   var varsArr = splitVars(vars, []);
   var active = getActiveState(scope = helper ? varsArr.shift() : scope);
@@ -277,7 +278,7 @@ function getTagData(scope, vars, type, start) {
     scope: parseScope(scope.substr(active), ''),
     isPartial: type === '>',
     isNot: type === '^',
-    isEscaped: start !== '{{{',
+    isEscaped: start.lastIndexOf(tags[0]) < 1,
     hasAlias: varsArr[0] === 'as',
     helper: helper,
     vars: processVars(varsArr, []),
@@ -306,7 +307,7 @@ function sizzleInlines(_this, text, blocks, tags) {
     function($, start, type, socpe, vars, end) {
       trims.push(getTrims(start, end));
       return /^(?:!|=)/.test(type || '') ? '' :
-        tags.push(getTagData(socpe, vars, type || '', start)),
+        tags.push(getTagData(_this, socpe, vars, type || '', start)),
         _this.options.splitter;
     }
   ).split(_this.options.splitter);
@@ -318,18 +319,20 @@ function sizzleInlines(_this, text, blocks, tags) {
   );
 
   return function executeInlines(data, extra) {
-    return loopInlines(_this, tags, glues, blocks, extra ? getScope(data, extra || []) : data);
+    return loopInlines(_this, tags, glues, blocks, extra ?
+      getScope(data, extra || []) : data);
   }
 }
 
 // ---- sizzle blocks
 
-function processBodyParts(_this, body, bodyFns, blocks) {
+function processBodyParts(_this, body, bodyFns, blocks, tagData) {
   var parts = body.split(_this.elseSplitter);
   var trims = [];
   var temp = [];
   var prevTrim = '';
   var vars = [];
+  var tags = _this.options.tags;
 
   for (var n = 0, l = parts.length; n < l; n += 4) {
     prevTrim = trims[1] || '';
@@ -338,6 +341,7 @@ function processBodyParts(_this, body, bodyFns, blocks) {
       scope: temp[0] ? temp[0] : '',
       vars: temp[1] ? temp[1] : {},
       bodyFn: sizzleInlines(_this, trim(parts[0 + n], prevTrim, trims[0]), blocks, []),
+      isEscaped: !n ? tagData.isEscaped : (parts[1 + n] || '').lastIndexOf(tags[0]) < 1,
     });
     temp = [];
     if (parts[2 + n]) temp.push(
@@ -347,7 +351,7 @@ function processBodyParts(_this, body, bodyFns, blocks) {
 
 function replaceBlock(_this, blocks, start, type, scope, vars, body, end, close) {
   var bodyFns = [];
-  var tagData = type !== '#*' ? getTagData(scope, vars, type || '', start) : {};
+  var tagData = type !== '#*' ? getTagData(_this, scope, vars, type || '', start) : {};
   var closeParts = close.split(scope);
   var trims = getTrims(end, closeParts[0]);
 
@@ -355,7 +359,7 @@ function replaceBlock(_this, blocks, start, type, scope, vars, body, end, close)
     _this.partials[vars.replace(/['"]/g, '')] = sizzleBlocks(_this, body, []);
     return '';
   }
-  processBodyParts(_this, trim(body, trims[0], trims[1]), bodyFns, blocks);
+  processBodyParts(_this, trim(body, trims[0], trims[1]), bodyFns, blocks, tagData);
   blocks.push(function executeBlock(data) {
     return renderBlock(_this, tagData, getScope(data, tagData), bodyFns);
   });
