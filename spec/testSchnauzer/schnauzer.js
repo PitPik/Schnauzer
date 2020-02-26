@@ -150,16 +150,16 @@ function renderInline(_this, tagData, model) {
   return model.result || '';
 }
 
-function renderBlock(_this, tagData, model, bodyFns, elseIfVars) {
+function renderBlock(_this, tagData, model, bodyFns) {
   var resultData = model.result;
   var ifHelper = tagData.helper === 'if' || tagData.helper === 'unless';
   var bodyFn = bodyFns[resultData ? 0 : 1];
 
-  console.log(bodyFns, elseIfVars);
+  console.log(bodyFns, bodyFn);
   if (ifHelper) {
-    return bodyFn ? bodyFn(model) : '';
+    return bodyFn ? bodyFn.bodyFn(model) : '';
   } else if (tagData.helper) {
-    return bodyFn ? bodyFn(model) : '';
+    return bodyFn ? bodyFn.bodyFn(model) : '';
   }
   if (isArray(model.data) || typeof model.data === 'object') {
     
@@ -323,23 +323,22 @@ function sizzleInlines(_this, text, blocks, tags) {
 
 // ---- sizzle blocks
 
-function processBodyParts(_this, body, elseIfVars, bodyFns, blocks) {
+function processBodyParts(_this, body, bodyFns, blocks) {
   var parts = body.split(_this.elseSplitter);
 
-  for (var n = 0, l = parts.length, elseWhites = [], tmp = [], pW = ''; n < l; n += 4) {
-    pW = elseWhites[1] || ''; // from previous round
-    if (parts[1 + n]) elseWhites = getWhites(parts[1 + n] || '', parts[3 + n] || '');
-    if (parts[2 + n]) elseIfVars.push({
-      scope: (tmp = parts[2 + n].split(/\s+/)).shift(),
-      vars: processVars(tmp, []),
+  for (var n = 0, l = parts.length, whites = [], tmp = [], pWhite = ''; n < l; n += 4) {
+    pWhite = whites[1] || '';
+    if (parts[1 + n]) whites = getWhites(parts[1 + n] || '', parts[3 + n] || '');
+    bodyFns.push({
+      scope: parts[2 + n] ? (tmp = parts[2 + n].split(/\s+/)).shift() : '',
+      vars: parts[2 + n] ? processVars(tmp, []) : {},
+      bodyFn: sizzleInlines(_this, trimParts(parts[0 + n], pWhite, whites[0]), blocks, []),
     });
-    bodyFns.push(sizzleInlines(_this, trimParts(parts[0 + n], pW, elseWhites[0]), blocks, []));
   }
 }
 
 function replaceBlock(_this, blocks, start, type, scope, vars, body, end, close) {
   var bodyFns = [];
-  var elseIfVars = [];
   var tagData = {};
   var closeParts = close.split(scope);
   var whites = getWhites(end, closeParts[0]);
@@ -348,10 +347,10 @@ function replaceBlock(_this, blocks, start, type, scope, vars, body, end, close)
     _this.partials[vars.replace(/['"]/g, '')] = sizzleBlocks(_this, body, []);
     return '';
   }
-  processBodyParts(_this, trimParts(body, whites[0], whites[1]), elseIfVars, bodyFns, blocks);
+  processBodyParts(_this, trimParts(body, whites[0], whites[1]), bodyFns, blocks);
   tagData = getTagData(scope, vars, type || '', start);
   blocks.push(function executeBlock(data) {
-    return renderBlock(_this, tagData, getScope(data, tagData), bodyFns, elseIfVars);
+    return renderBlock(_this, tagData, getScope(data, tagData), bodyFns);
   });
 
   return (start + '-block- ' + (blocks.length - 1) + closeParts[1]);
