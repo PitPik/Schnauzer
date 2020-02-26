@@ -326,6 +326,7 @@ function sizzleInlines(_this, text, blocks, tags) {
 function processBodyParts(_this, body, bodyFns, blocks) {
   var parts = body.split(_this.elseSplitter);
   var trims = [];
+  var temp = [];
   var prevTrim = '';
   var vars = [];
 
@@ -333,10 +334,13 @@ function processBodyParts(_this, body, bodyFns, blocks) {
     prevTrim = trims[1] || '';
     if (parts[1 + n]) trims = getTrims(parts[1 + n], parts[3 + n]);
     bodyFns.push({
-      scope: parts[2 + n] ? (vars = parts[2 + n].split(/\s+/)).shift() : '',
-      vars: parts[2 + n] ? processVars(vars, []) : {},
+      scope: temp[0] ? temp[0] : '',
+      vars: temp[1] ? temp[1] : {},
       bodyFn: sizzleInlines(_this, trim(parts[0 + n], prevTrim, trims[0]), blocks, []),
     });
+    temp = [];
+    if (parts[2 + n]) temp.push(
+      (vars = splitVars(parts[2 + n], [])).shift(), processVars(vars, []));
   }
 }
 
