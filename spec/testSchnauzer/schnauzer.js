@@ -48,9 +48,7 @@ var initSchnauzer = function(_this, options, template) {
   }
   options = _this.options;
   switchTags(_this, options.tags);
-  _this.entityRegExp = new RegExp(
-    '[' + getKeys(options.entityMap).join('') + ']', 'g'
-  );
+  _this.entityRegExp = new RegExp('[' + getKeys(options.entityMap).join('') + ']', 'g');
   _this.helpers = options.helpers;
   for (var name in options.partials) {
     _this.registerPartial(name, options.partials[name]);
@@ -148,16 +146,16 @@ function renderInline(_this, tagData, model) {
 
   } // else helpers and regular stuff
 
-  console.log(999, tagData, model);
+  // console.log(999, tagData, model);
   return model.result || '';
 }
 
-function renderBlock(_this, tagData, model, bodyFns) {
+function renderBlock(_this, tagData, model, bodyFns, elseIfVars) {
   var resultData = model.result;
   var ifHelper = tagData.helper === 'if' || tagData.helper === 'unless';
   var bodyFn = bodyFns[resultData ? 0 : 1];
 
-  // console.log(tagData.scope, model);
+  console.log(bodyFns, elseIfVars);
   if (ifHelper) {
     return bodyFn ? bodyFn(model) : '';
   } else if (tagData.helper) {
@@ -171,31 +169,27 @@ function renderBlock(_this, tagData, model, bodyFns) {
 // ---- parse (pre-render) helpers
 
 function trimParts(parts, start, end) {
-  var regExp = [];
+  var regExp = '^\\s*|\\s*$';
 
-  start && regExp.push('^\\s*')
-  end && regExp.push('\\s*$');
+  if (!start && !end) return parts;
+  regExp = !start ? '\\s*$' : !end ? '^\\s*' : regExp;
 
-  return regExp.length === 0 ? parts :
-    parts.replace(new RegExp(regExp.join('|'), 'g'), '');
+  return parts.replace(new RegExp(regExp, 'g'), '');
 }
 
-function getWhites(start, end, close, tags) {
+function getWhites(start, end) {
   return [
     start.indexOf('~') !== -1 ? '~' : '',
     end.indexOf('~') !== -1 ? '~' : '',
-    close.indexOf(tags[0] + '~') !== -1 ? '~' : '',
-    close.indexOf('~' + tags[1]) !== -1 ? '~' : ''
   ];
 }
 
-function convertString(text, obj) {
+function convertValue(text, obj) {
   if (text.charAt(0) === '"') { // || text.charAt(0) === "'"
     obj.isString = true;
     return text.substr(1, text.length - 2);
   }
-  return text === 'true' ? true : text === 'false' ? false :
-    isNaN(text) ? text : +text;
+  return text === 'true' ? true : text === 'false' ? false : isNaN(text) ? text : +text;
 }
 
 function cleanText(text) {
@@ -229,7 +223,7 @@ function parseScope(text, name) {
 
 function getVar(item, isAlias) {
   var out = {
-    variable: '',
+    variable: {},
     isAlias: isAlias,
     aliasKey: '',
     active: 0,
@@ -246,8 +240,8 @@ function getVar(item, isAlias) {
   }
   split = item.split('=');
   out.variable = split[1] ?
-    parseScope(convertString(split[1], out), split[0]) :
-    parseScope(convertString(split[0], out), '');
+    parseScope(convertValue(split[1], out), split[0]) :
+    parseScope(convertValue(split[0], out), '');
 
   return out;
 }
@@ -309,53 +303,54 @@ function sizzleInlines(_this, text, blocks, tags) {
   var glues = text.replace(
     _this.inlineRegExp,
     function($, start, type, socpe, vars, end) {
-      whites.push(getWhites(start, end, '', _this.options.tags));
+      whites.push(getWhites(start, end));
       return /^(?:!|=)/.test(type || '') ? '' :
         tags.push(getTagData(socpe, vars, type || '', start)),
         _this.options.splitter;
     }
   ).split(_this.options.splitter);
 
-  for (var n = glues.length; n--; ) {
-    if (whites[n]) {
-      glues[n] = trimParts(glues[n], '', whites[n][0]);
-      glues[n + 1] = trimParts(glues[n + 1], whites[n][1], '');
-    }
-  }
+  for (var n = glues.length; n--; ) glues[n] = trimParts(
+    glues[n],
+    whites[n - 1] ? whites[n - 1][1] : '',
+    whites[n] ? whites[n][0] : ''
+  );
 
   return function executeInlines(data, extra) {
-    return loopInlines(_this, tags, glues, blocks, extra ?
-      getScope(data, extra || []) : data);
+    return loopInlines(_this, tags, glues, blocks, extra ? getScope(data, extra || []) : data);
   }
 }
 
 // ---- sizzle blocks
 
 function replaceBlock(_this, blocks, start, type, scope, vars, body, end, close) {
-  var tags = _this.options.tags;
   var parts = [];
+  var bodyFns = [];
+  var elseIfVars = [];
   var tagData = {};
-  var whites = [];
-  var elseWhites = [];
+  var closeParts = close.split(scope);
+  var whites = getWhites(end, closeParts[0]);
 
   if (type === '#*') {
     _this.partials[vars.replace(/['"]/g, '')] = sizzleBlocks(_this, body, []);
     return '';
   }
-  
-  whites = getWhites(start, end, close, tags);
-  parts = trimParts(body, whites[1],  whites[2]).split(_this.elseSplitter);
-  elseWhites = getWhites(parts[1] || '', parts[3] || '', '', tags);
-  parts[0] = trimParts(parts[0], '', elseWhites[0]);
-  parts[4] && (parts[4] = trimParts(parts[4], elseWhites[1], ''));
-  parts = [ sizzleInlines(_this, parts[0], blocks, []),
-    parts[4] && sizzleInlines(_this, parts[4], blocks, []) || null ];
+
+  parts = trimParts(body, whites[0], whites[1]).split(_this.elseSplitter);
+  for (var n = 0, l = parts.length, elseWhites = [], pW = ''; n < l; n += 4) {
+    pW = elseWhites[1] || ''; // previous round
+    if (parts[1 + n]) elseWhites = getWhites(parts[1 + n] || '', parts[3 + n] || '');
+    if (parts[2 + n]) elseIfVars
+      .push(processVars(parts[2 + n].replace(/if\s*/, '').split(/\s+/), []));
+    bodyFns.push(sizzleInlines(_this, trimParts(parts[0 + n], pW, elseWhites[0]), blocks, []));
+  }
 
   tagData = getTagData(scope, vars, type || '', start);
   blocks.push(function executeBlock(data) {
-    return renderBlock(_this, tagData, getScope(data, tagData), parts);
+    return renderBlock(_this, tagData, getScope(data, tagData), bodyFns, elseIfVars);
   });
-  return (tags[0] + whites[0] + '-block- ' + (blocks.length - 1) + whites[3] + tags[1]);
+
+  return (start + '-block- ' + (blocks.length - 1) + closeParts[1]);
 }
 
 function sizzleBlocks(_this, text, blocks) {
