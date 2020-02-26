@@ -235,7 +235,8 @@ function getVar(item, isAlias) {
   item = item.substr(out.active = getActiveState(item));
   if (item.charAt(0) === '(') {
     item = item.substr(1, item.length - 2);
-    out.innerScope = processVars(splitVars(item, []), []);
+    out.innerScope = { scope: '', vars: processVars(splitVars(item, []), []) };
+    out.innerScope.scope = out.innerScope.vars.shift().variable.value;
     return out;
   }
   split = item.split('=');
