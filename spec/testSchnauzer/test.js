@@ -183,11 +183,13 @@ var testStr_test = `
   <div>Hello {{person.name}}</div>
   <div>Found foo: {{foo~}}    </div>
   <div>
-    {{~#if person~}}
+    {{{~#if person}}}
       <div>Hello {{person.name}}</div>
-    {{~else~}}
+    {{~else if foo.bar.fooBar~}}
       Nothing to print!
-    {{~/if~}}
+    {{~else if sss (inner-helper 'abc')~}}
+      Nothing to print2!
+    {{{~/if~}}}
     {{#if person}}
       Just Text;
       {{~#if foo~}}
@@ -197,18 +199,18 @@ var testStr_test = `
         Just Text if (bar);
       {{~else~}}
         Just Text else (bar);
-      {{~/if}}
+      {{/if}}
     {{~/if}}
   </div>
-  {{~#with person~}}
+  {{#with person~}}
     <div>{{name}}</div>
-    {{~#with lastName~}}
+    {{~#with lastName}}
       <div>{{name}}</div>
-    {{/with}}
+    {{/with~}}
   {{/with}}
 `;
 
-var s = new Schnauzer(testStr_test, {
+var s = new Schnauzer('', {
   helpers: {
     foo: function foo() {},
     inlineHelper: function inlineHelper() {},
@@ -217,6 +219,10 @@ var s = new Schnauzer(testStr_test, {
     partial: function foo() {},
   }
 });
+
+// console.log(s);
+
+s.parse(testStr_test);
 
 var out = s.render({
   person: {
