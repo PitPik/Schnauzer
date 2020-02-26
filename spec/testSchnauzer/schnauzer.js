@@ -316,7 +316,7 @@ function sizzleInlines(_this, text, blocks, tags) {
     }
   ).split(_this.options.splitter);
 
-  for (var n = 0, l = glues.length; n < l; n++) {
+  for (var n = glues.length; n--; ) {
     if (whites[n]) {
       glues[n] = trimParts(glues[n], '', whites[n][0]);
       glues[n + 1] = trimParts(glues[n + 1], whites[n][1], '');
