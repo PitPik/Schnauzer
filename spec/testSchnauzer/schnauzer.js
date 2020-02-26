@@ -342,7 +342,7 @@ function processBodyParts(_this, body, bodyFns, blocks) {
 
 function replaceBlock(_this, blocks, start, type, scope, vars, body, end, close) {
   var bodyFns = [];
-  var tagData = {};
+  var tagData = type !== '#*' ? getTagData(scope, vars, type || '', start) : {};
   var closeParts = close.split(scope);
   var trims = getTrims(end, closeParts[0]);
 
@@ -351,7 +351,6 @@ function replaceBlock(_this, blocks, start, type, scope, vars, body, end, close)
     return '';
   }
   processBodyParts(_this, trim(body, trims[0], trims[1]), bodyFns, blocks);
-  tagData = getTagData(scope, vars, type || '', start);
   blocks.push(function executeBlock(data) {
     return renderBlock(_this, tagData, getScope(data, tagData), bodyFns);
   });
