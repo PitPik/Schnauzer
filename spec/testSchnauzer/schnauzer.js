@@ -168,7 +168,7 @@ function renderBlock(_this, tagData, model, bodyFns) {
 
 // ---- parse (pre-render) helpers
 
-function trimParts(parts, start, end) {
+function trim(parts, start, end) {
   var regExp = '^\\s*|\\s*$';
 
   if (!start && !end) return parts;
@@ -310,7 +310,7 @@ function sizzleInlines(_this, text, blocks, tags) {
     }
   ).split(_this.options.splitter);
 
-  for (var n = glues.length; n--; ) glues[n] = trimParts(
+  for (var n = glues.length; n--; ) glues[n] = trim(
     glues[n],
     whites[n - 1] ? whites[n - 1][1] : '',
     whites[n] ? whites[n][0] : ''
@@ -332,7 +332,7 @@ function processBodyParts(_this, body, bodyFns, blocks) {
     bodyFns.push({
       scope: parts[2 + n] ? (tmp = parts[2 + n].split(/\s+/)).shift() : '',
       vars: parts[2 + n] ? processVars(tmp, []) : {},
-      bodyFn: sizzleInlines(_this, trimParts(parts[0 + n], pWhite, whites[0]), blocks, []),
+      bodyFn: sizzleInlines(_this, trim(parts[0 + n], pWhite, whites[0]), blocks, []),
     });
   }
 }
@@ -347,7 +347,7 @@ function replaceBlock(_this, blocks, start, type, scope, vars, body, end, close)
     _this.partials[vars.replace(/['"]/g, '')] = sizzleBlocks(_this, body, []);
     return '';
   }
-  processBodyParts(_this, trimParts(body, whites[0], whites[1]), bodyFns, blocks);
+  processBodyParts(_this, trim(body, whites[0], whites[1]), bodyFns, blocks);
   tagData = getTagData(scope, vars, type || '', start);
   blocks.push(function executeBlock(data) {
     return renderBlock(_this, tagData, getScope(data, tagData), bodyFns);
