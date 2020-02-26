@@ -86,15 +86,16 @@ Schnauzer.prototype = {
 return Schnauzer;
 
 function switchTags(_this, tags) {
-  var _tags = tags[0] === '{{' ? ['{{2,3}', '}{2,3}'] : tags;
+  var tgs = tags[0] === '{{' ? ['({{2,3}~*)', '(~*}{2,3})'] : tags;
   var chars = _this.options.characters + '\\][';
+  var blockEnd = (tgs[0] + '\\/\\3' + tgs[1]).replace(/[()]/g, '');
 
-  _this.inlineRegExp = new RegExp('(' + _tags[0] + ')([>!&=])*\\s*([\\w\\' +
-    chars + '\\.]+)\\s*([\\w' + chars + '|\\.\\s]*)' + _tags[1], 'g');
-  _this.sectionRegExp = new RegExp('(' + _tags[0] + ')([#^][*%]*)\\s*([\\w' +
-    chars + ']*)(?:\\s+([\\w$\\s|./' + chars + ']*))*(' +
-    _tags[1] + ')((?:(?!' + _tags[0] + '[#^])[\\S\\s])*?)\\1\\/\\3\\5', 'g');
-  _this.elseSplitter = new RegExp(_tags[0] + '(?:else|^)' + _tags[1]);
+  _this.inlineRegExp = new RegExp(tgs[0] + '([>!&=])*\\s*([\\w\\' +
+    chars + '\\.]+)\\s*([\\w' + chars + '|\\.\\s]*)' + tgs[1], 'g');
+  _this.sectionRegExp = new RegExp(tgs[0] + '([#^][*%]*)\\s*([\\w' +
+    chars + ']*)(?:\\s+([\\w$\\s|./' + chars + ']*))*' + tgs[1] +
+    '((?:(?!' + tgs[0] + '[#^])[\\S\\s])*?)(' + blockEnd + ')', 'g');
+  _this.elseSplitter = new RegExp(tgs[0] + '(?:else|^)\\s*(.*?)' + tgs[1]);
 }
 
 // ---- render helpers
@@ -169,8 +170,23 @@ function renderBlock(_this, tagData, model, bodyFns) {
 
 // ---- parse (pre-render) helpers
 
-function getActiveState(text) {
-  return text.charAt(1) === '%' ? 2 : text.charAt(0) === '%' ? 1 : 0;
+function trimParts(parts, start, end) {
+  var regExp = [];
+
+  start && regExp.push('^\\s*')
+  end && regExp.push('\\s*$');
+
+  return regExp.length === 0 ? parts :
+    parts.replace(new RegExp(regExp.join('|'), 'g'), '');
+}
+
+function getWhites(start, end, close, tags) {
+  return [
+    start.indexOf('~') !== -1 ? '~' : '',
+    end.indexOf('~') !== -1 ? '~' : '',
+    close.indexOf(tags[0] + '~') !== -1 ? '~' : '',
+    close.indexOf('~' + tags[1]) !== -1 ? '~' : ''
+  ];
 }
 
 function convertString(text, obj) {
@@ -184,6 +200,10 @@ function convertString(text, obj) {
 
 function cleanText(text) {
   return text.replace(/^(?:this|\.)?\//, '').replace(/[[\]|]/g, '');
+}
+
+function getActiveState(text) {
+  return text.charAt(1) === '%' ? 2 : text.charAt(0) === '%' ? 1 : 0;
 }
 
 function splitVars(text, collection) {
@@ -285,14 +305,23 @@ function loopInlines(_this, tags, glues, blocks, data) {
 }
 
 function sizzleInlines(_this, text, blocks, tags) {
+  var whites = [];
   var glues = text.replace(
     _this.inlineRegExp,
-    function(all, start, type, scope, vars) {
+    function($, start, type, socpe, vars, end) {
+      whites.push(getWhites(start, end, '', _this.options.tags));
       return /^(?:!|=)/.test(type || '') ? '' :
-        tags.push(getTagData(scope, vars, type || '', start)),
+        tags.push(getTagData(socpe, vars, type || '', start)),
         _this.options.splitter;
     }
   ).split(_this.options.splitter);
+
+  for (var n = 0, l = glues.length; n < l; n++) {
+    if (whites[n]) {
+      glues[n] = trimParts(glues[n], '', whites[n][0]);
+      glues[n + 1] = trimParts(glues[n + 1], whites[n][1], '');
+    }
+  }
 
   return function executeInlines(data, extra) {
     return loopInlines(_this, tags, glues, blocks, extra ?
@@ -302,29 +331,36 @@ function sizzleInlines(_this, text, blocks, tags) {
 
 // ---- sizzle blocks
 
-function replaceBlock(_this, blocks, start, type, scope, vars, body) {
+function replaceBlock(_this, blocks, start, type, scope, vars, body, end, close) {
   var tags = _this.options.tags;
   var parts = [];
   var tagData = {};
+  var whites = [];
+  var elseWhites = [];
 
   if (type === '#*') {
     _this.partials[vars.replace(/['"]/g, '')] = sizzleBlocks(_this, body, []);
     return '';
   }
-  parts = body.split(_this.elseSplitter);
+  
+  whites = getWhites(start, end, close, tags);
+  parts = trimParts(body, whites[1],  whites[2]).split(_this.elseSplitter);
+  elseWhites = getWhites(parts[1] || '', parts[3] || '', '', tags);
+  parts[0] = trimParts(parts[0], '', elseWhites[0]);
+  parts[4] && (parts[4] = trimParts(parts[4], elseWhites[1], ''));
   parts = [ sizzleInlines(_this, parts[0], blocks, []),
-    parts[1] && sizzleInlines(_this, parts[1], blocks, []) || null ];
+    parts[4] && sizzleInlines(_this, parts[4], blocks, []) || null ];
+
   tagData = getTagData(scope, vars, type || '', start);
   blocks.push(function executeBlock(data) {
     return renderBlock(_this, tagData, getScope(data, tagData), parts);
   });
-
-  return (tags[0] + '-block- ' + (blocks.length - 1) + tags[1]);
+  return (tags[0] + whites[0] + '-block- ' + (blocks.length - 1) + whites[3] + tags[1]);
 }
 
 function sizzleBlocks(_this, text, blocks) {
-  var replaceCb = function(all, start, type, scope, vars, end, body) {
-    return replaceBlock(_this, blocks, start, type, scope, vars, body);
+  var replaceCb = function($, start, type, socpe, vars, end, body, _, close) {
+    return replaceBlock(_this, blocks, start, type, socpe, vars, body, end, close);
   };
 
   while (text !== (text = text.replace(_this.sectionRegExp, replaceCb)));
