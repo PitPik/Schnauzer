@@ -122,20 +122,20 @@ function getScope(data, tag) {
   var tagScope = tag.scope;
   var scopes = [];
 
-  if (tagScope === undefined || tagScope.name === undefined) {
+  if (tagScope === undefined || tagScope.variable === undefined) {
     return { result: undefined, extra: tag, scopes: [{
       scope: data,
       helpers: [],
     }]};
   }
 
-  scopes = findScope(data.scopes[0].scope, tagScope.path);
+  scopes = findScope(data.scopes[0].scope, tagScope.variable.path || []);
   for (var n = 0, l = scopes.length; n < l; n++) { // TODO: inside findScope
     scopes[n] = { scope: scopes[n], helpers: [] };
   }
 
   return {
-    result: scopes[0].scope[tagScope.value],
+    result: scopes[0].scope[tagScope.variable.value],
     extra: data.extra,
     scopes: concat([data.scopes[0]], scopes.splice(0, 1)),
   };
@@ -146,7 +146,7 @@ function renderInline(_this, tagData, model) {
 
   } // else helpers and regular stuff
 
-  // console.log(999, tagData, model);
+  console.log(999, tagData, model);
   return model.result || '';
 }
 
@@ -155,6 +155,7 @@ function renderBlock(_this, tagData, model, bodyFns) {
   var ifHelper = tagData.helper === 'if' || tagData.helper === 'unless';
   var bodyFn = bodyFns[resultData ? 0 : 1];
 
+  // console.log('---', model)
   console.log(bodyFns, bodyFn);
   if (ifHelper) {
     return bodyFn ? bodyFn.bodyFn(model) : '';
@@ -268,14 +269,14 @@ function processVars(vars, collection) {
   return collection;
 }
 
-function getTagData(_this, scope, vars, type, start) {
+function getTagData(_this, scope, vars, type, start, bodyFn) {
   var tags = _this.options.tags;
   var helper = /if|each|with|unless/.test(scope) ? scope : '';
   var varsArr = splitVars(vars, []);
   var active = getActiveState(scope = helper ? varsArr.shift() : scope);
 
   return scope === '-block-' ? { blockIndex: +varsArr[0] } : {
-    scope: parseScope(scope.substr(active), ''),
+    scope: getVar(scope.substr(active), false),
     isPartial: type === '>',
     isNot: type === '^',
     isEscaped: start.lastIndexOf(tags[0]) < 1,
@@ -283,6 +284,7 @@ function getTagData(_this, scope, vars, type, start) {
     helper: helper,
     vars: processVars(varsArr, []),
     active: active,
+    bodyFn: bodyFn,
   };
 }
 
@@ -300,15 +302,25 @@ function loopInlines(_this, tags, glues, blocks, data) {
   return out;
 }
 
+function replaceInline(_this, trims, tags, start, type, scope, vars, end) {
+  var temp = [];
+
+  if (scope.charAt(0) === '(') {
+    scope = (temp = splitVars(scope + ' ' + vars, [])).shift();
+    vars = temp.join(' '); // TODO...
+  }
+  trims.push(getTrims(start, end));
+  return /^(?:!|=)/.test(type || '') ? '' :
+    tags.push(getTagData(_this, scope, vars, type || '', start)),
+    _this.options.splitter;
+}
+
 function sizzleInlines(_this, text, blocks, tags) {
   var trims = [];
   var glues = text.replace(
     _this.inlineRegExp,
     function($, start, type, scope, vars, end) {
-      trims.push(getTrims(start, end));
-      return /^(?:!|=)/.test(type || '') ? '' :
-        tags.push(getTagData(_this, scope, vars, type || '', start)),
-        _this.options.splitter;
+      return replaceInline(_this, trims, tags, start, type, scope, vars, end);
     }
   ).split(_this.options.splitter);
 
@@ -326,26 +338,28 @@ function sizzleInlines(_this, text, blocks, tags) {
 
 // ---- sizzle blocks
 
-function processBodyParts(_this, body, bodyFns, blocks, tagData) {
+function processBodyParts(_this, body, bodyFns, blocks, mainTag) {
   var parts = body.split(_this.elseSplitter);
   var trims = [];
   var prevIf = '';
   var prevTrim = '';
   var vars = [];
-  var tags = _this.options.tags;
 
   for (var n = 0, l = parts.length; n < l; n += 4) {
     prevIf = parts[2 + n - 4] || '';
     prevTrim = trims[1] || '';
     if (parts[1 + n]) trims = getTrims(parts[1 + n], parts[3 + n]);
-    bodyFns.push({
-      scope: prevIf ? (vars = splitVars(prevIf, [])).shift() : '',
-      vars: prevIf ? processVars(vars, []) : {},
-      bodyFn: sizzleInlines(_this, trim(parts[n], prevTrim, trims[0]), blocks, []),
-      isEscaped: n ? (parts[1 + n] || '').lastIndexOf(tags[0]) < 1 : tagData.isEscaped,
-    });
+    bodyFns.push(getTagData(
+      _this,
+      prevIf ? (vars = splitVars(prevIf, [])).shift() : '',
+      vars.join(' '),
+      '',
+      n ? parts[1 + n - 4] || '' : mainTag,
+      sizzleInlines(_this, trim(parts[n], prevTrim, trims[0]), blocks, []),
+    ));
   }
 }
+
 
 function replaceBlock(_this, blocks, start, end, close, body, type, scope, vars) {
   var bodyFns = [];
@@ -357,7 +371,7 @@ function replaceBlock(_this, blocks, start, end, close, body, type, scope, vars)
     _this.partials[vars.replace(/['"]/g, '')] = sizzleBlocks(_this, body, []);
     return '';
   }
-  processBodyParts(_this, trim(body, trims[0], trims[1]), bodyFns, blocks, tagData);
+  processBodyParts(_this, trim(body, trims[0], trims[1]), bodyFns, blocks, start);
   blocks.push(function executeBlock(data) {
     return renderBlock(_this, tagData, getScope(data, tagData), bodyFns);
   });
