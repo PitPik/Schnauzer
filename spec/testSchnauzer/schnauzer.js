@@ -197,8 +197,8 @@ function convertValue(text, obj) {
 }
 
 function cleanText(text, obj) {
-  return text.replace(/^(?:this|\.)?\/*/, function() {
-    obj.isStrict = true;
+  return text.replace(/^(?:this|\.)?\/*/, function($) {
+    if ($) obj.isStrict = true;
     return '';
   }).replace(/[[\]|]/g, '');
 }
@@ -220,7 +220,7 @@ function parseScope(text, name) {
   var parts = isString ? text.split('../') : [];
   var pathParts = isString ? parts.pop().split(/[.\/]/) : [text];
 
-  return !isString ? { value: text } : {
+  return !isString ? { value: text, isLiteral: true } : {
     name: name,
     value: pathParts.pop(),
     path: pathParts,
