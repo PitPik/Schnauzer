@@ -243,8 +243,7 @@ function getVar(item, isAlias) {
   if (item.charAt(0) === '(') {
     item = item.substr(1, item.length - 2);
     split = splitVars(item, []);
-    out.variable = { scope: split.shift(), vars: processVars(split, []) };
-    return out;
+    return { variable: { scope: split.shift(), vars: processVars(split, []) } };
   }
   split = item.split('=');
   out.variable = split[1] ?
