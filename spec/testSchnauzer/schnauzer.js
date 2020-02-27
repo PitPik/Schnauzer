@@ -189,16 +189,16 @@ function getTrims(start, end) {
 }
 
 function convertValue(text, obj) {
-  if (text.charAt(0) === '"') { // || text.charAt(0) === "'"
+  if (text.charAt(0) === '"' || text.charAt(0) === "'") {
     obj.isString = true;
     return text.substr(1, text.length - 2);
   }
   return text === 'true' ? true : text === 'false' ? false : isNaN(text) ? text : +text;
 }
 
-function cleanText(text, out) {
-  return text.replace(/^(?:this|\.)?\//, function() {
-    out.isStrict = true;
+function cleanText(text, obj) {
+  return text.replace(/^(?:this|\.)?\/*/, function() {
+    obj.isStrict = true;
     return '';
   }).replace(/[[\]|]/g, '');
 }
@@ -220,7 +220,7 @@ function parseScope(text, name) {
   var parts = isString ? text.split('../') : [];
   var pathParts = isString ? parts.pop().split(/[.\/]/) : [text];
 
-  return {
+  return !isString ? { value: text } : {
     name: name,
     value: pathParts.pop(),
     path: pathParts,
@@ -277,15 +277,14 @@ function processVars(vars, collection) {
 function getTagData(_this, scope, vars, type, start, bodyFn) {
   var varsArr = splitVars(scope + (vars ? ' ' + vars : ''), []);
   var _scope = varsArr.shift() || '';
-  var tags = _this.options.tags;
   var helper = /if|each|with|unless/.test(_scope) ? _scope : '';
   var active = getActiveState(_scope = helper ? varsArr.shift() : _scope);
 
-  return _scope === '-block-' ? { blockIndex: +varsArr[0] } : {
-    scope: getVar(_scope.substr(active), false),
+  return {
+    scope: getVar(_scope.substr(active), false), // varsArr[0] === 'as',
     isPartial: type === '>',
     isNot: type === '^',
-    isEscaped: start.lastIndexOf(tags[0]) < 1,
+    isEscaped: start.lastIndexOf(_this.options.tags[0]) < 1,
     hasAlias: varsArr[0] === 'as',
     helper: helper,
     vars: processVars(varsArr, []),
@@ -315,7 +314,8 @@ function sizzleInlines(_this, text, blocks, tags) {
     function($, start, type, scope, vars, end) {
       trims.push(getTrims(start, end));
       return /^(?:!|=)/.test(type || '') ? '' :
-        tags.push(getTagData(_this, scope, vars, type || '', start)),
+        tags.push(scope === '-block-' ? { blockIndex: +vars } :
+          getTagData(_this, scope, vars, type || '', start)),
         _this.options.splitter;
      }
   ).split(_this.options.splitter);
@@ -358,11 +358,12 @@ function processBodyParts(_this, body, bodyFns, blocks, mainTag) {
 
 function replaceBlock(_this, blocks, start, end, close, body, type, scope, vars) {
   var bodyFns = [];
-  var tagData = type !== '#*' ? getTagData(_this, scope, vars, type || '', start) : {};
+  var isComment = type === '#*';
+  var tagData = !isComment ? getTagData(_this, scope, vars, type || '', start) : {};
   var closeParts = close.split(scope);
   var trims = getTrims(end, closeParts[0]);
 
-  if (type === '#*') {
+  if (isComment) {
     _this.partials[vars.replace(/['"]/g, '')] = sizzleBlocks(_this, body, []);
     return '';
   }
