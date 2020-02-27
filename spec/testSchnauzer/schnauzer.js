@@ -196,8 +196,11 @@ function convertValue(text, obj) {
   return text === 'true' ? true : text === 'false' ? false : isNaN(text) ? text : +text;
 }
 
-function cleanText(text) {
-  return text.replace(/^(?:this|\.)?\//, '').replace(/[[\]|]/g, '');
+function cleanText(text, out) {
+  return text.replace(/^(?:this|\.)?\//, function() {
+    out.isStrict = true;
+    return '';
+  }).replace(/[[\]|]/g, '');
 }
 
 function getActiveState(text) {
@@ -231,12 +234,12 @@ function getVar(item, isAlias) {
     isAlias: isAlias,
     aliasKey: '',
     isString: false, // if value else variable
-    isStrict: /^(?:this|\.)?\//.test(item),
+    isStrict: false,
     active: 0,
   };
   var split = [];
 
-  item = cleanText(item).substr(out.active = getActiveState(item));
+  item = cleanText(item, out).substr(out.active = getActiveState(item));
   if (item.charAt(0) === '(') {
     item = item.substr(1, item.length - 2);
     split = splitVars(item, []);
