@@ -263,6 +263,7 @@ function processVars(vars, collection) {
 
   for (var n = 0, l = vars.length; n < l; n++) {
     isAs = vars[n] === 'as';
+    hasAliasKey = false;
     if (isAs && ++n) {
       aliasKey = (vars[n + 1] || '');
       hasAliasKey = aliasKey.charAt(aliasKey.length - 1) === '|';
