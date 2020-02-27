@@ -48,7 +48,8 @@ var initSchnauzer = function(_this, options, template) {
   }
   options = _this.options;
   switchTags(_this, options.tags);
-  _this.entityRegExp = new RegExp('[' + getKeys(options.entityMap).join('') + ']', 'g');
+  _this.entityRegExp = new RegExp('[' + getKeys(options.entityMap)
+    .join('') + ']', 'g');
   _this.helpers = options.helpers;
   _this.registerHelper('lookup', function() {
     // TODO...
@@ -193,7 +194,8 @@ function convertValue(text, obj) {
     obj.isString = true;
     return text.substr(1, text.length - 2);
   }
-  return text === 'true' ? true : text === 'false' ? false : isNaN(text) ? text : +text;
+  return text === 'true' ? true : text === 'false' ?
+    false : isNaN(text) ? text : +text;
 }
 
 function cleanText(text, obj) {
