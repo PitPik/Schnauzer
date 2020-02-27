@@ -97,7 +97,7 @@ function switchTags(_this, tags) {
   _this.sectionRegExp = new RegExp(tgs[0] + '([#^][*%]*)\\s*([\\w' +
     chars + ']*)(?:\\s+([\\w$\\s|./' + chars + ']*))*' + tgs[1] +
     '((?:(?!' + tgs[0] + '[#^])[\\S\\s])*?)(' + blockEnd + ')', 'g');
-  _this.elseSplitter = new RegExp(tgs[0] + '(?:else|^)\\s*(.*?)' + tgs[1]);
+  _this.elseSplitter = new RegExp(tgs[0] + '(?:else|\\^)\\s*(.*?)' + tgs[1]);
 }
 
 // ---- render helpers
@@ -173,13 +173,13 @@ function renderBlock(_this, tagData, model, bodyFns) {
 
 // ---- parse (pre-render) helpers
 
-function trim(parts, start, end) {
+function trim(text, start, end) {
   var regExp = '^\\s*|\\s*$';
 
-  if (!start && !end) return parts;
+  if (!start && !end) return text;
   regExp = !start ? '\\s*$' : !end ? '^\\s*' : regExp;
 
-  return parts.replace(new RegExp(regExp, 'g'), '');
+  return text.replace(new RegExp(regExp, 'g'), '');
 }
 
 function getTrims(start, end) {
@@ -195,7 +195,7 @@ function convertValue(text, obj) {
     return text.substr(1, text.length - 2);
   }
   return text === 'true' ? true : text === 'false' ?
-    false : isNaN(text) ? text : +text;
+    false : isNaN(text) || text === '' ? text : +text;
 }
 
 function cleanText(text, obj) {
