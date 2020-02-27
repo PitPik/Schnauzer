@@ -304,10 +304,10 @@ function sizzleInlines(_this, text, blocks, tags) {
   var trims = [];
   var glues = text.replace(
     _this.inlineRegExp,
-    function($, start, type, socpe, vars, end) {
+    function($, start, type, scope, vars, end) {
       trims.push(getTrims(start, end));
       return /^(?:!|=)/.test(type || '') ? '' :
-        tags.push(getTagData(_this, socpe, vars, type || '', start)),
+        tags.push(getTagData(_this, scope, vars, type || '', start)),
         _this.options.splitter;
     }
   ).split(_this.options.splitter);
@@ -347,7 +347,7 @@ function processBodyParts(_this, body, bodyFns, blocks, tagData) {
   }
 }
 
-function replaceBlock(_this, blocks, start, type, scope, vars, body, end, close) {
+function replaceBlock(_this, blocks, start, end, close, body, type, scope, vars) {
   var bodyFns = [];
   var tagData = type !== '#*' ? getTagData(_this, scope, vars, type || '', start) : {};
   var closeParts = close.split(scope);
@@ -366,8 +366,8 @@ function replaceBlock(_this, blocks, start, type, scope, vars, body, end, close)
 }
 
 function sizzleBlocks(_this, text, blocks) {
-  var replaceCb = function($, start, type, socpe, vars, end, body, _, close) {
-    return replaceBlock(_this, blocks, start, type, socpe, vars, body, end, close);
+  var replaceCb = function($, start, type, scope, vars, end, body, _, close) {
+    return replaceBlock(_this, blocks, start, end, close, body, type, scope, vars);
   };
 
   while (text !== (text = text.replace(_this.sectionRegExp, replaceCb)));
