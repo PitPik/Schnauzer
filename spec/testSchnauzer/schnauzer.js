@@ -50,6 +50,9 @@ var initSchnauzer = function(_this, options, template) {
   switchTags(_this, options.tags);
   _this.entityRegExp = new RegExp('[' + getKeys(options.entityMap).join('') + ']', 'g');
   _this.helpers = options.helpers;
+  _this.registerHelper('lookup', function() {
+    // TODO...
+  });
   for (var name in options.partials) {
     _this.registerPartial(name, options.partials[name]);
   }
@@ -209,6 +212,16 @@ function splitVars(text, collection) {
   return collection;
 }
 
+function repairScope(scope, vars) {
+  var temp = [];
+
+  if (scope.charAt(0) === '(' && scope.indexOf(')') === -1) {
+    scope = (temp = splitVars(scope + ' ' + vars, [])).shift();
+    vars = temp.join(' '); // TODO...
+  }
+  return { scope: scope, vars: vars };
+}
+
 function parseScope(text, name) {
   var isString = typeof text === 'string';
   var parts = isString ? text.split('../') : [];
@@ -225,15 +238,16 @@ function parseScope(text, name) {
 function getVar(item, isAlias) {
   var out = {
     variable: {},
+    innerScope: {},
     isAlias: isAlias,
     aliasKey: '',
-    active: 0,
     isString: false, // if value else variable
-    innerScope: {},
+    isStrict: /^(?:this|\.)?\//.test(item),
+    active: 0,
   };
   var split = [];
 
-  item = item.substr(out.active = getActiveState(item));
+  item = cleanText(item).substr(out.active = getActiveState(item));
   if (item.charAt(0) === '(') {
     item = item.substr(1, item.length - 2);
     split = splitVars(item, []);
@@ -260,7 +274,6 @@ function processVars(vars, collection) {
       aliasKey = (vars[n + 1] || '');
       hasAliasKey = aliasKey.charAt(aliasKey.length - 1) === '|';
     }
-    vars[n] = cleanText(vars[n]);
     out = getVar(vars[n], isAs);
     out.aliasKey = hasAliasKey && ++n ? cleanText(aliasKey) : '';
     collection.push(out);
@@ -270,13 +283,15 @@ function processVars(vars, collection) {
 }
 
 function getTagData(_this, scope, vars, type, start, bodyFn) {
+  var scopeFix = repairScope(scope, vars);
+  var _scope = scopeFix.scope;
   var tags = _this.options.tags;
-  var helper = /if|each|with|unless/.test(scope) ? scope : '';
-  var varsArr = splitVars(vars, []);
-  var active = getActiveState(scope = helper ? varsArr.shift() : scope);
+  var helper = /if|each|with|unless/.test(_scope) ? _scope : '';
+  var varsArr = splitVars(scopeFix.vars, []);
+  var active = getActiveState(_scope = helper ? varsArr.shift() : _scope);
 
-  return scope === '-block-' ? { blockIndex: +varsArr[0] } : {
-    scope: getVar(scope.substr(active), false),
+  return _scope === '-block-' ? { blockIndex: +varsArr[0] } : {
+    scope: getVar(_scope.substr(active), false),
     isPartial: type === '>',
     isNot: type === '^',
     isEscaped: start.lastIndexOf(tags[0]) < 1,
@@ -302,26 +317,16 @@ function loopInlines(_this, tags, glues, blocks, data) {
   return out;
 }
 
-function replaceInline(_this, trims, tags, start, type, scope, vars, end) {
-  var temp = [];
-
-  if (scope.charAt(0) === '(') {
-    scope = (temp = splitVars(scope + ' ' + vars, [])).shift();
-    vars = temp.join(' '); // TODO...
-  }
-  trims.push(getTrims(start, end));
-  return /^(?:!|=)/.test(type || '') ? '' :
-    tags.push(getTagData(_this, scope, vars, type || '', start)),
-    _this.options.splitter;
-}
-
 function sizzleInlines(_this, text, blocks, tags) {
   var trims = [];
   var glues = text.replace(
     _this.inlineRegExp,
     function($, start, type, scope, vars, end) {
-      return replaceInline(_this, trims, tags, start, type, scope, vars, end);
-    }
+      trims.push(getTrims(start, end));
+      return /^(?:!|=)/.test(type || '') ? '' :
+        tags.push(getTagData(_this, scope, vars, type || '', start)),
+        _this.options.splitter;
+     }
   ).split(_this.options.splitter);
 
   for (var n = glues.length; n--; ) glues[n] = trim(
