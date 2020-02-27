@@ -212,16 +212,6 @@ function splitVars(text, collection) {
   return collection;
 }
 
-function repairScope(scope, vars) {
-  var temp = [];
-
-  if (scope.charAt(0) === '(' && scope.indexOf(')') === -1) {
-    scope = (temp = splitVars(scope + ' ' + vars, [])).shift();
-    vars = temp.join(' '); // TODO...
-  }
-  return { scope: scope, vars: vars };
-}
-
 function parseScope(text, name) {
   var isString = typeof text === 'string';
   var parts = isString ? text.split('../') : [];
@@ -238,7 +228,6 @@ function parseScope(text, name) {
 function getVar(item, isAlias) {
   var out = {
     variable: {},
-    innerScope: {},
     isAlias: isAlias,
     aliasKey: '',
     isString: false, // if value else variable
@@ -251,7 +240,7 @@ function getVar(item, isAlias) {
   if (item.charAt(0) === '(') {
     item = item.substr(1, item.length - 2);
     split = splitVars(item, []);
-    out.innerScope = { scope: split.shift(), vars: processVars(split, []) };
+    out.variable = { scope: split.shift(), vars: processVars(split, []) };
     return out;
   }
   split = item.split('=');
@@ -283,11 +272,10 @@ function processVars(vars, collection) {
 }
 
 function getTagData(_this, scope, vars, type, start, bodyFn) {
-  var scopeFix = repairScope(scope, vars);
-  var _scope = scopeFix.scope;
+  var varsArr = splitVars(scope + (vars ? ' ' + vars : ''), []);
+  var _scope = varsArr.shift() || '';
   var tags = _this.options.tags;
   var helper = /if|each|with|unless/.test(_scope) ? _scope : '';
-  var varsArr = splitVars(scopeFix.vars, []);
   var active = getActiveState(_scope = helper ? varsArr.shift() : _scope);
 
   return _scope === '-block-' ? { blockIndex: +varsArr[0] } : {
@@ -364,7 +352,6 @@ function processBodyParts(_this, body, bodyFns, blocks, mainTag) {
     ));
   }
 }
-
 
 function replaceBlock(_this, blocks, start, end, close, body, type, scope, vars) {
   var bodyFns = [];
