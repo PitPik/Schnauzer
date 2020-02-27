@@ -329,23 +329,21 @@ function sizzleInlines(_this, text, blocks, tags) {
 function processBodyParts(_this, body, bodyFns, blocks, tagData) {
   var parts = body.split(_this.elseSplitter);
   var trims = [];
-  var temp = [];
+  var prevIf = '';
   var prevTrim = '';
   var vars = [];
   var tags = _this.options.tags;
 
   for (var n = 0, l = parts.length; n < l; n += 4) {
+    prevIf = parts[2 + n - 4] || '';
     prevTrim = trims[1] || '';
     if (parts[1 + n]) trims = getTrims(parts[1 + n], parts[3 + n]);
     bodyFns.push({
-      scope: temp[0] ? temp[0] : '',
-      vars: temp[1] ? temp[1] : {},
-      bodyFn: sizzleInlines(_this, trim(parts[0 + n], prevTrim, trims[0]), blocks, []),
-      isEscaped: !n ? tagData.isEscaped : (parts[1 + n] || '').lastIndexOf(tags[0]) < 1,
+      scope: prevIf ? (vars = splitVars(prevIf, [])).shift() : '',
+      vars: prevIf ? processVars(vars, []) : {},
+      bodyFn: sizzleInlines(_this, trim(parts[n], prevTrim, trims[0]), blocks, []),
+      isEscaped: n ? (parts[1 + n] || '').lastIndexOf(tags[0]) < 1 : tagData.isEscaped,
     });
-    temp = [];
-    if (parts[2 + n]) temp.push(
-      (vars = splitVars(parts[2 + n], [])).shift(), processVars(vars, []));
   }
 }
 
