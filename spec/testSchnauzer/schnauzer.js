@@ -348,7 +348,7 @@ function processBodyParts(_this, bodyFns, parts, blocks, mainStartTag) {
   for (var n = 0, l = parts.length; n < l; n += 4) {
     prevTagData = parts[2 + n - 4] || '';
     prevTrim = trims[1] || '';
-    if (parts[1 + n]) trims = getTrims(parts[1 + n], parts[3 + n]);
+    trims = parts[1 + n] ? getTrims(parts[1 + n], parts[3 + n]) : ['', ''];
     bodyFns.push(getTagData(
       _this,
       prevTagData ? (vars = splitVars(prevTagData, [])).shift() : '',
