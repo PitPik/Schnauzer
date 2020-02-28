@@ -317,12 +317,12 @@ function sizzleInlines(_this, text, blocks, tags) {
   var glues = text.replace(
     _this.inlineRegExp,
     function($, start, type, scope, vars, end) {
+      if (/^(?:!|=)/.test(type || '')) return '';
       trims.push(getTrims(start, end));
-      return /^(?:!|=)/.test(type || '') ? '' :
-        tags.push(scope === '-block-' ? { blockIndex: +vars } :
-          getTagData(_this, scope, vars, type || '', start)),
-        _this.options.splitter;
-     }
+      tags.push(scope === '-block-' ? { blockIndex: +vars } :
+        getTagData(_this, scope, vars, type || '', start));
+      return _this.options.splitter;
+    }
   ).split(_this.options.splitter);
 
   for (var n = glues.length; n--; ) glues[n] = trim(
