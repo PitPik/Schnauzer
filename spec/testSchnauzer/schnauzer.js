@@ -281,12 +281,13 @@ function getTagData(_this, scope, vars, type, start, bodyFn) {
   var _scope = varsArr.shift() || '';
   var helper = /if|each|with|unless/.test(_scope) ? _scope : '';
   var active = getActiveState(_scope = helper ? varsArr.shift() : _scope);
+  var isEscaped = start.lastIndexOf(_this.options.tags[0]) < 1;
 
-  return {
+  return bodyFn && !_scope ? { bodyFn: bodyFn, isEscaped: isEscaped } : {
     scope: getVar(_scope.substr(active), false), // varsArr[0] === 'as',
     isPartial: type === '>',
     isNot: type === '^',
-    isEscaped: start.lastIndexOf(_this.options.tags[0]) < 1,
+    isEscaped: isEscaped,
     hasAlias: varsArr[0] === 'as',
     helper: helper,
     vars: processVars(varsArr, []),
@@ -350,7 +351,7 @@ function processBodyParts(_this, body, bodyFns, blocks, mainTag) {
     bodyFns.push(getTagData(
       _this,
       prevIf ? (vars = splitVars(prevIf, [])).shift() : '',
-      vars.join(' '),
+      prevIf ? vars.join(' ') : '',
       '',
       n ? parts[1 + n - 4] || '' : mainTag,
       sizzleInlines(_this, trim(parts[n], prevTrim, trims[0]), blocks, []),
