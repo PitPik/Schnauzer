@@ -147,7 +147,7 @@ function getScope(data, tag) {
   };
 }
 
-function renderInline(_this, tagData, model) {
+function renderInline(_this, tagData, model, bodyFn) {
   if (tagData.isPartial) { // partial // TODO: previous function??
 
   } // else helpers and regular stuff
@@ -157,6 +157,12 @@ function renderInline(_this, tagData, model) {
 }
 
 function renderBlock(_this, tagData, model, bodyFns) {
+  // var result = false;
+
+  // for (var n = 0, l = bodyFns.length; n < l; n++) { // Hmmm...
+  //   result = renderInline(_this, tagData, model, bodyFns[n]);
+  //   if (result !== undefined) return result;
+  // }
   var resultData = model.result;
   var ifHelper = tagData.helper === 'if' || tagData.helper === 'unless';
   var bodyFn = bodyFns[resultData ? 0 : 1];
@@ -201,7 +207,7 @@ function convertValue(text, obj) {
 }
 
 function cleanText(text, obj) {
-  return text.replace(/^(?:this|\.)?\/*/, function($) {
+  return text.replace(/^(?:this[/.]|\.\/)/, function($) {
     if ($) obj.isStrict = true;
     return '';
   }).replace(/[[\]|]/g, '');
@@ -232,10 +238,10 @@ function parseScope(text, name) {
   }
 }
 
-function getVar(item, isAlias) {
+function getVar(item) {
   var out = {
     variable: {},
-    isAlias: isAlias,
+    isAlias: false,
     aliasKey: '',
     isString: false, // if value else variable
     isStrict: false,
@@ -261,17 +267,14 @@ function processVars(vars, collection) {
   var out = {};
   var isAs = false;
   var aliasKey = '';
-  var hasAliasKey = false;
 
   for (var n = 0, l = vars.length; n < l; n++) {
     isAs = vars[n] === 'as';
-    hasAliasKey = false;
-    if (isAs && ++n) {
-      aliasKey = (vars[n + 1] || '');
-      hasAliasKey = aliasKey.charAt(aliasKey.length - 1) === '|';
-    }
-    out = getVar(vars[n], isAs);
-    out.aliasKey = hasAliasKey && ++n ? cleanText(aliasKey) : '';
+    aliasKey = (vars[n + 2] || '');
+    out = getVar(vars[isAs ? ++n : n]);
+    out.isAlias = isAs;
+    out.aliasKey = isAs && aliasKey.charAt(aliasKey.length - 1) === '|' &&
+      ++n ? cleanText(aliasKey) : '';
     collection.push(out);
   }
 
@@ -286,7 +289,7 @@ function getTagData(_this, scope, vars, type, start, bodyFn) {
   var isEscaped = start.lastIndexOf(_this.options.tags[0]) < 1;
 
   return bodyFn && !_scope ? { bodyFn: bodyFn, isEscaped: isEscaped } : {
-    scope: getVar(_scope.substr(active), false), // varsArr[0] === 'as',
+    scope: getVar(_scope.substr(active)), // varsArr[0] === 'as',
     isPartial: type === '>',
     isNot: type === '^',
     isEscaped: isEscaped,
@@ -302,7 +305,7 @@ function getTagData(_this, scope, vars, type, start, bodyFn) {
 
 function loopInlines(_this, tags, glues, blocks, data) {
   for (var n = 0, l = glues.length, out = ''; n < l; n++) {
-    out += glues[n];
+    out += glues[n]; // TODO: check old extType ? render
     if (!tags[n]) continue;
 
     out += tags[n].blockIndex > -1 ? blocks[tags[n].blockIndex](data) :
