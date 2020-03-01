@@ -183,23 +183,25 @@ var testStr_test = `
   <div>Hello {{person.name}}</div>
   <div>Found foo: {{foo~}}    </div>
   <div>
-    {{{~#if person}}}
+    {{{#if person~}}}
       <div>Hello {{person.name}}</div>
     {{~else if foo.bar.fooBar~}}
       Nothing to print!
-    {{~else if sss (inner-helper 'abc')~}}
+    {{{~else if sss (inner-helper "abc")~}}}
       Nothing to print2!
-    {{{~/if~}}}
-    {{#if person}}
+    {{else}}
+      Nothing to print3!
+    {{{~/if}}}
+    {{#if person~}}
       Just Text;
-      {{~#if foo~}}
+      {{#if foo~}}
         Just Text if (foo);
-      {{/if~}}
-      {{#if bar}}
-        Just Text if (bar);
-      {{~else~}}
-        Just Text else (bar);
       {{/if}}
+      {{~#if bar}}
+        Just Text if (bar);
+      {{else~}}
+        Just Text else (bar);
+      {{~/if}}
     {{~/if}}
   </div>
   {{#with person~}}
@@ -208,11 +210,104 @@ var testStr_test = `
       <div>{{name}}</div>
     {{/with~}}
   {{/with}}
+  {{> (whichPartial foo bar.sss) as |foo bar| %%this.foo ./bar.sde foo.bar.de 100 false a=1000 "aaa" bb="ddd"}}
+  {{> ddd as |foo bar| %%this.foo}}
 `;
+
+var testStr_test = `
+{{#each nav}}
+  <a href="{{url}}">
+    {{#if test}}
+      {{title}}
+    {{else}}
+      Empty
+    {{/if}}
+  </a>
+{{~/each}}`;
+
+var testStr_test = `
+{{#if ./foo}}
+  Foo
+  {{/if}}
+  {{/if}}
+{{44}}
+{{'44'}}
+{{0}}
+{{true}}
+{{false}}
+{{#if true}}55{{/if}}
+{{#if extra}}
+| Extra
+{{/if}}
+| {{#if bar}}
+    Bar
+  {{else if hhh}}
+    no Bar
+  {{/if}}
+| {{#each arr}}
+  {{.}}{{#unless @last}}, {{/unless}}
+{{/each}}
+| {{#each arrObj}}
+  {{key}}({{@key}}): {{value}}{{#unless @last}}, {{/unless}}
+{{/each}}
+| {{foo}}
+| {{persons.lastName.name foo="bar"}}`;
+
+var testStr_test = `
+{{#if foo bar dd=8 "fooooo and bar" 112 true}}
+    --Foo helper content-- |
+  {{else unless foo ggg}}
+    no Bar
+  {{else}}
+    the else
+{{/if}}{{12}}
+{{foo}}
+{{#foo}}sss{{/foo}}`;
+
+var model = {
+  person: {
+    name: 'World!',
+    lastName: {
+      name: 'lastName'
+    }
+  },
+  foo: true,
+  arr: [1, 2, 3],
+  arrObj: [
+    { key: 'key1', value: 'value1'},
+    { key: 'key2', value: 'value2'},
+    { key: 'key3', value: 'value3'},
+  ],
+  hhh: true,
+  bar: false
+};
+
+// var testStr_test = `
+// {{#each nav}}
+//   <a href="{{url}}">
+//     {{#if test}}
+//       {{title}}
+//     {{else}}
+//       Empty
+//     {{/if}}
+//   </a>
+// {{~/each}}`;
+
+
+
 
 var s = new Schnauzer('', {
   helpers: {
-    foo: function foo() {},
+    // foo: function foo($1, $2, $3, $4, $5) {
+    //   console.log('--helper--', this, $1, $2, $3, $4, $5);
+    //   return this.getBody() || '--inline Foo--'; // block or inline
+    // }, //'I\m a helper' },
+    foo: function foo(getBody, escapeHTML, scope, getData) {
+      console.log('--helper--', this);
+      console.log(scope);
+      console.log(getData('person.lastName.name'));
+      return getBody() || '--inline Foo--'; // block or inline
+    }, //'I\m a helper' },
     inlineHelper: function inlineHelper() {},
   },
   partials: {
@@ -222,19 +317,20 @@ var s = new Schnauzer('', {
 
 // console.log(s);
 
+// testStr_test = testStr_test.replace(/[ ]*({{2,3}(?:(?!{{2,3})[\S\s])*}{2,3})/g, '$1');
+// console.log(testStr_test);
 s.parse(testStr_test);
 
-var out = s.render({
-  person: {
-    name: 'World!',
-    lastName: {
-      name: 'lastName'
-    }
-  },
-  foo: true,
-}, {
+var out = s.render(model, {
   extra: true,
+  persons: {
+    name: 'World! extra',
+    lastName: {
+      name: 'lastName extra'
+    }
+  }
 });
+
 
 output.innerHTML = out;
 console.log(out);
