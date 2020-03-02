@@ -127,14 +127,14 @@ function createHelper(idx, key, len, value) {
   };
 }
 
-function shiftScope(scopes, parentDepth, path) {
+function shiftScope(scopes, parentDepth, path, helpers) {
   var scope = {};
-  
+
   scopes = concat(scopes, []); // TODO: ...
   if (parentDepth) scopes = scopes.splice(parentDepth);
   scope = (scopes[0] || {}).scope;
   for (var n = 0, l = path.length; n < l; n++) {
-    scopes.unshift({ scope: scope = (scope || {})[path[n]], helpers: {} });
+    scopes.unshift({ scope: scope = (scope || {})[path[n]], helpers: helpers });
   }
   return scopes;
 }
@@ -146,10 +146,9 @@ function getScope(data, tagData) {
   if (tagRoot.variable === undefined) tagData['@root'] = data;
 
   return tagRoot.variable === undefined ?
-    { extra: tagData, alias: {}, scopes: [{ scope: data, helpers: {} }] } :
+    { extra: tagData, scopes: [{ scope: data, helpers: {} }] } :
     { extra: data.extra,
-      alias: {},
-      scopes: shiftScope(data.scopes, mainVar.parentDepth, mainVar.path) };
+      scopes: shiftScope(data.scopes, mainVar.parentDepth, mainVar.path, {}) };
 }
 
 function getExtraData(extra, isStrict, mainVar) { // TODO: keep scope??
@@ -169,8 +168,8 @@ function getData(_this, model, root) {
   var partial = root.isPartial && _this.partials[key] || null;
   var value = root.isString || root.variable.isLiteral ? key :
     helper || partial || (scopeData[key] !== undefined ? scopeData[key] :
-      scope.helpers[key] !== undefined ? scope.helpers[key] :
-      getExtraData(model.extra || {}, root.isStrict, root.variable));
+    scope.helpers[key] !== undefined ? scope.helpers[key] :
+    getExtraData(model.extra || {}, root.isStrict, root.variable));
 
   return {
     key: key || '',
@@ -179,7 +178,6 @@ function getData(_this, model, root) {
       value === undefined ? '' :
       helper ? 'helper' :
       partial ? 'partial' :
-      isArray(value) ? 'array' :
       typeof value === 'object' ? 'object' :
       'literal',
   };
@@ -203,7 +201,7 @@ function getValue(_this, data, model, tagData, bodyFn) {
 }
 
 // ---- render blocks and inlines
-// TODO: scope shifting, alias, helper way of passing arguments, #with
+// TODO: alias, helper way of passing arguments, #with, fix as | s |
 
 function render(_this, tagData, model, isBlock, out) {
   return _this.options.render ?
@@ -239,25 +237,29 @@ function renderIfUnless(_this, data, model, tagData, bodyFns) {
   return result ? escapeHtml(item.bodyFn(model), _this, item.isEscaped) : '';
 }
 
-function renderLoops(_this, data, model, bodyFn) {
+function renderEach(_this, data, model, bodyFn) {
   var out = '';
-  var idx = 0;
-  var isArr = data.type === 'array';
-  var _data = isArr ? data.value : getKeys(data.value);
+  var isArr = isArray(data.value);
+  var _data = isArr ? data.value || [] : getKeys(data.value || {});
 
-  model.scopes = concat(model.scopes, [
-    { scope: {}, helpers: {} },
-    { scope: data.value, helpers: {} }
-  ]);
   for (var n = 0, l = _data.length, key = ''; n < l; n++) {
     key = isArr ? n : _data[n];
-    model.scopes[0] = { // TODO: concat for ../ ?
-      scope: isArr ? _data[n] : data.value[key],
-      helpers: createHelper(idx++, key, l, isArr ? _data[n] : data.value[key]),
-    };
+    model.scopes = shiftScope(model.scopes, n ? 2 : 0, [data.key, key],
+      createHelper(n, key, l, isArr ? _data[n] : data.value[key]));
     out += bodyFn.bodyFn(model);
   }
   return escapeHtml(out, _this, bodyFn.isEscaped);
+}
+
+function renderWith(_this, data, model, tagData, bodyFn) {
+  var helpers = model.scopes[0].helpers;
+  
+  if (tagData.hasAlias) {
+    helpers[tagData.root.aliasKey || tagData.root.variable.value] = data.value;
+  }
+  model.scopes = shiftScope(model.scopes, 0, [data.key], helpers);
+  console.log(model.scopes) // TODO: doesn't find helper.....
+  return escapeHtml(bodyFn.bodyFn(model), bodyFn.isEscaped);
 }
 
 function renderInline(_this, tagData, model, bodyFn) {
@@ -289,14 +291,16 @@ function renderInlines(_this, tags, glues, blocks, data) {
 
 function renderBlock(_this, tagData, model, bodyFns) {
   var data = getData(_this, model, tagData.root);
-  var helper = tagData.helper === 'if' || tagData.helper === 'unless';
+  var helper = tagData.helper;
+  var ifHelper = helper === 'if' || helper === 'unless';
   var isHelperFn = data.type === 'helper' || isFunction(data.type);
   var bodyFn = bodyFns[0];
 
-  return render(_this, tagData, model, true, helper ?
+  return render(_this, tagData, model, true, ifHelper ?
     renderIfUnless(_this, data, model, tagData, bodyFns) : isHelperFn ?
     renderHelper(_this, data, model, tagData, bodyFn.bodyFn, bodyFn.isEscaped) :
-    renderLoops(_this, data, model, bodyFn));
+    helper === 'with' ? renderWith(_this, data, model, tagData, bodyFn) :
+    renderEach(_this, data, model, bodyFn));
 }
 
 // ---- parse (pre-render) helpers
