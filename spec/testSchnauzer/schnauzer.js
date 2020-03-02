@@ -17,6 +17,10 @@ var getKeys = Object.keys || function(obj) {
   for (var key in obj) obj.hasOwnProperty(key) && keys.push(key);
   return keys;
 };
+var clone = function(obj, newObj) {
+  for (var key in obj) newObj[key] = obj[key];
+  return newObj;
+}
 
 var Schnauzer = function(template, options) {
   this.version = '1.5.0';
@@ -215,7 +219,7 @@ function renderHelper(_this, data, model, tagData, bodyFn, escape) {
     function escape(string) { return escapeHtml(string, _this, true) },
     model.scopes[0].scope,
     function getIntData(key) {
-      var variable = getVar(key, false);
+      var variable = getVar(key);
       return getData(_this, getScope(model, {root: variable}), variable).value;
     }
   ), _this, escape);
@@ -252,10 +256,11 @@ function renderEach(_this, data, model, bodyFn) {
 }
 
 function renderWith(_this, data, model, tagData, bodyFn) {
-  var helpers = model.scopes[0].helpers;
-  
+  var helpers = clone(model.scopes[0].helpers, {});
+  var variable = tagData.root.variable;
+  console.log(tagData);
   if (tagData.hasAlias) {
-    helpers[tagData.root.aliasKey || tagData.root.variable.value] = data.value;
+    helpers[variable.name || variable.value] = data.value;
   }
   model.scopes = shiftScope(model.scopes, 0, [data.key], helpers);
   console.log(model.scopes) // TODO: doesn't find helper.....
@@ -358,11 +363,11 @@ function parseScope(text, name) {
   }
 }
 
-function getVar(item, isAs) {
+function getVar(item) {
   var split = [];
   var out = {
     variable: {},
-    isAlias: isAs || false,
+    isAlias: false,
     aliasKey: '',
     isString: false, // if value else variable
     isStrict: false,
@@ -384,17 +389,23 @@ function getVar(item, isAs) {
   return out;
 }
 
-function processVars(vars, collection) {
-  var out = {};
-  var isAs = false;
+function processVars(vars, collection, root) {
+  var out = root || {};
   var asKey = '';
 
   for (var n = 0, l = vars.length; n < l; n++) {
-    isAs = vars[n] === 'as';
-    asKey = (vars[n + 2] || '');
-    out = getVar(vars[isAs ? ++n : n], isAs);
-    out.aliasKey = isAs && asKey.charAt(asKey.length - 1) === '|' && ++n ?
-      cleanText(asKey) : '';
+    if (vars[n] === 'as') {
+      n++;
+      asKey = (vars[n + 1] || '');
+      asKey = asKey.charAt(asKey.length - 1) === '|' ? cleanText(asKey) : '';
+      out.variable.name = cleanText(vars[n]);
+      out.aliasKey = asKey;
+      out.isAlias = true;
+      if (asKey) n++;
+      continue;
+    }
+
+    out = getVar(vars[n]);
     collection.push(out);
   }
 
@@ -407,15 +418,16 @@ function getTagData(_this, root, vars, type, start, bodyFn) {
   var helper = /if|each|with|unless/.test(_root) ? _root : '';
   var active = getActiveState(_root = helper ? varsArr.shift() || '' : _root);
   var isEscaped = start.lastIndexOf(_this.options.tags[0]) < 1;
+  var root = getVar(_root.substr(active));
 
   return bodyFn && !_root ? { bodyFn: bodyFn, isEscaped: isEscaped } : {
-    root: getVar(_root.substr(active), varsArr[0] === 'as'),
+    root: root,
     isPartial: type === '>',
     isNot: type === '^',
     isEscaped: isEscaped,
     hasAlias: varsArr[0] === 'as',
     helper: helper,
-    vars: processVars(varsArr, []),
+    vars: processVars(varsArr, [], root),
     active: active,
     bodyFn: bodyFn || null,
   };
