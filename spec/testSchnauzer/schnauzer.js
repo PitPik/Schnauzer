@@ -412,27 +412,23 @@ function getTagData(_this, root, vars, type, start, bodyFn) {
     helper: helper,
     vars: processVars(varsArr, []),
     active: active,
-    bodyFn: bodyFn,
+    bodyFn: bodyFn || null,
   };
 }
 
 // ---- sizzle inlines
-
-function doInline(_this, start, type, root, vars, end, trims, tags) {
-  if (/^(?:!|=)/.test(type || '')) return '';
-  trims.push(getTrims(start, end));
-  tags.push(root === '-block-' ? { blockIndex: +vars } :
-    getTagData(_this, root, vars, type || '', start));
-
-  return _this.options.splitter;
-}
 
 function sizzleInlines(_this, text, blocks, tags) {
   var trims = [];
   var glues = text.replace(
     _this.inlineRegExp,
     function($, start, type, root, vars, end) {
-      return doInline(_this, start, type, root, vars, end, trims, tags);
+      if (/^(?:!|=)/.test(type || '')) return '';
+      trims.push(getTrims(start, end));
+      tags.push(root === '-block-' ? { blockIndex: +vars } :
+        getTagData(_this, root, vars, type || '', start));
+    
+      return _this.options.splitter;
     }
   ).split(_this.options.splitter);
 
