@@ -379,7 +379,7 @@ function getVar(item) {
     item = item.substr(1, item.length - 2);
     split = splitVars(item, []);
     return { variable: {
-      root: split.shift(), vars: processVars(split, []), path: []
+      root: split.shift(), vars: processVars(split, [], {}), path: []
     }};
   }
   split = item.split(/([=!<>]+)/);
