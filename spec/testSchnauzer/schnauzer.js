@@ -183,9 +183,9 @@ function getData(_this, model, root) {
   };
 }
 
-function collectValues(_this, model, data, tagData, carrier) {
-  for (var n = tagData.vars.length, item = {}, key = '', scope = ''; n--; ) {
-    item = tagData.vars[n];
+function collectValues(_this, data, model, vars, carrier) {
+  for (var n = vars.length, item = {}, key = '', scope = ''; n--; ) {
+    item = vars[n];
     scope = item.variable.root || '';
     key = !!scope || item.isString ||
       (item.variable.isLiteral && !item.variable.name) ?
@@ -211,7 +211,7 @@ function render(_this, tagData, model, isBlock, out) {
 
 function renderHelper(_this, data, model, tagData, bodyFn, escape) {
   return escapeHtml(data.value.call(
-    collectValues(_this, model, data, tagData, {}),
+    collectValues(_this, data, model, tagData.vars, {}),
     function getBody() { return bodyFn ? bodyFn(model) : '' },
     function escape(string) { return escapeHtml(string, _this, true) },
     model.scopes[0].scope,
@@ -238,7 +238,7 @@ function renderIfUnless(_this, data, model, tagData, bodyFns) {
   return result ? escapeHtml(item.bodyFn(model), _this, item.isEscaped) : '';
 }
 
-function renderLoops(_this, model, data, bodyFn) {
+function renderLoops(_this, data, model, bodyFn) {
   var out = '';
   var idx = 0;
 
@@ -263,7 +263,7 @@ function renderInline(_this, tagData, model, bodyFn) {
 
   if (tagData.isPartial) { // partial // TODO: previous function??
     if (!data.value) return '';
-    collectValues(_this, model, data, tagData, model.scopes[0].helpers);
+    collectValues(_this, data, model, tagData.vars, model.scopes[0].helpers);
     out = data.value(model);
   } else {
     out = data.type === 'helper' ?
@@ -287,24 +287,22 @@ function renderInlines(_this, tags, glues, blocks, data) {
 function renderBlock(_this, tagData, model, bodyFns) {
   var data = getData(_this, model, tagData.root);
   var helper = tagData.helper === 'if' || tagData.helper === 'unless';
-  var isHelper = data.type === 'helper' || isFunction(data.type);
+  var isHelperFn = data.type === 'helper' || isFunction(data.type);
   var bodyFn = bodyFns[0];
 
   return render(_this, tagData, model, true, helper ?
-    renderIfUnless(_this, data, model, tagData, bodyFns) : isHelper ?
+    renderIfUnless(_this, data, model, tagData, bodyFns) : isHelperFn ?
     renderHelper(_this, data, model, tagData, bodyFn.bodyFn, bodyFn.isEscaped) :
-    renderLoops(_this, model, data, bodyFn));
+    renderLoops(_this, data, model, bodyFn));
 }
 
 // ---- parse (pre-render) helpers
 
 function trim(text, start, end) {
-  var regExp = '^\\s*|\\s*$';
+  var regExp = !start && !end ? '' :
+    !start ? '\\s*$' : !end ? '^\\s*' : '^\\s*|\\s*$';
 
-  if (!start && !end) return text;
-  regExp = !start ? '\\s*$' : !end ? '^\\s*' : regExp;
-
-  return text.replace(new RegExp(regExp, 'g'), '');
+  return regExp ? text.replace(new RegExp(regExp, 'g'), '') : text;
 }
 
 function getTrims(start, end) {
