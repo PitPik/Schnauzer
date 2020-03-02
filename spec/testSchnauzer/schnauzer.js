@@ -190,8 +190,7 @@ function collectValues(_this, data, model, vars, carrier) {
     key = !!scope || item.isString ||
       (item.variable.isLiteral && !item.variable.name) ?
         ('$' + n) : item.variable.name || item.variable.value;
-    carrier[key] = scope ?
-      renderHelper(_this, data, model, item.variable, null, false) :
+    carrier[key] = scope ? getValue(_this, data, model, item.variable, null) :
       getData(_this, model, item).value;
   }
   return carrier;
