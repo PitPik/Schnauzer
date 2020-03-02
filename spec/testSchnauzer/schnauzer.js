@@ -184,14 +184,13 @@ function getData(_this, model, root) {
 }
 
 function collectValues(_this, data, model, vars, carrier) {
-  for (var n = vars.length, item = {}, key = '', scope = ''; n--; ) {
+  for (var n = vars.length, item = {}, key = '', scp = null, iVar = ''; n--; ) {
     item = vars[n];
-    scope = item.variable.root || '';
-    key = !!scope || item.isString ||
-      (item.variable.isLiteral && !item.variable.name) ?
-        ('$' + n) : item.variable.name || item.variable.value;
-    carrier[key] = scope ? getValue(_this, data, model, item.variable, null) :
-      getData(_this, model, item).value;
+    iVar = item.variable;
+    scp = !!iVar.root ? getValue(_this, data, model, iVar, null) : null;
+    key = scp || item.isString || (iVar.isLiteral && !iVar.name) ?
+        ('$' + n) : iVar.name || iVar.value;
+    carrier[key] = scp || getData(_this, model, item).value;
   }
   return carrier;
 }
