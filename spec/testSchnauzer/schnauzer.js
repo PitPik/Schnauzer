@@ -116,17 +116,15 @@ function concat(array, host) {
   return host;
 }
 
-function createHelper(idx, len, isArray, key, value) {
-  var helpers = isArray ? {
-    '@index': idx,
+function createHelper(idx, key, len, value) {
+  return {
+    '@index': '' + idx,
     '@last': idx === len - 1,
     '@first': idx === 0,
-  } : {};
-
-  helpers['@key'] = key;
-  helpers['.'] = helpers['this'] = value;
-
-  return helpers;
+    '@key': '' + key,
+    'this': '' + value,
+    '.': '' + value,
+  };
 }
 
 function shiftScope(scopes, parentDepth, path) {
@@ -145,9 +143,12 @@ function getScope(data, tagData) {
   var tagRoot = tagData.root || {};
   var mainVar = tagRoot.variable || {};
 
+  if (tagRoot.variable === undefined) tagData['@root'] = data;
+
   return tagRoot.variable === undefined ?
-    { extra: tagData, scopes: [{ scope: data, helpers: {} }] } :
+    { extra: tagData, alias: {}, scopes: [{ scope: data, helpers: {} }] } :
     { extra: data.extra,
+      alias: {},
       scopes: shiftScope(data.scopes, mainVar.parentDepth, mainVar.path) };
 }
 
@@ -178,6 +179,7 @@ function getData(_this, model, root) {
       value === undefined ? '' :
       helper ? 'helper' :
       partial ? 'partial' :
+      isArray(value) ? 'array' :
       typeof value === 'object' ? 'object' :
       'literal',
   };
@@ -201,6 +203,7 @@ function getValue(_this, data, model, tagData, bodyFn) {
 }
 
 // ---- render blocks and inlines
+// TODO: scope shifting, alias, helper way of passing arguments, #with
 
 function render(_this, tagData, model, isBlock, out) {
   return _this.options.render ?
@@ -215,7 +218,7 @@ function renderHelper(_this, data, model, tagData, bodyFn, escape) {
     model.scopes[0].scope,
     function getIntData(key) {
       var variable = getVar(key, false);
-      return getData(_this,getScope(model, { root: variable }), variable).value;
+      return getData(_this, getScope(model, {root: variable}), variable).value;
     }
   ), _this, escape);
 }
@@ -239,16 +242,18 @@ function renderIfUnless(_this, data, model, tagData, bodyFns) {
 function renderLoops(_this, data, model, bodyFn) {
   var out = '';
   var idx = 0;
+  var isArr = data.type === 'array';
+  var _data = isArr ? data.value : getKeys(data.value);
 
   model.scopes = concat(model.scopes, [
     { scope: {}, helpers: {} },
     { scope: data.value, helpers: {} }
   ]);
-  for(var key in data.value) { // TODO: getKeys() for objects
+  for (var n = 0, l = _data.length, key = ''; n < l; n++) {
+    key = isArr ? n : _data[n];
     model.scopes[0] = { // TODO: concat for ../ ?
-      scope: data.value[key],
-      helpers: createHelper(idx++, data.value.length,
-        isArray(data.type), key, data.value[key]),
+      scope: isArr ? _data[n] : data.value[key],
+      helpers: createHelper(idx++, key, l, isArr ? _data[n] : data.value[key]),
     };
     out += bodyFn.bodyFn(model);
   }
