@@ -39,7 +39,7 @@ var Schnauzer = function(template, options) {
     characters: '$"<>%-=@',
     splitter: '|##|',
     useMustageUnless: true,
-    evaluate: false, // TODO
+    render: null, // hook for shadow-DOM engines
   };
   initSchnauzer(this, options || {}, template);
 };
@@ -53,9 +53,7 @@ var initSchnauzer = function(_this, options, template) {
   _this.entityRegExp = new RegExp('[' + getKeys(options.entityMap)
     .join('') + ']', 'g');
   _this.helpers = options.helpers;
-  _this.registerHelper('lookup', function() {
-    // TODO...
-  });
+  _this.registerHelper('lookup', function() { /* TODO... */ });
   for (var name in options.partials) {
     _this.registerPartial(name, options.partials[name]);
   }
@@ -105,13 +103,13 @@ function switchTags(_this, tags) {
 
 // ---- render helpers
 
-function escapeHtml(string, _this) {
-  return String(string).replace(_this.entityRegExp, function(char) {
+function escapeHtml(string, _this, doEscape) {
+  return doEscape ? String(string).replace(_this.entityRegExp, function(char) {
     return _this.options.entityMap[char];
-  });
+  }) : string;
 }
 
-function concat(array, host) { // way faster than [].concat
+function concat(array, host) {
   for (var n = 0, l = array.length; n < l; n++) {
     host[host.length] = array[n];
   }
@@ -134,7 +132,7 @@ function createHelper(idx, len, isArray, key, value) {
 function shiftScope(scopes, parentDepth, path) {
   var scope = {};
   
-  scopes = concat(scopes, []); // TODO: [ ...scopes ]? maybe for ../
+  scopes = concat(scopes, []); // TODO: ...
   if (parentDepth) scopes = scopes.splice(parentDepth);
   scope = (scopes[0] || {}).scope;
   for (var n = 0, l = path.length; n < l; n++) {
@@ -148,11 +146,9 @@ function getScope(data, tagData) {
   var mainVar = tagRoot.variable || {};
 
   return tagRoot.variable === undefined ?
-    { extra: tagData, scopes: [{ scope: data, helpers: {} }] } : // root
-    {
-      extra: data.extra,
-      scopes: shiftScope(data.scopes, mainVar.parentDepth, mainVar.path),
-    };
+    { extra: tagData, scopes: [{ scope: data, helpers: {} }] } :
+    { extra: data.extra,
+      scopes: shiftScope(data.scopes, mainVar.parentDepth, mainVar.path) };
 }
 
 function getExtraData(extra, isStrict, mainVar) { // TODO: keep scope??
@@ -164,7 +160,7 @@ function getExtraData(extra, isStrict, mainVar) { // TODO: keep scope??
   return extra[mainVar.value];
 }
 
-function getData(_this, model, root) { // TODO: unify renderInline/Block
+function getData(_this, model, root) {
   var scope = model.scopes && model.scopes[0] || {};
   var scopeData = scope.scope || {};
   var key = root.variable.value;
@@ -176,59 +172,73 @@ function getData(_this, model, root) { // TODO: unify renderInline/Block
       getExtraData(model.extra || {}, root.isStrict, root.variable));
 
   return {
-    key: key,
+    key: key || '',
     value: value,
     type:
       value === undefined ? '' :
       helper ? 'helper' :
       partial ? 'partial' :
-      isArray(value) ? 'array' :
-      isFunction(value) ? 'function' :
       typeof value === 'object' ? 'object' :
       'literal',
   };
 }
 
-function getValue(_this, data, model, tagData, bodyFn) {
-  return data.type === 'helper' ? // || isFunction(data.value) ?
-    renderHelper(_this, data, model, tagData, bodyFn) : data.value;
+function collectValues(_this, model, data, tagData, carrier) {
+  for (var n = tagData.vars.length, item = {}, key = '', scope = ''; n--; ) {
+    item = tagData.vars[n];
+    scope = item.variable.root || '';
+    key = !!scope || item.isString ||
+      (item.variable.isLiteral && !item.variable.name) ?
+        ('$' + n) : item.variable.name || item.variable.value;
+    carrier[key] = scope ?
+      renderHelper(_this, data, model, item.variable, null, false) :
+      getData(_this, model, item).value;
+  }
+  return carrier;
 }
 
-function renderHelper(_this, data, model, tagData, bodyFn) {
-  for (var n = tagData.vars.length, item = {}, key = '', scope = {}; n--; ) {
-    item = tagData.vars[n]; // TODO: repetitive: see renderInline()
-    key = item.isString || (item.variable.isLiteral && !item.variable.name) ?
-      ('$' + n) : item.variable.name || item.variable.value;
-    scope[key] = getData(_this, model, item).value;
-  }
+function getValue(_this, data, model, tagData, bodyFn) {
+  return data.type === 'helper' ?
+    renderHelper(_this, data, model, tagData, bodyFn, false) : data.value;
+}
 
-  return data.value.apply(scope, [
+// ---- render blocks and inlines
+
+function render(_this, tagData, model, isBlock, out) {
+  return _this.options.render ?
+    _this.options.render.call(_this, out, tagData, model, isBlock) : out;
+}
+
+function renderHelper(_this, data, model, tagData, bodyFn, escape) {
+  return escapeHtml(data.value.call(
+    collectValues(_this, model, data, tagData, {}),
     function getBody() { return bodyFn ? bodyFn(model) : '' },
-    function escape(string) { return escapeHtml(string, _this) },
+    function escape(string) { return escapeHtml(string, _this, true) },
     model.scopes[0].scope,
     function getIntData(key) {
       var variable = getVar(key, false);
       return getData(_this,getScope(model, { root: variable }), variable).value;
     }
-  ]);
+  ), _this, escape);
 }
 
-function renderIntHelper(_this, data, model, tagData, bodyFns) {
+function renderIfUnless(_this, data, model, tagData, bodyFns) {
   var idx = 0;
   var item = bodyFns[idx];
-  var alt = !tagData.helper || tagData.helper === 'if' ? true : false;
+  var cond = !tagData.helper || tagData.helper === 'if' ? true : false;
+  var result = false;
   var value = getValue(_this, data, model, tagData, item.bodyFn);
 
-  while (!(alt && value || !alt && !value) && bodyFns[idx + 1]) {
+  while (!(result = cond && value || !cond && !value) && bodyFns[idx + 1]) {
     item = bodyFns[++idx];
-    alt = !item.helper || item.helper === 'if' ? true : false;
-    data = item.root ? getData(_this, model, item.root) : { value: alt };
+    cond = !item.helper || item.helper === 'if' ? true : false;
+    data = item.root ? getData(_this, model, item.root) : { value: cond };
     value = getValue(_this, data, model, item, item.bodyFn);
   }
-  return (alt && value || !alt && !value) ? item.bodyFn(model) : '';
+  return result ? escapeHtml(item.bodyFn(model), _this, item.isEscaped) : '';
 }
 
-function renderLoops(model, data, bodyFn) {
+function renderLoops(_this, model, data, bodyFn) {
   var out = '';
   var idx = 0;
 
@@ -236,15 +246,15 @@ function renderLoops(model, data, bodyFn) {
     { scope: {}, helpers: {} },
     { scope: data.value, helpers: {} }
   ]);
-  for(var key in data.value) {
+  for(var key in data.value) { // TODO: getKeys() for objects
     model.scopes[0] = { // TODO: concat for ../ ?
       scope: data.value[key],
       helpers: createHelper(idx++, data.value.length,
-        data.type === 'array', key, data.value[key]),
+        isArray(data.type), key, data.value[key]),
     };
-    out += bodyFn(model);
+    out += bodyFn.bodyFn(model);
   }
-  return out;
+  return escapeHtml(out, _this, bodyFn.isEscaped);
 }
 
 function renderInline(_this, tagData, model, bodyFn) {
@@ -252,29 +262,38 @@ function renderInline(_this, tagData, model, bodyFn) {
   var out = '';
 
   if (tagData.isPartial) { // partial // TODO: previous function??
-    for (var n = tagData.vars.length, item = {}, key = ''; n--; ) {
-      item = tagData.vars[n]; // TODO: repetitive: see renderHelper()
-      key = item.isString || (item.variable.isLiteral && !item.variable.name) ?
-        ('$' + n) : item.variable.name || item.variable.value;
-      model.scopes[0].helpers[key] = getData(_this, model, item).value;
-    }
-    out = data.value && data.value(model); // TODO: vars???
+    if (!data.value) return '';
+    collectValues(_this, model, data, tagData, model.scopes[0].helpers);
+    out = data.value(model);
   } else {
-    out = data.type === 'helper' ? // data.value() ...
-      renderHelper(_this, data, model, tagData, bodyFn) : data.value || '';
+    out = data.type === 'helper' ?
+      renderHelper(_this, data, model, tagData, bodyFn, false) :
+      data.value || '';
   }
+  return render(_this, tagData, model, false,
+    escapeHtml(out, _this, tagData.isEscaped));
+}
 
+function renderInlines(_this, tags, glues, blocks, data) {
+  for (var n = 0, l = glues.length, out = ''; n < l; n++) {
+    out += glues[n];
+    if (!tags[n]) continue;
+    out += tags[n].blockIndex > -1 ? blocks[tags[n].blockIndex](data) :
+      renderInline(_this, tags[n], getScope(data, tags[n]));
+  }
   return out;
 }
 
 function renderBlock(_this, tagData, model, bodyFns) {
   var data = getData(_this, model, tagData.root);
-  var intHelper = tagData.helper === 'if' || tagData.helper === 'unless';
-  var isHelper = data.type === 'helper' || isFunction(data.value);
+  var helper = tagData.helper === 'if' || tagData.helper === 'unless';
+  var isHelper = data.type === 'helper' || isFunction(data.type);
+  var bodyFn = bodyFns[0];
 
-  return intHelper ? renderIntHelper(_this, data, model, tagData, bodyFns) :
-    isHelper ? renderHelper(_this, data, model, tagData, bodyFns[0].bodyFn) :
-    renderLoops(model, data, bodyFns[0].bodyFn);
+  return render(_this, tagData, model, true, helper ?
+    renderIfUnless(_this, data, model, tagData, bodyFns) : isHelper ?
+    renderHelper(_this, data, model, tagData, bodyFn.bodyFn, bodyFn.isEscaped) :
+    renderLoops(_this, model, data, bodyFn));
 }
 
 // ---- parse (pre-render) helpers
@@ -349,7 +368,9 @@ function getVar(item, isAs) {
   if (item.charAt(0) === '(') {
     item = item.substr(1, item.length - 2);
     split = splitVars(item, []);
-    return { variable: { root: split.shift(), vars: processVars(split, []) } };
+    return { variable: {
+      root: split.shift(), vars: processVars(split, []), path: []
+    }};
   }
   split = item.split(/([=!<>]+)/);
   out.variable = split[1] ?
@@ -397,16 +418,13 @@ function getTagData(_this, root, vars, type, start, bodyFn) {
 
 // ---- sizzle inlines
 
-function loopInlines(_this, tags, glues, blocks, data) {
-  for (var n = 0, l = glues.length, out = ''; n < l; n++) {
-    out += glues[n];
-    if (!tags[n]) continue;
+function doInline(_this, start, type, root, vars, end, trims, tags) {
+  if (/^(?:!|=)/.test(type || '')) return '';
+  trims.push(getTrims(start, end));
+  tags.push(root === '-block-' ? { blockIndex: +vars } :
+    getTagData(_this, root, vars, type || '', start));
 
-    out += tags[n].blockIndex > -1 ? blocks[tags[n].blockIndex](data) :
-      renderInline(_this, tags[n], getScope(data, tags[n]));
-  }
-
-  return out;
+  return _this.options.splitter;
 }
 
 function sizzleInlines(_this, text, blocks, tags) {
@@ -414,11 +432,7 @@ function sizzleInlines(_this, text, blocks, tags) {
   var glues = text.replace(
     _this.inlineRegExp,
     function($, start, type, root, vars, end) {
-      if (/^(?:!|=)/.test(type || '')) return '';
-      trims.push(getTrims(start, end));
-      tags.push(root === '-block-' ? { blockIndex: +vars } :
-        getTagData(_this, root, vars, type || '', start));
-      return _this.options.splitter;
+      return doInline(_this, start, type, root, vars, end, trims, tags);
     }
   ).split(_this.options.splitter);
 
@@ -430,7 +444,7 @@ function sizzleInlines(_this, text, blocks, tags) {
 
   return function executeInlines(data, extra) {
     data = extra && !data.extra ? getScope(data, extra || {}) : data;
-    return loopInlines(_this, tags, glues, blocks, data);
+    return renderInlines(_this, tags, glues, blocks, data);
   }
 }
 
@@ -469,7 +483,6 @@ function doBlock(_this, blocks, start, end, close, body, type, root, vars) {
   blocks.push(function executeBlock(data) {
     return renderBlock(_this, tagData, getScope(data, tagData), bodyFns);
   });
-
   return (start + '-block- ' + (blocks.length - 1) + closeParts[1]);
 }
 

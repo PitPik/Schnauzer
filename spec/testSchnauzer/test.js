@@ -262,7 +262,14 @@ var testStr_test = `
     the else
 {{/if}}{{12}}
 {{foo}}
-{{#foo}}sss{{/foo}}`;
+{{#foo}}sss{{/foo}}
+-- {{#each arrObj}}#{{@key}}: {{key}}, {{value}}{{#unless @last}} | {{/unless}}{{/each}} --
+{{#if (foo 12)}} --render scope-- {{/if}}`;
+
+var testStr_test = `
+  {{#if foo}} --render foo-- {{/if}}
+  {{#if foo (foo d=12)}} --render scope-- {{/if}}
+`;
 
 var model = {
   person: {
