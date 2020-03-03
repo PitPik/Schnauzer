@@ -223,6 +223,7 @@ function collectValues(_this, data, model, vars, carrier, coll) {
       ('$' + n) : iVar.name || iVar.value;
     carrier[key] = scp || getData(_this, model, item).value;
     coll.push(carrier[key]);
+    if (item.isAlias) model.scopes[0].helpers[key] = carrier[key];
   }
   return { obj: carrier, arr: coll };
 }
