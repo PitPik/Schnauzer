@@ -125,6 +125,7 @@ function createHelper(idx, key, len, value, extra) {
     '@index': '' + idx,
     '@last': idx === len - 1,
     '@first': idx === 0,
+    '@length': len,
     '@key': '' + key,
     'this': '' + value,
     '.': '' + value,
@@ -172,10 +173,15 @@ function getDeepData(data, isStrict, mainVar) {
   return data[mainVar.value];
 }
 
+function getHelperData(_this, model, root) { // TODO: integrate with other fns
+  var key = root.variable.root;
+  var data = { key: key, value: _this.helpers[key], type: 'helper' };
+  var value = getValue(_this, data, model, { vars: root.variable.vars }, null);
+
+  return { key: key, value: value, type: '' };
+}
+
 function getData(_this, model, root) {
-  var isShell = root.variable.root !== undefined;
-  var shell = isShell ? '' : '';
-  console.log(root.variable);
   var scope = model.scopes && model.scopes[0] || {};
   var scopeData = scope.scope || {};
   var variable =  root.variable;
@@ -184,8 +190,11 @@ function getData(_this, model, root) {
   var helper = !isStrict && _this.helpers[key] || null;
   var partial = root.isPartial && _this.partials[key] || null;
   var tmp = '';
-  var value = root.isString || variable.isLiteral ? key :
-    shell || helper || partial || (scopeData[key] !== undefined ? scopeData[key] :
+  var value = '';
+  
+  if (root.variable.root) return getHelperData(_this, model, root);
+  value = root.isString || variable.isLiteral ? key :
+    helper || partial || (scopeData[key] !== undefined ? scopeData[key] :
     (tmp = getDeepData(scope.helpers, isStrict, variable)) !== undefined ?
     tmp : getDeepData(model.extra || {}, isStrict, variable));
 
@@ -200,21 +209,29 @@ function getData(_this, model, root) {
   };
 }
 
-function collectValues(_this, data, model, vars, carrier) {
+function getValue(_this, data, model, tagData, bodyFn) {
+  return data.type === 'helper' ?
+    renderHelper(_this, data, model, tagData, [{ bodyFn: bodyFn }]) : data.value;
+}
+
+function collectValues(_this, data, model, vars, carrier, coll) {
   for (var n = vars.length, item = {}, key = '', scp = null, iVar = ''; n--; ) {
     item = vars[n];
     iVar = item.variable;
     scp = !!iVar.root ? getValue(_this, data, model, iVar, null) : null;
     key = scp || item.isString || (iVar.isLiteral && !iVar.name) ?
-        ('$' + n) : iVar.name || iVar.value;
+      ('$' + n) : iVar.name || iVar.value;
     carrier[key] = scp || getData(_this, model, item).value;
+    coll.push(carrier[key]);
   }
-  return carrier;
+  return { obj: carrier, arr: coll };
 }
 
-function getValue(_this, data, model, tagData, bodyFn) {
-  return data.type === 'helper' ?
-    renderHelper(_this, data, model, tagData, bodyFn, false) : data.value;
+function pushAlias(tagData, variable, obj, key, value) {
+  if (tagData.hasAlias) {
+    obj[variable.name || variable.value] = value;
+    obj[tagData.root.aliasKey] = key;
+  }
 }
 
 // ---- render blocks and inlines
@@ -224,17 +241,23 @@ function render(_this, tagData, model, isBlock, out) {
     _this.options.render.call(_this, out, tagData, model, isBlock) : out;
 }
 
-function renderHelper(_this, data, model, tagData, bodyFn, escape) {
-  return escapeHtml(data.value.call(
-    collectValues(_this, data, model, tagData.vars, {}),
-    function getBody() { return bodyFn ? bodyFn(model) : '' },
-    function escape(string) { return escapeHtml(string, _this, true) },
-    model.scopes[0].scope,
-    function getIntData(key) {
+function renderHelper(_this, data, model, tagData, bodyFns) {
+  return escapeHtml(data.value.apply({
+    name: data.key,
+    getBody: function getBody() {
+      return bodyFns[0] ? bodyFns[0].bodyFn(model) : '';
+    },
+    getAltBody: function getAltBody() { // TODO: check if ever available
+      return bodyFns[1] ? bodyFns[1].bodyFn(model) : '';
+    },
+    escape: function escape(string) { return escapeHtml(string, _this, true) },
+    scope: model.scopes[0].scope,
+    getData: function getIntData(key) {
       var variable = getVar(key);
       return getData(_this, getScope(model, {root: variable}), variable).value;
-    }
-  ), _this, escape);
+    }},
+    collectValues(_this, data, model, tagData.vars, {}, []).arr,
+  ), _this, !!bodyFns[0].escape);
 }
 
 function renderIfUnless(_this, data, model, tagData, bodyFns) {
@@ -253,25 +276,18 @@ function renderIfUnless(_this, data, model, tagData, bodyFns) {
   return result ? escapeHtml(item.bodyFn(model), _this, item.isEscaped) : '';
 }
 
-function addHelpers(tagData, variable, obj, key, value) {
-  if (tagData.hasAlias) {
-    obj[variable.name || variable.value] = value;
-    obj[tagData.root.aliasKey] = key;
-  }
-}
-
 function renderEach(_this, data, model, tagData, bodyFn) {
   var out = '';
   var isArr = isArray(data.value);
   var _data = isArr ? data.value || [] : getKeys(data.value || {});
-  var alias = clone(model.scopes[0].helpers, {});
+  var helpers = clone(model.scopes[0].helpers, {});
   var variable = tagData.root.variable;
 
   for (var n = 0, l = _data.length, key = ''; n < l; n++) {
     key = isArr ? n : _data[n];
-    addHelpers(tagData, variable, alias, key, data.value);
+    pushAlias(tagData, variable, helpers, key, data.value);
     model.scopes = shiftScope(model, n ? 2 : 0, [data.key, key],
-      createHelper(n, key, l, isArr ? _data[n] : data.value[key], alias));
+      createHelper(n, key, l, isArr ? _data[n] : data.value[key], helpers));
     out += bodyFn.bodyFn(model);
   }
   return escapeHtml(out, _this, bodyFn.isEscaped);
@@ -281,23 +297,23 @@ function renderWith(_this, data, model, tagData, bodyFn) {
   var helpers = clone(model.scopes[0].helpers, {});
   var variable = tagData.root.variable;
 
-  addHelpers(tagData, variable, helpers, variable.value, data.value);
+  pushAlias(tagData, variable, helpers, variable.value, data.value);
   model.scopes = shiftScope(model, 0, [data.key], helpers);
 
   return escapeHtml(bodyFn.bodyFn(model), bodyFn.isEscaped);
 }
 
-function renderInline(_this, tagData, model, bodyFn) {
+function renderInline(_this, tagData, model) {
   var data = getData(_this, model, tagData.root);
   var out = '';
 
   if (tagData.isPartial) { // partial // TODO: previous function??
     if (!data.value) return '';
-    collectValues(_this, data, model, tagData.vars, model.scopes[0].helpers);
+    collectValues(_this, data, model, tagData.vars, model.scopes[0].helpers, []);
     out = data.value(model);
   } else {
     out = data.type === 'helper' ?
-      renderHelper(_this, data, model, tagData, bodyFn, false) :
+      renderHelper(_this, data, model, tagData, []) :
       data.value || '';
   }
   return render(_this, tagData, model, false,
@@ -323,7 +339,7 @@ function renderBlock(_this, tagData, model, bodyFns) {
 
   return render(_this, tagData, model, true, ifHelper ?
     renderIfUnless(_this, data, model, tagData, bodyFns) : isHelperFn ?
-    renderHelper(_this, data, model, tagData, bodyFn.bodyFn, bodyFn.isEscaped) :
+    renderHelper(_this, data, model, tagData, bodyFns) :
     helper === 'with' ? renderWith(_this, data, model, tagData, bodyFn) :
     renderEach(_this, data, model, tagData, bodyFn));
 }
