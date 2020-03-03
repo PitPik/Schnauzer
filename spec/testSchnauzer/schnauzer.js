@@ -136,7 +136,7 @@ function createHelper(idx, key, len, value, extra) {
 
 function shiftScope(model, parentDepth, path, helpers) {
   var scope = {};
-  var scopes = model.scopes; // TODO: ...
+  var scopes = concat(model.scopes, []); // TODO: ...
   var maxLen = scopes.length - 1;
 
   if (parentDepth) {
@@ -146,7 +146,6 @@ function shiftScope(model, parentDepth, path, helpers) {
   if (!scopes[0].scope[path[0]] &&
     (scopes[0].helpers[path[0]] || model.extra[path[0]])) return scopes;
 
-  scopes = concat(scopes, []);
   scope = (scopes[0] || {}).scope;
   for (var n = 0, l = path.length; n < l; n++) {
     scopes.unshift({ scope: scope = scope[path[n]], helpers: helpers });
@@ -186,7 +185,8 @@ function getHelperData(_this, model, root) { // TODO: integrate with other fns
 }
 
 function getData(_this, model, root) {
-  var scope = model.scopes && model.scopes[0] || {};
+  var parentDepth = root.variable.parentDepth;
+  var scope = model.scopes && model.scopes[parentDepth] || {};
   var scopeData = scope.scope || {};
   var variable =  root.variable;
   var key = variable.value;
@@ -199,6 +199,7 @@ function getData(_this, model, root) {
   if (root.variable.root) return getHelperData(_this, model, root);
   value = root.isString || variable.isLiteral ? key :
     helper || partial || (scopeData[key] !== undefined ? scopeData[key] :
+    // (tmp = getDeepData(scopeData, isStrict, variable)) !== undefined ? tmp :
     (tmp = getDeepData(scope.helpers, isStrict, variable)) !== undefined ?
     tmp : getDeepData(model.extra || {}, isStrict, variable));
 
@@ -311,7 +312,6 @@ function renderWith(_this, data, model, tagData, bodyFn) {
 function renderInline(_this, tagData, model) {
   var data = getData(_this, model, tagData.root);
   var out = '';
-
   if (tagData.isPartial) { // partial // TODO: previous function??
     if (!data.value) return '';
     collectValues(_this, data, model, tagData.vars, model.scopes[0].helpers, []);
@@ -320,7 +320,7 @@ function renderInline(_this, tagData, model) {
     out = data.type === 'helper' ?
       renderHelper(_this, data, model, tagData, []) :
       data.value || '';
-  }
+    }
   return render(_this, tagData, model, false,
     escapeHtml(out, _this, tagData.isEscaped));
 }
