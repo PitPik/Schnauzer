@@ -137,8 +137,12 @@ function createHelper(idx, key, len, value, extra) {
 function shiftScope(model, parentDepth, path, helpers) {
   var scope = {};
   var scopes = model.scopes; // TODO: ...
+  var maxLen = scopes.length - 1;
 
-  if (parentDepth) scopes = scopes.splice(parentDepth);
+  if (parentDepth) {
+    parentDepth = parentDepth > maxLen ? maxLen : parentDepth;
+    scopes = scopes.splice(parentDepth);
+  }
   if (!scopes[0].scope[path[0]] &&
     (scopes[0].helpers[path[0]] || model.extra[path[0]])) return scopes;
 
