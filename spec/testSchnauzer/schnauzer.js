@@ -173,6 +173,9 @@ function getDeepData(data, isStrict, mainVar) {
 }
 
 function getData(_this, model, root) {
+  var isShell = root.variable.root !== undefined;
+  var shell = isShell ? '' : '';
+  console.log(root.variable);
   var scope = model.scopes && model.scopes[0] || {};
   var scopeData = scope.scope || {};
   var variable =  root.variable;
@@ -182,7 +185,7 @@ function getData(_this, model, root) {
   var partial = root.isPartial && _this.partials[key] || null;
   var tmp = '';
   var value = root.isString || variable.isLiteral ? key :
-    helper || partial || (scopeData[key] !== undefined ? scopeData[key] :
+    shell || helper || partial || (scopeData[key] !== undefined ? scopeData[key] :
     (tmp = getDeepData(scope.helpers, isStrict, variable)) !== undefined ?
     tmp : getDeepData(model.extra || {}, isStrict, variable));
 
@@ -406,24 +409,26 @@ function getVar(item) {
   return out;
 }
 
+function processAlias(out, vars, n, key) { // TODO: clean up
+  if (vars[n] === '|') n++;
+  key = vars[n + 1] || '';
+  key = key.indexOf('|') !== -1 || vars[n + 2] === '|' ? cleanText(key) : '';
+  out.variable.name = cleanText(vars[n]);
+  out.aliasKey = key;
+  out.isAlias = true;
+  if (vars[n + 2] === '|') n++;
+  if (key) n++;
+  return n;
+}
+
 function processVars(vars, collection, root) {
   var out = root || {};
-  var asKey = '';
 
   for (var n = 0, l = vars.length; n < l; n++) {
-    if (vars[n] === 'as') { // TODO: clean up
-      n++;
-      asKey = (vars[n + 1] || '');
-      asKey = asKey.indexOf('|') !== -1 || vars[n + 2] === '|' ?
-        cleanText(asKey) : '';
-      out.variable.name = cleanText(vars[n]);
-      out.aliasKey = asKey;
-      out.isAlias = true;
-      if (vars[n + 2] === '|') n++;
-      if (asKey) n++;
+    if (vars[n] === 'as') {
+      n = processAlias(out, vars, ++n, '');
       continue;
     }
-
     out = getVar(vars[n]);
     collection.push(out);
   }
