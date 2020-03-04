@@ -56,13 +56,11 @@ var Schnauzer = function(template, options) {
 };
 
 var initSchnauzer = function(_this, options, template) {
-  for (var option in options) {
-    _this.options[option] = options[option];
-  }
+  for (var option in options) _this.options[option] = options[option];
   options = _this.options;
   switchTags(_this, options.tags);
-  _this.entityRegExp = new RegExp('[' + getObjectKeys(options.entityMap)
-    .join('') + ']', 'g');
+  _this.entityRegExp =
+    new RegExp('[' + getObjectKeys(options.entityMap).join('') + ']', 'g');
   _this.helpers = options.helpers;
   _this.registerHelper('lookup', function() { /* TODO... */ });
   for (var name in options.partials) {
