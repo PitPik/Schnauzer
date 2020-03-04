@@ -210,7 +210,7 @@ function getData(_this, model, root) {
 
 function getValue(_this, data, model, tagData, bodyFn) {
   return data.type === 'helper' ?
-    renderHelper(_this, data, model, tagData, [{ bodyFn: bodyFn }]) : data.value;
+    renderHelper(_this, data, model, tagData, [{bodyFn: bodyFn}]) : data.value;
 }
 
 function collectValues(_this, data, model, vars, carrier, coll) {
@@ -303,7 +303,7 @@ function renderWith(_this, data, model, tagData, bodyFn) {
   var variable = tagData.root.variable;
 
   pushAlias(tagData, variable, helpers, variable.value, data.value);
-  model.scopes = shiftScope(model, { parentDepth: 0, path: [data.key] }, helpers);
+  model.scopes = shiftScope(model, {parentDepth: 0, path: [data.key]}, helpers);
 
   return escapeHtml(bodyFn.bodyFn(model), bodyFn.isEscaped);
 }
@@ -314,7 +314,7 @@ function renderInline(_this, tagData, model) {
 
   if (tagData.isPartial) { // partial // TODO: previous function??
     if (!data.value) return '';
-    collectValues(_this, data, model, tagData.vars, model.scopes[0].helpers, []);
+    collectValues(_this, data, model, tagData.vars, model.scopes[0].helpers,[]);
     out = data.value(model);
   } else {
     out = data.type === 'helper' ?
