@@ -49,7 +49,7 @@ var Schnauzer = function(template, options) {
     characters: '$"<>%-=@',
     splitter: '|##|',
     useMustageUnless: true,
-    handlebarsScoping: true,
+    useHandlebarsScoping: true,
     render: null, // hook for shadow-DOM engines
   };
   initSchnauzer(this, options || {}, template);
@@ -275,7 +275,7 @@ function renderEach(_this, data, model, tagData, bodyFn) {
   var _data = isArr ? data.value || [] : getObjectKeys(data.value || {});
   var helpers = cloneObject(model.scopes[0].helpers, {});
   var variable = tagData.root.variable;
-  var hs = _this.options.handlebarsScoping ? 1 : 2;
+  var hs = _this.options.useHandlebarsScoping ? 1 : 2;
 
   for (var n = 0, l = _data.length, key = ''; n < l; n++) {
     key = isArr ? n : _data[n];
