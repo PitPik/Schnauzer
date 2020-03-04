@@ -264,12 +264,49 @@ var testStr_test = `
 {{foo}}
 {{#foo}}sss{{/foo}}
 -- {{#each arrObj}}#{{@key}}: {{key}}, {{value}}{{#unless @last}} | {{/unless}}{{/each}} --
-{{#if (foo 12)}} --render scope-- {{/if}}`;
+{{#if foo (foo 12)}} --render scope-- {{/if}}`;
 
 var testStr_test = `
   {{#if foo}} --render foo-- {{/if}}
   {{#if foo (foo d=12)}} --render scope-- {{/if}}
 `;
+
+var testStr_test = `
+  <div>{{#with obj as |abc xyz|}}{{abc.fooo}}-{{abc.bar}}-{{abc.deep.deeper}}-{{xyz}} | {{./fooo}}-{{bar}}{{/with}}</div>
+  {{> ddd as |foo bar| %%this.foo}}
+`;
+
+var testStr_test = `
+  <div>{{#each arrObj as | abc xyz |}}{{abc.key}}-{{abc.value}}-{{xyz}}- | {{key}}-{{value}}{{/each}}</div>
+`;
+
+var testStr_test = `
+  {{#if (isdefined value1)}}true{{else}}false{{/if}}
+  {{#if (isdefined value2)}}true{{else}}false{{/if}}
+`;
+
+var testStr_test = `
+{{#with obj as |abc xyz|}}{{abc.foo}}-{{abc.bar}}-{{abc.deep.deeper}}-{{deep.deeper}}-{{xyz}} | {{./foo}}-{{../someString.string}}{{/with}}
+<br>
+objFooValue-objBarValue-objDeeper-objDeeper-obj | objFooValue-someString
+
+  <br><br>
+{{#each arrObj as | abc xyz |}}{{abc.key}}-{{abc.value}}-{{xyz}}- | {{key}}-{{value}}{{/each}}
+<br>
+key1-value1-0- | key1-value1key2-value2-1- | key2-value2key3-value3-2- | key3-value3
+
+<br><br>
+{{#if (isdefined value1)}}true{{else}}false{{/if}}
+{{#if (isdefined value2)}}true{{else}}false{{/if}}
+<br>
+true false
+
+<br><br>
+{{#each names}}{{@index}}: {{baz}} {{../str}} {{#each name}} {{../../str}} {{.}}: {{../baz}} {{../../someString.string}}{{/each}} - {{/each}}
+  <br>
+  0: baz str str name 1: baz someString - 1: baz str str name 2: baz someString - 2: baz str str name 3: baz someString -
+`;
+
 
 var model = {
   person: {
@@ -278,15 +315,29 @@ var model = {
       name: 'lastName'
     }
   },
+  value1: {},
+  value2: false,
   foo: true,
+  someString: { string: 'someString' },
+  str: 'str',
   arr: [1, 2, 3],
   arrObj: [
     { key: 'key1', value: 'value1'},
     { key: 'key2', value: 'value2'},
     { key: 'key3', value: 'value3'},
   ],
+  obj: {
+    foo: 'objFooValue',
+    bar: 'objBarValue',
+    deep: { deeper: 'objDeeper'}
+  },
   hhh: true,
-  bar: false
+  bar: false,
+  names: [
+    { baz: 'baz', name: ['name 1']},
+    { baz: 'baz', name: ['name 2']},
+    { baz: 'baz', name: ['name 3']},
+  ]
 };
 
 // var testStr_test = `
@@ -316,6 +367,10 @@ var s = new Schnauzer('', {
       return getBody() || '--inline Foo--'; // block or inline
     }, //'I\m a helper' },
     inlineHelper: function inlineHelper() {},
+    isdefined: function($1) {
+      console.log(this)
+      return !!$1;
+    }
   },
   partials: {
     partial: function foo() {},
