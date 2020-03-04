@@ -273,17 +273,17 @@ function renderEach(_this, data, model, tagData, bodyFn) {
   var _data = isArr ? data.value || [] : getObjectKeys(data.value || {});
   var helpers = cloneObject(model.scopes[0].helpers, {});
   var variable = tagData.root.variable;
-  var hs = _this.options.useHandlebarsScoping ? 1 : 2;
+  var depth = _this.options.useHandlebarsScoping ? 1 : 2;
 
   for (var n = 0, l = _data.length, key = ''; n < l; n++) {
     key = isArr ? n : _data[n];
     pushAlias(tagData, variable, helpers, key, data.value);
     model.scopes = shiftScope(
       model,
-      { parentDepth: n ? hs : 0, path: [data.key, key] },
+      { parentDepth: n ? depth : 0, path: [data.key, key] },
       createHelper(n, key, l, isArr ? _data[n] : data.value[key], helpers)
     );
-    hs === 1 && model.scopes.splice(1, 1); // Whaaaaaaaaat? bad HBS
+    depth === 1 && model.scopes.splice(1, 1); // Whaaaaaaaaat? bad HBS
     out += bodyFn.bodyFn(model);
   }
   return escapeHtml(out, _this, bodyFn.isEscaped);
