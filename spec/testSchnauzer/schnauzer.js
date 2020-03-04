@@ -49,6 +49,7 @@ var Schnauzer = function(template, options) {
     characters: '$"<>%-=@',
     splitter: '|##|',
     useMustageUnless: true,
+    handlebarsScoping: true,
     render: null, // hook for shadow-DOM engines
   };
   initSchnauzer(this, options || {}, template);
@@ -139,8 +140,8 @@ function shiftScope(model, data, helpers) {
   var parentDepth = data.parentDepth;
   var path = data.path;
   var scopes = model.scopes;
-  // TODO: getData.type??
-  if (parentDepth && path.length && !scopes[0].scope[path[0]] &&
+
+  if (parentDepth && path.length && !scopes[0].scope[path[0]] && // TODO
     (scopes[0].helpers[path[0]] || model.extra[path[0]])) return scopes;
   
   scopes = concatArrays(model.scopes, []); // copy
@@ -153,13 +154,12 @@ function shiftScope(model, data, helpers) {
 
 function getScope(data, tagData, isInline) {
   var tagRoot = tagData.root || {};
-  var mainVar = tagRoot.variable || {};
   var model = { extra: data.extra, scopes: data.scopes };
 
   return tagRoot.variable === undefined ?
     { extra: tagData, scopes: [{ scope: data, helpers: { '@root': data } }] } :
     { extra: data.extra, scopes: isInline ?
-      data.scopes : shiftScope(model, mainVar, {}) };
+      data.scopes : shiftScope(model, tagRoot.variable || {}, {}) };
 }
 
 function getDeepData(data, mainVar) {
@@ -180,17 +180,14 @@ function getHelperData(_this, model, root) { // TODO: integrate with other fns
 
 function getData(_this, model, root) {
   var variable =  root.variable;
-  var parentDepth = variable.parentDepth;
-  var scope = model.scopes && model.scopes[parentDepth] || {}; // + parentArray
+  var scope = model.scopes && model.scopes[variable.parentDepth] || {};
   var scopeData = scope.scope || {};
   var key = variable.value;
   var helper = !root.isStrict && _this.helpers[key] || null;
   var partial = root.isPartial && _this.partials[key] || null;
   var tmp = '';
-  var value = '';
-
-  if (variable.root) return getHelperData(_this, model, root);
-  value = root.isString || variable.isLiteral ? key :
+  var value = variable.root ? getHelperData(_this, model, root) : 
+    root.isString || variable.isLiteral ? key :
     helper || partial || (scopeData[key] !== undefined ? scopeData[key] :
     (tmp = getDeepData(scopeData, variable)) !== undefined ? tmp :
     (tmp = getDeepData(scope.helpers || {}, variable)) !== undefined ? tmp : 
@@ -199,10 +196,7 @@ function getData(_this, model, root) {
   return {
     key: key || '',
     value: value,
-    type:
-      value === undefined ? '' :
-      helper ? 'helper' :
-      partial ? 'partial' :
+    type: value === undefined ? '' : helper ? 'helper' : partial ? 'partial' :
       typeof value === 'object' ? 'object' : 'literal',
   };
 }
@@ -217,8 +211,8 @@ function collectValues(_this, data, model, vars, carrier, coll) {
     item = vars[n];
     iVar = item.variable;
     scp = !!iVar.root ? getValue(_this, data, model, iVar, null) : null;
-    key = scp || item.isString || (iVar.isLiteral && !iVar.name) ?
-      ('$' + n) : iVar.name || iVar.value;
+    key = scp || item.isString || (iVar.isLiteral && !iVar.name) ? ('$' + n) :
+      iVar.name || iVar.value;
     carrier[key] = scp || getData(_this, model, item).value;
     coll.push(carrier[key]);
     if (item.isAlias) model.scopes[0].helpers[key] = carrier[key];
@@ -253,8 +247,7 @@ function renderHelper(_this, data, model, tagData, bodyFns) {
     scope: model.scopes[0].scope,
     rootScope: model.scopes[model.scopes.length - 1].scope,
     getData: function getIntData(key) {
-      var variable = getVar(key); // TODO: check getScope() or model (inline?)
-      return getData(_this, getScope(model, {root: variable}), variable).value;
+      return getData(_this, model, getVar(key)).value;
     }},
     collectValues(_this, data, model, tagData.vars, {}, []).arr
   ), _this, !!bodyFns[0].escape);
@@ -282,16 +275,17 @@ function renderEach(_this, data, model, tagData, bodyFn) {
   var _data = isArr ? data.value || [] : getObjectKeys(data.value || {});
   var helpers = cloneObject(model.scopes[0].helpers, {});
   var variable = tagData.root.variable;
+  var hs = _this.options.handlebarsScoping ? 1 : 2;
 
   for (var n = 0, l = _data.length, key = ''; n < l; n++) {
     key = isArr ? n : _data[n];
     pushAlias(tagData, variable, helpers, key, data.value);
     model.scopes = shiftScope(
       model,
-      { parentDepth: n ? 1 : 0, path: [data.key, key] }, // 2 => 1
+      { parentDepth: n ? hs : 0, path: [data.key, key] },
       createHelper(n, key, l, isArr ? _data[n] : data.value[key], helpers)
     );
-    model.scopes.splice(1, 1); // Whaaaaaaaaat?
+    hs === 1 && model.scopes.splice(1, 1); // Whaaaaaaaaat? bad HBS
     out += bodyFn.bodyFn(model);
   }
   return escapeHtml(out, _this, bodyFn.isEscaped);
@@ -311,7 +305,7 @@ function renderInline(_this, tagData, model) {
   var data = getData(_this, model, tagData.root);
   var out = '';
 
-  if (tagData.isPartial) { // partial // TODO: previous function??
+  if (tagData.isPartial) {
     if (!data.value) return '';
     collectValues(_this, data, model, tagData.vars, model.scopes[0].helpers,[]);
     out = data.value(model);
@@ -385,7 +379,7 @@ function getActiveState(text) {
 function splitVars(text, collection) {
   if (!text) return collection;
   text.replace(/\(.*?\)|(?:\S*?"(?:\\.|[^\"])*\")|\S+/g, function(match) {
-    if (match) collection.push(match);
+    if (match) collection.push(match); // TODO: regexp
   });
   return collection;
 }
@@ -423,7 +417,7 @@ function getVar(item) {
       root: split.shift(), vars: processVars(split, [], {}), path: []
     }};
   }
-  split = item.split(/([=!<>]+)/);
+  split = item.split('='); // item.split(/([=!<>]+)/);
   out.variable = split[1] ?
     parseScope(convertValue(split[2], out), split[0]) :
     parseScope(convertValue(split[0], out), '');
@@ -489,7 +483,6 @@ function sizzleInlines(_this, text, blocks, tags) {
       trims.push(getTrims(start, end));
       tags.push(root === '-block-' ? { blockIndex: +vars } :
         getTagData(_this, root, vars, type || '', start));
-    
       return _this.options.splitter;
     }
   ).split(_this.options.splitter);
