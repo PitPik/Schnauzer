@@ -122,16 +122,16 @@ function concat(array, host) {
 
 function createHelper(idx, key, len, value, extra) {
   var out = {
-    '@index': '' + idx,
+    '@index': idx,
     '@last': idx === len - 1,
     '@first': idx === 0,
     '@length': len,
-    '@key': '' + key,
-    'this': '' + value,
-    '.': '' + value,
+    '@key': key,
+    'this': value,
+    '.': value,
   };
   if (extra) for (var n in extra)
-    if (out[n] === undefined) out[n] = '' + extra[n];
+    if (out[n] === undefined) out[n] = extra[n];
 
   return out;
 }
@@ -319,7 +319,7 @@ function renderInline(_this, tagData, model) {
   } else {
     out = data.type === 'helper' ?
       renderHelper(_this, data, model, tagData, []) :
-      data.value || '';
+      data.value !== undefined ? data.value : '';
     }
   return render(_this, tagData, model, false,
     escapeHtml(out, _this, tagData.isEscaped));
