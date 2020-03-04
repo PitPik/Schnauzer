@@ -257,7 +257,7 @@ function renderHelper(_this, data, model, tagData, bodyFns) {
       var variable = getVar(key); // TODO: check getScope() or model (inline?)
       return getData(_this, getScope(model, {root: variable}), variable).value;
     }},
-    collectValues(_this, data, model, tagData.vars, {}, []).arr,
+    collectValues(_this, data, model, tagData.vars, {}, []).arr
   ), _this, !!bodyFns[0].escape);
 }
 
@@ -526,7 +526,7 @@ function processBodyParts(_this, bodyFns, parts, blocks, mainStartTag) {
       prevTagData ? prevTagData.substr(separator) : '',
       '',
       n !== 0 ? parts[1 + n - 4] || '' : mainStartTag,
-      sizzleInlines(_this, trim(parts[n], prevTrim, trims[0]), blocks, []),
+      sizzleInlines(_this, trim(parts[n], prevTrim, trims[0]), blocks, [])
     ));
   }
   return bodyFns;
