@@ -228,9 +228,9 @@ function pushAlias(tagData, variable, obj, key, value) {
 
 // ---- render blocks and inlines
 
-function render(_this, tagData, model, isBlock, out) {
+function render(_this, tagData, model, data, isBlock, out) {
   return _this.options.render ?
-    _this.options.render.call(_this, out, tagData, model, isBlock) : out;
+    _this.options.render.call(_this, out, tagData, model, data, isBlock) : out;
 }
 
 function renderHelper(_this, data, model, tagData, bodyFns) {
@@ -305,7 +305,7 @@ function renderInline(_this, tagData, model) {
   if (tagData.isPartial)
     collectValues(_this, data, model, tagData.vars, model.scopes[0].helpers,[]);
 
-  return render(_this, tagData, model, false,
+  return render(_this, tagData, model, data, false,
     escapeHtml(data.value === undefined ? '' : tagData.isPartial ?
       data.value(model) : data.type === 'helper' ?
       renderHelper(_this, data, model, tagData, []) :
@@ -327,7 +327,7 @@ function renderBlock(_this, tagData, model, bodyFns) {
   var helper = tagData.helper;
   var ifHelper = helper === 'if' || helper === 'unless';
 
-  return render(_this, tagData, model, true, ifHelper ?
+  return render(_this, tagData, model, data, true, ifHelper ?
     renderIfUnless(_this, data, model, tagData, bodyFns) :
     data.type === 'helper' || isFunction(data.type) ?
     renderHelper(_this, data, model, tagData, bodyFns) :
