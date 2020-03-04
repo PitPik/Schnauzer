@@ -194,7 +194,7 @@ function getData(_this, model, root) {
   value = root.isString || variable.isLiteral ? key :
     helper || partial || (scopeData[key] !== undefined ? scopeData[key] :
     (tmp = getDeepData(scopeData, variable)) !== undefined ? tmp :
-    (tmp = getDeepData(scope.helpers, variable)) !== undefined ? tmp : 
+    (tmp = getDeepData(scope.helpers || {}, variable)) !== undefined ? tmp : 
     getDeepData(model.extra || {}, variable));
 
   return {
