@@ -12,15 +12,21 @@ var isFunction = function(obj) {
 var isArray = Array.isArray || function(obj) {
   return !!obj && obj.constructor === Array;
 };
-var getKeys = Object.keys || function(obj) {
+var getObjectKeys = Object.keys || function(obj) {
   var keys = [];
   for (var key in obj) obj.hasOwnProperty(key) && keys.push(key);
   return keys;
 };
-var clone = function(obj, newObj) {
+var cloneObject = function(obj, newObj) {
   for (var key in obj) newObj[key] = obj[key];
   return newObj;
 }
+var concatArrays = function(array, host) {
+  for (var n = 0, l = array.length; n < l; n++) {
+    host[host.length] = array[n];
+  }
+  return host;
+};
 
 var Schnauzer = function(template, options) {
   this.version = '1.5.0';
@@ -54,7 +60,7 @@ var initSchnauzer = function(_this, options, template) {
   }
   options = _this.options;
   switchTags(_this, options.tags);
-  _this.entityRegExp = new RegExp('[' + getKeys(options.entityMap)
+  _this.entityRegExp = new RegExp('[' + getObjectKeys(options.entityMap)
     .join('') + ']', 'g');
   _this.helpers = options.helpers;
   _this.registerHelper('lookup', function() { /* TODO... */ });
@@ -113,13 +119,6 @@ function escapeHtml(string, _this, doEscape) {
   }) : string;
 }
 
-function concat(array, host) {
-  for (var n = 0, l = array.length; n < l; n++) {
-    host[host.length] = array[n];
-  }
-  return host;
-}
-
 function createHelper(idx, key, len, value, extra) {
   var out = {
     '@index': idx,
@@ -140,11 +139,11 @@ function shiftScope(model, data, helpers) {
   var parentDepth = data.parentDepth;
   var path = data.path;
   var scopes = model.scopes;
-
-  if (!scopes[0].scope[path[0]] && // TODO: getData.type??
+  // TODO: getData.type??
+  if (parentDepth && path.length && !scopes[0].scope[path[0]] &&
     (scopes[0].helpers[path[0]] || model.extra[path[0]])) return scopes;
   
-  scopes = concat(model.scopes, []); // copy
+  scopes = concatArrays(model.scopes, []); // copy
   while (scopes.length && parentDepth--) scopes.shift();
   for (var n = 0, l = path.length, scope = scopes[0].scope; n < l; n++) {
     scopes.unshift({ scope: scope = scope[path[n]], helpers: helpers });
@@ -280,8 +279,8 @@ function renderIfUnless(_this, data, model, tagData, bodyFns) {
 function renderEach(_this, data, model, tagData, bodyFn) {
   var out = '';
   var isArr = isArray(data.value);
-  var _data = isArr ? data.value || [] : getKeys(data.value || {});
-  var helpers = clone(model.scopes[0].helpers, {});
+  var _data = isArr ? data.value || [] : getObjectKeys(data.value || {});
+  var helpers = cloneObject(model.scopes[0].helpers, {});
   var variable = tagData.root.variable;
 
   for (var n = 0, l = _data.length, key = ''; n < l; n++) {
@@ -299,7 +298,7 @@ function renderEach(_this, data, model, tagData, bodyFn) {
 }
 
 function renderWith(_this, data, model, tagData, bodyFn) {
-  var helpers = clone(model.scopes[0].helpers, {});
+  var helpers = cloneObject(model.scopes[0].helpers, {});
   var variable = tagData.root.variable;
 
   pushAlias(tagData, variable, helpers, variable.value, data.value);
