@@ -159,11 +159,11 @@ function getScope(data, tagData, isInline) {
 
   return tagRoot.variable === undefined ?
     { extra: tagData, scopes: [{ scope: data, helpers: { '@root': data } }] } :
-    { extra: data.extra, scopes: shiftScope(model, mainVar, {}) };
+    { extra: data.extra, scopes: isInline ?
+      data.scopes : shiftScope(model, mainVar, {}) };
 }
 
-function getDeepData(data, isStrict, mainVar) {
-  if (isStrict || mainVar.parentDepth) return;
+function getDeepData(data, mainVar) {
   for (var n = 0, l = mainVar.path.length; n < l; n++) {
     data = data[mainVar.path[n]];
     if (!data) return;
@@ -180,23 +180,22 @@ function getHelperData(_this, model, root) { // TODO: integrate with other fns
 }
 
 function getData(_this, model, root) {
-  var parentDepth = root.variable.parentDepth;
-  var scope = model.scopes && model.scopes[parentDepth] || {};
-  var scopeData = scope.scope || {};
   var variable =  root.variable;
+  var parentDepth = variable.parentDepth;
+  var scope = model.scopes && model.scopes[parentDepth] || {}; // + parentArray
+  var scopeData = scope.scope || {};
   var key = variable.value;
-  var isStrict = root.isStrict;
-  var helper = !isStrict && _this.helpers[key] || null;
+  var helper = !root.isStrict && _this.helpers[key] || null;
   var partial = root.isPartial && _this.partials[key] || null;
   var tmp = '';
   var value = '';
-  
-  if (root.variable.root) return getHelperData(_this, model, root);
+
+  if (variable.root) return getHelperData(_this, model, root);
   value = root.isString || variable.isLiteral ? key :
     helper || partial || (scopeData[key] !== undefined ? scopeData[key] :
-    // (tmp = getDeepData(scopeData, isStrict, variable)) !== undefined ? tmp :
-    (tmp = getDeepData(scope.helpers, isStrict, variable)) !== undefined ?
-    tmp : getDeepData(model.extra || {}, isStrict, variable));
+    (tmp = getDeepData(scopeData, variable)) !== undefined ? tmp :
+    (tmp = getDeepData(scope.helpers, variable)) !== undefined ? tmp : 
+    getDeepData(model.extra || {}, variable));
 
   return {
     key: key || '',
@@ -253,8 +252,9 @@ function renderHelper(_this, data, model, tagData, bodyFns) {
     },
     escape: function escape(string) { return escapeHtml(string, _this, true) },
     scope: model.scopes[0].scope,
+    rootScope: model.scopes[model.scopes.length - 1].scope,
     getData: function getIntData(key) {
-      var variable = getVar(key);
+      var variable = getVar(key); // TODO: check getScope() or model (inline?)
       return getData(_this, getScope(model, {root: variable}), variable).value;
     }},
     collectValues(_this, data, model, tagData.vars, {}, []).arr,
@@ -289,9 +289,10 @@ function renderEach(_this, data, model, tagData, bodyFn) {
     pushAlias(tagData, variable, helpers, key, data.value);
     model.scopes = shiftScope(
       model,
-      { parentDepth: n ? 2 : 0, path: [data.key, key] },
+      { parentDepth: n ? 1 : 0, path: [data.key, key] }, // 2 => 1
       createHelper(n, key, l, isArr ? _data[n] : data.value[key], helpers)
     );
+    model.scopes.splice(1, 1); // Whaaaaaaaaat?
     out += bodyFn.bodyFn(model);
   }
   return escapeHtml(out, _this, bodyFn.isEscaped);
@@ -366,6 +367,7 @@ function convertValue(text, obj) {
     obj.isString = true;
     return text.substr(1, text.length - 2);
   }
+  if (/\.|\|/.test(text)) obj.isStrict = true;
   return text === 'true' ? true : text === 'false' ?
     false : isNaN(text) || text === '' ? text : +text;
 }
