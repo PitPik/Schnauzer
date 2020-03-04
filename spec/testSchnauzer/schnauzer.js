@@ -145,7 +145,7 @@ function shiftScope(model, data, helpers) {
   scopes = concatArrays(model.scopes, []); // copy
   while (scopes.length && parentDepth--) scopes.shift();
   for (var n = 0, l = path.length, scope = scopes[0].scope; n < l; n++) {
-    scope = scope[path[n]]; // skip: HBS scoping
+    scope = scope[path[n]]; // data.skip: HBS scoping
     if (!data.skip || n) scopes.unshift({ scope: scope, helpers: helpers });
   }
   return scopes;
@@ -311,7 +311,7 @@ function renderInline(_this, tagData, model) {
     out = data.type === 'helper' ?
       renderHelper(_this, data, model, tagData, []) :
       data.value !== undefined ? data.value : '';
-    }
+  }
   return render(_this, tagData, model, false,
     escapeHtml(out, _this, tagData.isEscaped));
 }
