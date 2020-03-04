@@ -205,18 +205,18 @@ function getValue(_this, data, model, tagData, bodyFn) {
     renderHelper(_this, data, model, tagData, [{bodyFn: bodyFn}]) : data.value;
 }
 
-function collectValues(_this, data, model, vars, carrier, coll) {
+function collectValues(_this, data, model, vars, obj, arr) {
   for (var n = vars.length, item = {}, key = '', scp = null, iVar = ''; n--; ) {
     item = vars[n];
     iVar = item.variable;
     scp = !!iVar.root ? getValue(_this, data, model, iVar, null) : null;
     key = scp || item.isString || (iVar.isLiteral && !iVar.name) ? ('$' + n) :
       iVar.name || iVar.value;
-    carrier[key] = scp || getData(_this, model, item).value;
-    coll.push(carrier[key]);
-    if (item.isAlias) model.scopes[0].helpers[key] = carrier[key];
+    obj[key] = scp || getData(_this, model, item).value;
+    arr.push(obj[key]);
+    if (item.isAlias) model.scopes[0].helpers[key] = obj[key];
   }
-  return { obj: carrier, arr: coll };
+  return { obj: obj, arr: arr };
 }
 
 function pushAlias(tagData, variable, obj, key, value) {
