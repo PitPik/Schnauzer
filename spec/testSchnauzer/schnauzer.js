@@ -130,42 +130,37 @@ function createHelper(idx, key, len, value, extra) {
     'this': '' + value,
     '.': '' + value,
   };
-  if (extra) for (var n in extra) out[n] = '' + extra[n];
+  if (extra) for (var n in extra)
+    if (out[n] === undefined) out[n] = '' + extra[n];
+
   return out;
 }
 
-function shiftScope(model, parentDepth, path, helpers) {
-  var scope = {};
-  var scopes = concat(model.scopes, []); // TODO: ...
-  var maxLen = scopes.length - 1;
+function shiftScope(model, data, helpers) {
+  var parentDepth = data.parentDepth;
+  var path = data.path;
+  var scopes = model.scopes;
 
-  if (parentDepth) {
-    parentDepth = parentDepth > maxLen ? maxLen : parentDepth;
-    scopes = scopes.splice(parentDepth);
-  }
-  if (!scopes[0].scope[path[0]] &&
+  if (!scopes[0].scope[path[0]] && // TODO: getData.type??
     (scopes[0].helpers[path[0]] || model.extra[path[0]])) return scopes;
-
-  scope = (scopes[0] || {}).scope;
-  for (var n = 0, l = path.length; n < l; n++) {
+  
+  scopes = concat(model.scopes, []); // copy
+  while (scopes.length && parentDepth--) scopes.shift();
+  for (var n = 0, l = path.length, scope = scopes[0].scope; n < l; n++) {
     scopes.unshift({ scope: scope = scope[path[n]], helpers: helpers });
   }
   return scopes;
 }
 
-function getScope(data, tagData) {
+function getScope(data, tagData, isInline) {
   var tagRoot = tagData.root || {};
   var mainVar = tagRoot.variable || {};
   var model = { extra: data.extra, scopes: data.scopes };
 
-  if (tagRoot.variable === undefined) tagData['@root'] = data;
-
   return tagRoot.variable === undefined ?
-    { extra: tagData, scopes: [{ scope: data, helpers: {} }] } :
-    { extra: data.extra,
-      scopes: shiftScope(model, mainVar.parentDepth, mainVar.path, {})};
+    { extra: tagData, scopes: [{ scope: data, helpers: { '@root': data } }] } :
+    { extra: data.extra, scopes: shiftScope(model, mainVar, {}) };
 }
-
 
 function getDeepData(data, isStrict, mainVar) {
   if (isStrict || mainVar.parentDepth) return;
@@ -292,8 +287,11 @@ function renderEach(_this, data, model, tagData, bodyFn) {
   for (var n = 0, l = _data.length, key = ''; n < l; n++) {
     key = isArr ? n : _data[n];
     pushAlias(tagData, variable, helpers, key, data.value);
-    model.scopes = shiftScope(model, n ? 2 : 0, [data.key, key],
-      createHelper(n, key, l, isArr ? _data[n] : data.value[key], helpers));
+    model.scopes = shiftScope(
+      model,
+      { parentDepth: n ? 2 : 0, path: [data.key, key] },
+      createHelper(n, key, l, isArr ? _data[n] : data.value[key], helpers)
+    );
     out += bodyFn.bodyFn(model);
   }
   return escapeHtml(out, _this, bodyFn.isEscaped);
@@ -304,7 +302,7 @@ function renderWith(_this, data, model, tagData, bodyFn) {
   var variable = tagData.root.variable;
 
   pushAlias(tagData, variable, helpers, variable.value, data.value);
-  model.scopes = shiftScope(model, 0, [data.key], helpers);
+  model.scopes = shiftScope(model, { parentDepth: 0, path: [data.key] }, helpers);
 
   return escapeHtml(bodyFn.bodyFn(model), bodyFn.isEscaped);
 }
@@ -312,6 +310,7 @@ function renderWith(_this, data, model, tagData, bodyFn) {
 function renderInline(_this, tagData, model) {
   var data = getData(_this, model, tagData.root);
   var out = '';
+
   if (tagData.isPartial) { // partial // TODO: previous function??
     if (!data.value) return '';
     collectValues(_this, data, model, tagData.vars, model.scopes[0].helpers, []);
@@ -330,7 +329,7 @@ function renderInlines(_this, tags, glues, blocks, data) {
     out += glues[n];
     if (!tags[n]) continue;
     out += tags[n].blockIndex > -1 ? blocks[tags[n].blockIndex](data) :
-      renderInline(_this, tags[n], getScope(data, tags[n]));
+      renderInline(_this, tags[n], getScope(data, tags[n], true));
   }
   return out;
 }
