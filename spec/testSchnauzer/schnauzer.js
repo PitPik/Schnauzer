@@ -301,19 +301,15 @@ function renderWith(_this, data, model, tagData, bodyFn) {
 
 function renderInline(_this, tagData, model) {
   var data = getData(_this, model, tagData.root);
-  var out = '';
 
-  if (tagData.isPartial) {
-    if (!data.value) return '';
+  if (tagData.isPartial)
     collectValues(_this, data, model, tagData.vars, model.scopes[0].helpers,[]);
-    out = data.value(model);
-  } else {
-    out = data.type === 'helper' ?
-      renderHelper(_this, data, model, tagData, []) :
-      data.value !== undefined ? data.value : '';
-  }
+
   return render(_this, tagData, model, false,
-    escapeHtml(out, _this, tagData.isEscaped));
+    escapeHtml(data.value === undefined ? '' : tagData.isPartial ?
+      data.value(model) : data.type === 'helper' ?
+      renderHelper(_this, data, model, tagData, []) :
+      data.value, _this, tagData.isEscaped));
 }
 
 function renderInlines(_this, tags, glues, blocks, data) {
@@ -330,14 +326,13 @@ function renderBlock(_this, tagData, model, bodyFns) {
   var data = getData(_this, model, tagData.root);
   var helper = tagData.helper;
   var ifHelper = helper === 'if' || helper === 'unless';
-  var isHelperFn = data.type === 'helper' || isFunction(data.type);
-  var bodyFn = bodyFns[0];
 
   return render(_this, tagData, model, true, ifHelper ?
-    renderIfUnless(_this, data, model, tagData, bodyFns) : isHelperFn ?
+    renderIfUnless(_this, data, model, tagData, bodyFns) :
+    data.type === 'helper' || isFunction(data.type) ?
     renderHelper(_this, data, model, tagData, bodyFns) :
-    helper === 'with' ? renderWith(_this, data, model, tagData, bodyFn) :
-    renderEach(_this, data, model, tagData, bodyFn));
+    helper === 'with' ? renderWith(_this, data, model, tagData, bodyFns[0]) :
+    renderEach(_this, data, model, tagData, bodyFns[0]));
 }
 
 // ---- parse (pre-render) helpers
