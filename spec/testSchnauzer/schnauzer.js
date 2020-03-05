@@ -481,7 +481,7 @@ function sizzleInlines(_this, text, blocks, tags) {
       tags.push(root === '-block-' ? {
         blockIndex: +vars,
         isEscaped: start.lastIndexOf(_this.options.tags[0]) < 1,
-      } : getTagData(_this, root, vars, type || '', start));
+      } : getTagData(_this, root, vars, type || '', start, null));
       return _this.options.splitter;
     }
   ).split(_this.options.splitter);
@@ -526,7 +526,7 @@ function doBlock(_this, blocks, start, end, close, body, type, root, vars) {
   var trims = getTrims(end, closeParts[0]);
   var bodyParts = trim(body, trims[0], trims[1]).split(_this.elseSplitter);
   var bodyFns = processBodyParts(_this, [], bodyParts, blocks, start);
-  var tagData = getTagData(_this, root, vars, type || '', start);
+  var tagData = getTagData(_this, root, vars, type || '', start, null);
 
   blocks.push(function executeBlock(data, esc) {
     return renderBlock(_this, tagData, getScope(data, tagData), bodyFns, esc);
