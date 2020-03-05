@@ -456,13 +456,13 @@ function getTagData(_this, root, vars, type, start, bodyFn) {
   var isEscaped = start.lastIndexOf(_this.options.tags[0]) < 1;
 
   return bodyFn && !_root ? { bodyFn: bodyFn, isEscaped: isEscaped } : {
-    root: root = getVar(_root.substr(active)),
+    root: _root = getVar(_root.substr(active)),
     isPartial: type === '>',
     isNot: type === '^',
     isEscaped: isEscaped,
     hasAlias: varsArr[0] === 'as',
     helper: helper,
-    vars: processVars(varsArr, [], root),
+    vars: processVars(varsArr, [], _root),
     active: active,
     bodyFn: bodyFn || null,
   };
