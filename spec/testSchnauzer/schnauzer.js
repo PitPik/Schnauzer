@@ -278,6 +278,7 @@ function renderEach(_this, data, model, tagData, bodyFn) {
 
   for (var n = 0, l = _data.length, key = ''; n < l; n++) {
     key = isArr ? n : _data[n];
+    helpers['@parent'] = data.value;
     pushAlias(tagData, variable, helpers, key, data.value);
     model.scopes = shiftScope(
       model,
@@ -293,6 +294,7 @@ function renderWith(_this, data, model, tagData, bodyFn) {
   var helpers = cloneObject(model.scopes[0].helpers, {});
   var variable = tagData.root.variable;
 
+  helpers['@parent'] = data.value;
   pushAlias(tagData, variable, helpers, variable.value, data.value);
   model.scopes = shiftScope(model, {parentDepth: 0, path: [data.key]}, helpers);
 
