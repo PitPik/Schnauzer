@@ -335,9 +335,9 @@ function renderBlock(_this, tagData, model, bodyFns) {
 
   return render(_this, tagData, model, data, true, ifHelper ?
     renderIfUnless(_this, data, model, tagData, bodyFns) :
-    data.type === 'helper' || isFunction(data.type) ?
-    renderHelper(_this, data, model, tagData, bodyFns) :
-    helper === 'with' ? renderWith(_this, data, model, tagData, bodyFns[0]) :
+      data.type === 'helper' || isFunction(data.type) ?
+    renderHelper(_this, data, model, tagData, bodyFns) : helper === 'with' ?
+    renderWith(_this, data, model, tagData, bodyFns[0]) :
     renderEach(_this, data, model, tagData, bodyFns[0]));
 }
 
