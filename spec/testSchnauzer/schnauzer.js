@@ -228,11 +228,6 @@ function pushAlias(tagData, variable, obj, key, value) {
 
 // ---- render blocks/inlines helpers
 
-function render(_this, tagData, model, data, isBlock, out) {
-  return _this.options.render ?
-    _this.options.render.call(_this, out, tagData, model, data, isBlock) : out;
-}
-
 function renderHelper(_this, data, model, tagData, bodyFns) {
   return escapeHtml(data.value.apply({
     name: data.key,
@@ -250,6 +245,11 @@ function renderHelper(_this, data, model, tagData, bodyFns) {
     }},
     collectValues(_this, data, model, tagData.vars, {}, []).arr
   ), _this, !!bodyFns[0].escape);
+}
+
+function renderPartial(_this, model, tagData, data) {
+  collectValues(_this, data, model, tagData.vars, model.scopes[0].helpers,[]);
+  return data.value(model);
 }
 
 function renderIfUnless(_this, data, model, tagData, bodyFns) {
@@ -303,15 +303,17 @@ function renderWith(_this, data, model, tagData, bodyFn) {
 
 // ---- render blocks and inlines
 
+function render(_this, tagData, model, data, isBlock, out) {
+  return _this.options.render ?
+    _this.options.render.call(_this, out, tagData, model, data, isBlock) : out;
+}
+
 function renderInline(_this, tagData, model) {
   var data = getData(_this, model, tagData.root);
 
-  if (tagData.isPartial)
-    collectValues(_this, data, model, tagData.vars, model.scopes[0].helpers,[]);
-
   return render(_this, tagData, model, data, false,
     escapeHtml(data.value === undefined ? '' : tagData.isPartial ?
-      data.value(model) : data.type === 'helper' ?
+      renderPartial(_this, model, tagData, data) : data.type === 'helper' ?
       renderHelper(_this, data, model, tagData, []) :
       data.value, _this, tagData.isEscaped));
 }
