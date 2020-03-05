@@ -22,9 +22,7 @@ var cloneObject = function(obj, newObj) {
   return newObj;
 }
 var concatArrays = function(array, host) {
-  for (var n = 0, l = array.length; n < l; n++) {
-    host[host.length] = array[n];
-  }
+  for (var n = 0, l = array.length; n < l; n++) host[host.length] = array[n];
   return host;
 };
 
@@ -63,9 +61,8 @@ var initSchnauzer = function(_this, options, template) {
     new RegExp('[' + getObjectKeys(options.entityMap).join('') + ']', 'g');
   _this.helpers = options.helpers;
   _this.registerHelper('lookup', function() { /* TODO... */ });
-  for (var name in options.partials) {
+  for (var name in options.partials)
     _this.registerPartial(name, options.partials[name]);
-  }
   if (template) _this.parse(template);
 };
 
@@ -128,8 +125,7 @@ function createHelper(idx, key, len, value, extra) {
     'this': value,
     '.': value,
   };
-  if (extra) for (var n in extra)
-    if (out[n] === undefined) out[n] = extra[n];
+  if (extra) for (var n in extra) if (out[n] === undefined) out[n] = extra[n];
 
   return out;
 }
@@ -184,7 +180,6 @@ function getData(_this, model, root) {
   var helper = !root.isStrict && _this.helpers[key] || null;
   var partial = root.isPartial && _this.partials[key] || null;
   var tmp = '';
-
   var value = variable.root ? getHelperData(_this, model, root) : 
     root.isString || variable.isLiteral ? key :
     helper || partial || (scopeData[key] !== undefined ? scopeData[key] :
