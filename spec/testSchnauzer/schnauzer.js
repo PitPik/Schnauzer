@@ -110,7 +110,7 @@ function switchTags(_this, tags) {
   _this.elseSplitter = new RegExp(tgs[0] + '(?:else|\\^)\\s*(.*?)' + tgs[1]);
 }
 
-// ---- render helpers
+// ---- render data helpers
 
 function escapeHtml(string, _this, doEscape) {
   return doEscape ? String(string).replace(_this.entityRegExp, function(char) {
@@ -226,7 +226,7 @@ function pushAlias(tagData, variable, obj, key, value) {
   }
 }
 
-// ---- render blocks and inlines
+// ---- render blocks/inlines helpers
 
 function render(_this, tagData, model, data, isBlock, out) {
   return _this.options.render ?
@@ -300,6 +300,8 @@ function renderWith(_this, data, model, tagData, bodyFn) {
 
   return escapeHtml(bodyFn.bodyFn(model), bodyFn.isEscaped);
 }
+
+// ---- render blocks and inlines
 
 function renderInline(_this, tagData, model) {
   var data = getData(_this, model, tagData.root);
