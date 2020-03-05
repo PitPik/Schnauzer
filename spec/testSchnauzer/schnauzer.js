@@ -298,7 +298,7 @@ function renderWith(_this, data, model, tagData, bodyFn) {
   pushAlias(tagData, variable, helpers, variable.value, data.value);
   model.scopes = shiftScope(model, {parentDepth: 0, path: [data.key]}, helpers);
 
-  return escapeHtml(bodyFn.bodyFn(model), bodyFn.isEscaped);
+  return escapeHtml(bodyFn.bodyFn(model), _this, bodyFn.isEscaped);
 }
 
 // ---- render blocks and inlines
