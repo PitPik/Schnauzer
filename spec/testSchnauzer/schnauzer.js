@@ -112,7 +112,7 @@ function switchTags(_this, tags) {
 
 // ---- render data helpers
 
-function escapeHtml(string, _this, doEscape) {
+function escapeHtml(_this, string, doEscape) {
   return doEscape ? String(string).replace(_this.entityRegExp, function(char) {
     return _this.options.entityMap[char];
   }) : string;
@@ -229,7 +229,7 @@ function pushAlias(tagData, variable, obj, key, value) {
 // ---- render blocks/inlines helpers
 
 function renderHelper(_this, data, model, tagData, bodyFns) {
-  return escapeHtml(data.value.apply({
+  return escapeHtml(_this, data.value.apply({
     name: data.key,
     getBody: function getBody() {
       return bodyFns[0] ? bodyFns[0].bodyFn(model) : '';
@@ -237,14 +237,14 @@ function renderHelper(_this, data, model, tagData, bodyFns) {
     getAltBody: function getAltBody() { // TODO: check if ever available
       return bodyFns[1] ? bodyFns[1].bodyFn(model) : '';
     },
-    escape: function escape(string) { return escapeHtml(string, _this, true) },
+    escape: function escape(string) { return escapeHtml(_this, string, true) },
     scope: model.scopes[0].scope,
     rootScope: model.scopes[model.scopes.length - 1].scope,
     getData: function getIntData(key) {
       return getData(_this, model, getVar(key)).value;
     }},
     collectValues(_this, data, model, tagData.vars, {}, []).arr
-  ), _this, !!bodyFns[0].escape);
+  ), !!bodyFns[0].escape);
 }
 
 function renderPartial(_this, model, tagData, data) {
@@ -265,7 +265,7 @@ function renderIfUnless(_this, data, model, tagData, bodyFns) {
     data = item.root ? getData(_this, model, item.root) : { value: cond };
     value = getValue(_this, data, model, item, item.bodyFn);
   }
-  return result ? escapeHtml(item.bodyFn(model), _this, item.isEscaped) : '';
+  return result ? escapeHtml(_this, item.bodyFn(model), item.isEscaped) : '';
 }
 
 function renderEach(_this, data, model, tagData, bodyFn) {
@@ -287,7 +287,7 @@ function renderEach(_this, data, model, tagData, bodyFn) {
     );
     out += bodyFn.bodyFn(model);
   }
-  return escapeHtml(out, _this, bodyFn.isEscaped);
+  return escapeHtml(_this, out, bodyFn.isEscaped);
 }
 
 function renderWith(_this, data, model, tagData, bodyFn) {
@@ -298,7 +298,7 @@ function renderWith(_this, data, model, tagData, bodyFn) {
   pushAlias(tagData, variable, helpers, variable.value, data.value);
   model.scopes = shiftScope(model, {parentDepth: 0, path: [data.key]}, helpers);
 
-  return escapeHtml(bodyFn.bodyFn(model), _this, bodyFn.isEscaped);
+  return escapeHtml(_this, bodyFn.bodyFn(model), bodyFn.isEscaped);
 }
 
 // ---- render blocks and inlines
@@ -312,10 +312,10 @@ function renderInline(_this, tagData, model) {
   var data = getData(_this, model, tagData.root);
 
   return render(_this, tagData, model, data, false,
-    escapeHtml(data.value === undefined ? '' : tagData.isPartial ?
+    escapeHtml(_this, data.value === undefined ? '' : tagData.isPartial ?
       renderPartial(_this, model, tagData, data) : data.type === 'helper' ?
       renderHelper(_this, data, model, tagData, []) : data.value,
-    _this, tagData.isEscaped));
+    tagData.isEscaped));
 }
 
 function renderInlines(_this, tags, glues, blocks, data) {
