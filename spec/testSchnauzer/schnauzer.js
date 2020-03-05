@@ -172,9 +172,8 @@ function getDeepData(data, mainVar) {
 function getHelperData(_this, model, root) { // TODO: integrate with other fns
   var key = root.variable.root;
   var data = { key: key, value: _this.helpers[key], type: 'helper' };
-  var value = getValue(_this, data, model, { vars: root.variable.vars }, null);
 
-  return { key: key, value: value, type: '' };
+  return  getValue(_this, data, model, { vars: root.variable.vars }, null);
 }
 
 function getData(_this, model, root) {
@@ -185,6 +184,7 @@ function getData(_this, model, root) {
   var helper = !root.isStrict && _this.helpers[key] || null;
   var partial = root.isPartial && _this.partials[key] || null;
   var tmp = '';
+
   var value = variable.root ? getHelperData(_this, model, root) : 
     root.isString || variable.isLiteral ? key :
     helper || partial || (scopeData[key] !== undefined ? scopeData[key] :
