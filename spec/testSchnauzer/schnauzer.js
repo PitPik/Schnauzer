@@ -302,9 +302,9 @@ function renderWith(_this, data, model, tagData, bodyFn, escaped) {
 
 // ---- render blocks and inlines
 
-function render(_this, tagData, model, data, isBlock, out) {
-  return _this.options.render ?
-    _this.options.render.call(_this, out, tagData, model, data, isBlock) : out;
+function render(_this, tagData, model, data, isBlock, out, escaped) {
+  return _this.options.render ? _this.options.render
+    .call(_this, out, tagData, model, data, isBlock, escaped) : out;
 }
 
 function renderInline(_this, tagData, model, escaped) {
@@ -314,7 +314,7 @@ function renderInline(_this, tagData, model, escaped) {
     escapeHtml(_this, data.value === undefined ? '' : tagData.isPartial ?
       renderPartial(_this, model, tagData, data) : data.type === 'helper' ?
       renderHelper(_this, data, model, tagData, []) : data.value,
-    !escaped && tagData.isEscaped));
+    !escaped && tagData.isEscaped), escaped);
 }
 
 function renderInlines(_this, tags, glues, blocks, data, escaped) {
@@ -339,7 +339,7 @@ function renderBlock(_this, tagData, model, bodyFns, escaped) {
       data.type === 'helper' || isFunction(data.type) ?
     renderHelper(_this, data, model, tagData, bodyFns) : helper === 'with' ?
     renderWith(_this, data, model, tagData, bodyFns[0], escaped) :
-    renderEach(_this, data, model, tagData, bodyFns[0], escaped));
+    renderEach(_this, data, model, tagData, bodyFns[0], escaped), escaped);
 }
 
 // ---- parse (pre-render) helpers
