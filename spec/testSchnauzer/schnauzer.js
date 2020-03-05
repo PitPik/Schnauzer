@@ -447,7 +447,6 @@ function processVars(vars, collection, root) {
     out = getVar(vars[n]);
     collection.push(out);
   }
-
   return collection;
 }
 
@@ -493,7 +492,6 @@ function sizzleInlines(_this, text, blocks, tags) {
     trims[n - 1] ? trims[n - 1][1] : false,
     trims[n] ? trims[n][0] : false
   );
-
   return function executeInlines(data, esc) {
     return renderInlines(_this, tags, glues, blocks, data, esc);
   }
