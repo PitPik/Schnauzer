@@ -13,12 +13,14 @@ var isArray = Array.isArray || function(obj) {
   return !!obj && obj.constructor === Array;
 };
 var getObjectKeys = Object.keys || function(obj) {
+  var fn = function(obj, key, keys) {obj.hasOwnProperty(key) && keys.push(key)};
   var keys = [];
-  for (var key in obj) obj.hasOwnProperty(key) && keys.push(key);
+  for (var key in obj) fn(obj, key, keys);
   return keys;
 };
 var cloneObject = function(obj, newObj) {
-  for (var key in obj) newObj[key] = obj[key];
+  var fn = function(obj, newObj, key) { newObj[key] = obj[key] };
+  for (var key in obj) fn(obj, newObj, key);
   return newObj;
 }
 var concatArrays = function(array, host) {
@@ -116,6 +118,7 @@ function escapeHtml(_this, string, doEscape) {
 }
 
 function createHelper(idx, key, len, value, extra) {
+  var fn = function(out, n, obj) { if (out[n] === undefined) out[n] = obj[n] };
   var out = {
     '@index': idx,
     '@last': idx === len - 1,
@@ -125,7 +128,7 @@ function createHelper(idx, key, len, value, extra) {
     'this': value,
     '.': value,
   };
-  if (extra) for (var n in extra) if (out[n] === undefined) out[n] = extra[n];
+  if (extra) for (var n in extra) fn(out, n, extra);
 
   return out;
 }
