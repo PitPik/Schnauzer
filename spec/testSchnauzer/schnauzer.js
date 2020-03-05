@@ -48,6 +48,7 @@ var Schnauzer = function(template, options) {
     self: 'self',
     characters: '$"<>%-=@',
     splitter: '|##|',
+    escapeHTML: true,
     useMustageUnless: true,
     useHandlebarsScoping: true,
     render: null, // hook for shadow-DOM engines
@@ -112,9 +113,10 @@ function switchTags(_this, tags) {
 // ---- render data helpers
 
 function escapeHtml(_this, string, doEscape) {
-  return doEscape ? String(string).replace(_this.entityRegExp, function(char) {
-    return _this.options.entityMap[char];
-  }) : string;
+  return doEscape && _this.options.escapeHTML ?
+    String(string).replace(_this.entityRegExp, function(char) {
+      return _this.options.entityMap[char];
+    }) : string;
 }
 
 function createHelper(idx, key, len, value, extra) {
@@ -227,7 +229,7 @@ function pushAlias(tagData, variable, obj, key, value) {
 // ---- render blocks/inlines helpers
 
 function renderHelper(_this, data, model, tagData, bodyFns) {
-  return escapeHtml(_this, data.value.apply({
+  return data.value.apply({
     name: data.key,
     getBody: function getBody() {
       return bodyFns[0] ? bodyFns[0].bodyFn(model) : '';
@@ -240,17 +242,16 @@ function renderHelper(_this, data, model, tagData, bodyFns) {
     rootScope: model.scopes[model.scopes.length - 1].scope,
     getData: function getIntData(key) {
       return getData(_this, model, getVar(key)).value;
-    }},
-    collectValues(_this, data, model, tagData.vars, {}, []).arr
-  ), !!bodyFns[0].escape);
+    }
+  }, collectValues(_this, data, model, tagData.vars, {}, []).arr);
 }
 
-function renderPartial(_this, model, tagData, data) {
+function renderPartial(_this, model, tagData, data) { // TODO: check escape?
   collectValues(_this, data, model, tagData.vars, model.scopes[0].helpers,[]);
   return data.value(model);
 }
 
-function renderIfUnless(_this, data, model, tagData, bodyFns) {
+function renderIfUnless(_this, data, model, tagData, bodyFns, escaped) {
   var idx = 0;
   var item = bodyFns[idx];
   var cond = !tagData.helper || tagData.helper === 'if' ? true : false;
@@ -263,10 +264,10 @@ function renderIfUnless(_this, data, model, tagData, bodyFns) {
     data = item.root ? getData(_this, model, item.root) : { value: cond };
     value = getValue(_this, data, model, item, item.bodyFn);
   }
-  return result ? escapeHtml(_this, item.bodyFn(model), item.isEscaped) : '';
+  return result ? item.bodyFn(model, escaped || item.isEscaped) : '';
 }
 
-function renderEach(_this, data, model, tagData, bodyFn) {
+function renderEach(_this, data, model, tagData, bodyFn, escaped) {
   var out = '';
   var isArr = isArray(data.value);
   var _data = isArr ? data.value || [] : getObjectKeys(data.value || {});
@@ -283,12 +284,12 @@ function renderEach(_this, data, model, tagData, bodyFn) {
       { parentDepth: n ? depth : 0, path: [data.key, key], skip: depth === 1 },
       createHelper(n, key, l, isArr ? _data[n] : data.value[key], helpers)
     );
-    out += bodyFn.bodyFn(model);
+    out += bodyFn.bodyFn(model, escaped || bodyFn.isEscaped);
   }
-  return escapeHtml(_this, out, bodyFn.isEscaped);
+  return out;
 }
 
-function renderWith(_this, data, model, tagData, bodyFn) {
+function renderWith(_this, data, model, tagData, bodyFn, escaped) {
   var helpers = cloneObject(model.scopes[0].helpers, {});
   var variable = tagData.root.variable;
 
@@ -296,7 +297,7 @@ function renderWith(_this, data, model, tagData, bodyFn) {
   pushAlias(tagData, variable, helpers, variable.value, data.value);
   model.scopes = shiftScope(model, {parentDepth: 0, path: [data.key]}, helpers);
 
-  return escapeHtml(_this, bodyFn.bodyFn(model), bodyFn.isEscaped);
+  return bodyFn.bodyFn(model, escaped || bodyFn.isEscaped);
 }
 
 // ---- render blocks and inlines
@@ -306,37 +307,39 @@ function render(_this, tagData, model, data, isBlock, out) {
     _this.options.render.call(_this, out, tagData, model, data, isBlock) : out;
 }
 
-function renderInline(_this, tagData, model) {
+function renderInline(_this, tagData, model, escaped) {
   var data = getData(_this, model, tagData.root);
 
   return render(_this, tagData, model, data, false,
     escapeHtml(_this, data.value === undefined ? '' : tagData.isPartial ?
       renderPartial(_this, model, tagData, data) : data.type === 'helper' ?
       renderHelper(_this, data, model, tagData, []) : data.value,
-    tagData.isEscaped));
+    !escaped && tagData.isEscaped));
 }
 
-function renderInlines(_this, tags, glues, blocks, data) {
-  for (var n = 0, l = glues.length, out = ''; n < l; n++) {
+function renderInlines(_this, tags, glues, blocks, data, escaped) {
+  for (var n = 0, l = glues.length, out = '', escape = false; n < l; n++) {
     out += glues[n];
     if (!tags[n]) continue;
-    out += tags[n].blockIndex > -1 ? blocks[tags[n].blockIndex](data) :
-      renderInline(_this, tags[n], getScope(data, tags[n], true));
+    escape = !escaped && tags[n].isEscaped; // TODO: check escaping
+    out += tags[n].blockIndex > -1 ?
+      escapeHtml(_this, blocks[tags[n].blockIndex](data, escaped), escape) :
+      renderInline(_this, tags[n], getScope(data, tags[n], true), escaped);
   }
   return out;
 }
 
-function renderBlock(_this, tagData, model, bodyFns) {
+function renderBlock(_this, tagData, model, bodyFns, escaped) {
   var data = getData(_this, model, tagData.root);
   var helper = tagData.helper;
   var ifHelper = helper === 'if' || helper === 'unless';
 
   return render(_this, tagData, model, data, true, ifHelper ?
-    renderIfUnless(_this, data, model, tagData, bodyFns) :
+    renderIfUnless(_this, data, model, tagData, bodyFns, escaped) :
       data.type === 'helper' || isFunction(data.type) ?
     renderHelper(_this, data, model, tagData, bodyFns) : helper === 'with' ?
-    renderWith(_this, data, model, tagData, bodyFns[0]) :
-    renderEach(_this, data, model, tagData, bodyFns[0]));
+    renderWith(_this, data, model, tagData, bodyFns[0], escaped) :
+    renderEach(_this, data, model, tagData, bodyFns[0], escaped));
 }
 
 // ---- parse (pre-render) helpers
@@ -477,8 +480,10 @@ function sizzleInlines(_this, text, blocks, tags) {
     function($, start, type, root, vars, end) {
       if (/^(?:!|=)/.test(type || '')) return '';
       trims.push(getTrims(start, end));
-      tags.push(root === '-block-' ? { blockIndex: +vars } :
-        getTagData(_this, root, vars, type || '', start));
+      tags.push(root === '-block-' ? {
+        blockIndex: +vars,
+        isEscaped: start.lastIndexOf(_this.options.tags[0]) < 1
+      } : getTagData(_this, root, vars, type || '', start));
       return _this.options.splitter;
     }
   ).split(_this.options.splitter);
@@ -489,9 +494,8 @@ function sizzleInlines(_this, text, blocks, tags) {
     trims[n] ? trims[n][0] : false
   );
 
-  return function executeInlines(data, extra) {
-    data = extra && !data.extra ? getScope(data, extra || {}) : data;
-    return renderInlines(_this, tags, glues, blocks, data);
+  return function executeInlines(data, esc) {
+    return renderInlines(_this, tags, glues, blocks, data, esc);
   }
 }
 
@@ -527,8 +531,8 @@ function doBlock(_this, blocks, start, end, close, body, type, root, vars) {
   var bodyFns = processBodyParts(_this, [], bodyParts, blocks, start);
   var tagData = getTagData(_this, root, vars, type || '', start);
 
-  blocks.push(function executeBlock(data) {
-    return renderBlock(_this, tagData, getScope(data, tagData), bodyFns);
+  blocks.push(function executeBlock(data, esc) {
+    return renderBlock(_this, tagData, getScope(data, tagData), bodyFns, esc);
   });
   return (start + '-block- ' + (blocks.length - 1) + closeParts[1]);
 }
@@ -541,10 +545,14 @@ function sizzleBlocks(_this, text, blocks) {
     }
     return doBlock(_this, blocks, start, end, close, body, type, root, vars);
   };
+  var allInlinesFn = {};
 
   while (text !== (text = text.replace(_this.sectionRegExp, replaceCb)));
+  allInlinesFn = sizzleInlines(_this, text, blocks, []);
 
-  return sizzleInlines(_this, text, blocks, []);
+  return function executeAll(data, extra) {
+    return allInlinesFn(getScope(data, extra || {}), false);
+  };
 }
 
 }));
