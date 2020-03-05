@@ -314,8 +314,7 @@ function renderInline(_this, tagData, model) {
   return render(_this, tagData, model, data, false,
     escapeHtml(data.value === undefined ? '' : tagData.isPartial ?
       renderPartial(_this, model, tagData, data) : data.type === 'helper' ?
-      renderHelper(_this, data, model, tagData, []) :
-      data.value,
+      renderHelper(_this, data, model, tagData, []) : data.value,
     _this, tagData.isEscaped));
 }
 
