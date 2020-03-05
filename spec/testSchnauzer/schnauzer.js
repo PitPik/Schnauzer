@@ -63,7 +63,6 @@ var initSchnauzer = function(_this, options, template) {
   _this.entityRegExp =
     new RegExp('[' + getObjectKeys(options.entityMap).join('') + ']', 'g');
   _this.helpers = options.helpers;
-  _this.registerHelper('lookup', function() { /* TODO... */ });
   for (var name in options.partials)
     _this.registerPartial(name, options.partials[name]);
   if (template) _this.parse(template);
