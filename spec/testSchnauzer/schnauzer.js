@@ -454,10 +454,9 @@ function getTagData(_this, root, vars, type, start, bodyFn) {
   var helper = /if|each|with|unless/.test(_root) ? _root : '';
   var active = getActiveState(_root = helper ? varsArr.shift() || '' : _root);
   var isEscaped = start.lastIndexOf(_this.options.tags[0]) < 1;
-  var root = getVar(_root.substr(active));
 
   return bodyFn && !_root ? { bodyFn: bodyFn, isEscaped: isEscaped } : {
-    root: root,
+    root: root = getVar(_root.substr(active)),
     isPartial: type === '>',
     isNot: type === '^',
     isEscaped: isEscaped,
