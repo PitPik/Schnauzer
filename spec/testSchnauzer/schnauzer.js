@@ -228,14 +228,12 @@ function pushAlias(tagData, variable, obj, key, value) {
 
 // ---- render blocks/inlines helpers
 
-function renderHelper(_this, data, model, tagData, bodyFns) {
+function renderHelper(_this, data, model, tagData, bodyFns, escaped) {
   return data.value.apply({
     name: data.key,
-    getBody: function getBody() {
-      return bodyFns[0] ? bodyFns[0].bodyFn(model) : '';
-    },
-    getAltBody: function getAltBody() { // TODO: check if ever available
-      return bodyFns[1] ? bodyFns[1].bodyFn(model) : '';
+    getBody: function getBody(alt) {
+      var idx = !!alt ? 1 : 0;
+      return bodyFns[idx] ? bodyFns[idx].bodyFn(model, escaped) : '';
     },
     escape: function escape(string) { return escapeHtml(_this, string, true) },
     scope: model.scopes[0].scope,
@@ -246,9 +244,9 @@ function renderHelper(_this, data, model, tagData, bodyFns) {
   }, collectValues(_this, data, model, tagData.vars, {}, []).arr);
 }
 
-function renderPartial(_this, model, tagData, data) { // TODO: check escape?
+function renderPartial(_this, model, tagData, data, escaped) {
   collectValues(_this, data, model, tagData.vars, model.scopes[0].helpers,[]);
-  return data.value(model);
+  return data.value(model, escaped);
 }
 
 function renderIfUnless(_this, data, model, tagData, bodyFns, escaped) {
@@ -277,7 +275,7 @@ function renderEach(_this, data, model, tagData, bodyFn, escaped) {
 
   for (var n = 0, l = _data.length, key = ''; n < l; n++) {
     key = isArr ? n : _data[n];
-    helpers['@parent'] = data.value;
+    helpers['@parent'] = data.value; // used in blick
     pushAlias(tagData, variable, helpers, key, data.value);
     model.scopes = shiftScope(
       model,
@@ -311,20 +309,20 @@ function renderInline(_this, tagData, model, escaped) {
   var data = getData(_this, model, tagData.root);
 
   return render(_this, tagData, model, data, false,
-    escapeHtml(_this, data.value === undefined ? '' : tagData.isPartial ?
-      renderPartial(_this, model, tagData, data) : data.type === 'helper' ?
-      renderHelper(_this, data, model, tagData, []) : data.value,
-    !escaped && tagData.isEscaped), escaped);
+    data.value === undefined ? '' : tagData.isPartial ?
+      renderPartial(_this, model, tagData, data, escaped) :
+        data.type === 'helper' ?
+      renderHelper(_this, data, model, tagData, [], escaped) : data.value);
 }
 
 function renderInlines(_this, tags, glues, blocks, data, escaped) {
-  for (var n = 0, l = glues.length, out = '', escape = false; n < l; n++) {
+  for (var n = 0, l = glues.length, out = ''; n < l; n++) {
     out += glues[n];
     if (!tags[n]) continue;
-    escape = !escaped && tags[n].isEscaped; // TODO: check escaping
-    out += tags[n].blockIndex > -1 ?
-      escapeHtml(_this, blocks[tags[n].blockIndex](data, escaped), escape) :
-      renderInline(_this, tags[n], getScope(data, tags[n], true), escaped);
+    out += escapeHtml(_this, tags[n].blockIndex > -1 ?
+      blocks[tags[n].blockIndex](data, escaped) :
+      renderInline(_this, tags[n], getScope(data, tags[n], true), escaped),
+    !escaped && tags[n].isEscaped);
   }
   return out;
 }
@@ -337,7 +335,8 @@ function renderBlock(_this, tagData, model, bodyFns, escaped) {
   return render(_this, tagData, model, data, true, ifHelper ?
     renderIfUnless(_this, data, model, tagData, bodyFns, escaped) :
       data.type === 'helper' || isFunction(data.type) ?
-    renderHelper(_this, data, model, tagData, bodyFns) : helper === 'with' ?
+    renderHelper(_this, data, model, tagData, bodyFns, escaped) :
+      helper === 'with' ?
     renderWith(_this, data, model, tagData, bodyFns[0], escaped) :
     renderEach(_this, data, model, tagData, bodyFns[0], escaped), escaped);
 }
@@ -481,7 +480,7 @@ function sizzleInlines(_this, text, blocks, tags) {
       trims.push(getTrims(start, end));
       tags.push(root === '-block-' ? {
         blockIndex: +vars,
-        isEscaped: start.lastIndexOf(_this.options.tags[0]) < 1
+        isEscaped: start.lastIndexOf(_this.options.tags[0]) < 1,
       } : getTagData(_this, root, vars, type || '', start));
       return _this.options.splitter;
     }
