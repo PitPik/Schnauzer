@@ -470,15 +470,12 @@ function sizzleInlines(_this, text, blocks, tags) {
   var trims = [];
   var glues = [];
   var parts = text.split(_this.inlineRegExp);
-  var root = '', vars = '', end = '';
 
-  for (var n = 0, l = parts.length; n < l; n += 6) {
+  for (var n = 0, l = parts.length, root = '', vars = ''; n < l; n += 6) {
     if (/^(?:!|=)/.test(parts[2 + n] || '')) continue;
     root = parts[3 + n] || '';
     vars = parts[4 + n] || '';
-    end = parts[5 + n] || '';
-
-    trims = getTrims(n === 0 ? '' : parts[1 + n - 6], !end ? '' : end);
+    trims = getTrims(!n ? '' : parts[1 + n - 6], !root ? '' : parts[5 + n]);
     glues.push(trim(parts[n], trims[0], trims[1]));
     parts[1 + n] && tags.push(root === '-block-' ? { blockIndex: +vars } :
       getTagData(_this, root, vars, parts[2 + n] || '', parts[1 + n], null));
