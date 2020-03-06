@@ -175,13 +175,14 @@ function getHelperData(_this, model, root) { // TODO: integrate with other fns
   return  getValue(_this, data, model, { vars: root.variable.vars }, null);
 }
 
-function getData(_this, model, root) {
+function getData(_this, model, tagData) {
+  var root = tagData.root;
   var variable =  root.variable;
   var scope = model.scopes && model.scopes[variable.parentDepth] || {};
   var scopeData = scope.scope || {};
   var key = variable.value;
   var helper = !root.isStrict && _this.helpers[key] || null;
-  var partial = root.isPartial && _this.partials[key] || null;
+  var partial = tagData.isPartial && _this.partials[key] || null; // TODO
   var tmp = '';
   var value = variable.root ? getHelperData(_this, model, root) : 
     root.isString || variable.isLiteral ? key :
@@ -210,7 +211,7 @@ function collectValues(_this, data, model, vars, obj, arr) {
     scp = !!iVar.root ? getValue(_this, data, model, iVar, null) : null;
     key = scp || item.isString || (iVar.isLiteral && !iVar.name) ? ('$' + n) :
       iVar.name || iVar.value;
-    obj[key] = scp || getData(_this, model, item).value;
+    obj[key] = scp || getData(_this, model, { root: item }).value;
     arr.push(obj[key]);
     if (item.isAlias) model.scopes[0].helpers[key] = obj[key];
   }
@@ -235,7 +236,9 @@ function renderHelper(_this, data, model, tagData, bodyFns) {
       var idx = !!alt ? 1 : 0;
       return bodyFns[idx] ? bodyFns[idx].bodyFn(model) : '';
     },
-    getData: function(key) { return getData(_this, model, getVar(key)).value },
+    getData: function(key) {
+      return getData(_this, model, { root: getVar(key) }).value;
+    },
     escape: function(string) { return escapeHtml(string, _this, true) },
   }, collectValues(_this, data, model, tagData.vars, {}, []).arr);
 }
@@ -255,7 +258,7 @@ function renderIfUnless(_this, data, model, tagData, bodyFns) {
   while (!(result = cond && value || !cond && !value) && bodyFns[idx + 1]) {
     item = bodyFns[++idx];
     cond = !item.helper || item.helper === 'if' ? true : false;
-    data = item.root ? getData(_this, model, item.root) : { value: cond };
+    data = item.root ? getData(_this, model, item) : { value: cond };
     value = getValue(_this, data, model, item, item.bodyFn); // else ??
   }
   return result ? item.bodyFn(model) : '';
@@ -302,7 +305,7 @@ function render(_this, tagData, model, data, isBlock, out) {
 }
 
 function renderInline(_this, tagData, model) {
-  var data = getData(_this, model, tagData.root);
+  var data = getData(_this, model, tagData);
 
   return render(_this, tagData, model, data, false,
     data.value === undefined ? '' : tagData.isPartial ?
@@ -323,7 +326,7 @@ function renderInlines(_this, tags, glues, blocks, data) {
 }
 
 function renderBlock(_this, tagData, model, bodyFns) {
-  var data = getData(_this, model, tagData.root);
+  var data = getData(_this, model, tagData);
   var helper = tagData.helper;
   var ifHelper = helper === 'if' || helper === 'unless';
 
@@ -412,7 +415,7 @@ function getVar(item) {
   }
   split = item.split('='); // item.split(/([=!<>]+)/);
   out.variable = split[1] ?
-    parseScope(convertValue(split[2], out), split[0]) :
+    parseScope(convertValue(split[1], out), split[0]) :
     parseScope(convertValue(split[0], out), '');
   return out;
 }
@@ -448,7 +451,7 @@ function getTagData(_this, root, vars, type, start, bodyFn) {
   var _root = varsArr.shift() || '';
   var helper = /if|each|with|unless/.test(_root) ? _root : '';
   var active = getActiveState(_root = helper ? varsArr.shift() || '' : _root);
-  
+
   return bodyFn && !_root ? { bodyFn: bodyFn } : {
     root: _root = getVar(_root.substr(active)),
     isPartial: type === '>',
