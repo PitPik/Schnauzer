@@ -273,7 +273,6 @@ function renderEach(_this, data, model, tagData, bodyFn) {
   for (var n = 0, l = _data.length, key = ''; n < l; n++) {
     key = isArr ? n : _data[n];
     helpers['@parent'] = data.value; // used in blick
-    console.log(variable);
     pushAlias(tagData, variable, helpers, key, data.value);
     model.scopes = shiftScope(
       model,
