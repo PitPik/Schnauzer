@@ -240,7 +240,7 @@ function renderHelper(_this, data, model, tagData, bodyFns) {
   }, collectValues(_this, data, model, tagData.vars, {}, []).arr);
 }
 
-function renderPartial(_this, model, tagData, data) {
+function renderPartial(_this, data, model, tagData) {
   collectValues(_this, data, model, tagData.vars, model.scopes[0].helpers,[]);
   return data.value(model);
 }
@@ -306,7 +306,7 @@ function renderInline(_this, tagData, model) {
 
   return render(_this, tagData, model, data, false,
     data.value === undefined ? '' : tagData.isPartial ?
-      renderPartial(_this, model, tagData, data) : 
+      renderPartial(_this, data, model, tagData) : 
       escapeHtml(data.type === 'helper' ?
         renderHelper(_this, data, model, tagData, []) : data.value,
       _this, tagData.isEscaped));
