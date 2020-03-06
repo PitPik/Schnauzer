@@ -224,7 +224,7 @@ function pushAlias(tagData, variable, obj, key, value) {
   }
 }
 
-// ---- render blocks/inlines helpers
+// ---- render blocks/inlines helpers (std. HBS helpers)
 
 function renderHelper(_this, data, model, tagData, bodyFns) {
   return data.value.apply({
