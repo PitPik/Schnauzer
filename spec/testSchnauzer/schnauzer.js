@@ -466,24 +466,49 @@ function getTagData(_this, root, vars, type, start, bodyFn) {
 
 // ---- sizzle inlines
 
+// function sizzleInlines(_this, text, blocks, tags) {
+//   var trims = [];
+//   var glues = text.replace( // split gets to complex
+//     _this.inlineRegExp,
+//     function($, start, type, root, vars, end) {
+//       if (/^(?:!|=)/.test(type || '')) return '';
+//       trims.push(getTrims(start, end));
+//       tags.push(root === '-block-' ? { blockIndex: +vars } :
+//         getTagData(_this, root, vars, type || '', start, null));
+//       return _this.options.splitter;
+//     }
+//   ).split(_this.options.splitter);
+
+//   for (var n = glues.length; n--; ) glues[n] = trim(
+//     glues[n],
+//     trims[n - 1] ? trims[n - 1][1] : false,
+//     trims[n] ? trims[n][0] : false
+//   );
+//   return function executeInlines(data, extra) {
+//     data = extra && !data.extra ? getScope(data, extra || {}) : data;
+//     return renderInlines(_this, tags, glues, blocks, data);
+//   }
+// }
+
 function sizzleInlines(_this, text, blocks, tags) {
   var trims = [];
-  var glues = text.replace(
-    _this.inlineRegExp,
-    function($, start, type, root, vars, end) {
-      if (/^(?:!|=)/.test(type || '')) return '';
-      trims.push(getTrims(start, end));
-      tags.push(root === '-block-' ? { blockIndex: +vars } :
-        getTagData(_this, root, vars, type || '', start, null));
-      return _this.options.splitter;
-    }
-  ).split(_this.options.splitter);
+  var glues = [];
+  var pts = text.split(_this.inlineRegExp);
+  var start = '', type = '', root = '', vars = '', end = '';
 
-  for (var n = glues.length; n--; ) glues[n] = trim(
-    glues[n],
-    trims[n - 1] ? trims[n - 1][1] : false,
-    trims[n] ? trims[n][0] : false
-  );
+  for (var n = 0, l = pts.length; n < l; n += 6) {
+    if (/^(?:!|=)/.test(pts[2 + n] || '')) continue;
+    start = pts[1 + n] || '';
+    type = pts[2 + n] || '';
+    root = pts[3 + n] || '';
+    vars = pts[4 + n] || '';
+    end = pts[5 + n] || '';
+
+    trims = getTrims(n === 0 ? '' : pts[1 + n - 6], !end ? '' : end);
+    glues.push(trim(pts[n], trims[0], trims[1]));
+    start && tags.push(root === '-block-' ? { blockIndex: +vars } :
+      getTagData(_this, root, vars, type, start, null));
+  }
   return function executeInlines(data, extra) {
     data = extra && !data.extra ? getScope(data, extra || {}) : data;
     return renderInlines(_this, tags, glues, blocks, data);
