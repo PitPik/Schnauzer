@@ -307,7 +307,7 @@ function renderInline(_this, tagData, model) {
   return render(_this, tagData, model, data, false,
     data.value === undefined ? '' : tagData.isPartial ?
       renderPartial(_this, data, model, tagData) : 
-      escapeHtml(data.type === 'helper' ?
+      escapeHtml(data.type === 'helper' || isFunction(data.value) ?
         renderHelper(_this, data, model, tagData, []) : data.value,
       _this, tagData.isEscaped));
 }
@@ -329,7 +329,7 @@ function renderBlock(_this, tagData, model, bodyFns) {
 
   return render(_this, tagData, model, data, true, ifHelper ?
     renderIfUnless(_this, data, model, tagData, bodyFns) :
-      data.type === 'helper' || isFunction(data.type) ?
+      data.type === 'helper' || isFunction(data.value) ?
     renderHelper(_this, data, model, tagData, bodyFns) : helper === 'with' ?
     renderWith(_this, data, model, tagData, bodyFns[0]) :
     renderEach(_this, data, model, tagData, bodyFns[0]));
