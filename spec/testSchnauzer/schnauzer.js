@@ -49,7 +49,6 @@ var Schnauzer = function(template, options) {
     characters: '$"<>%-=@',
     splitter: '|##|',
     escapeHTML: true,
-    useMustageUnless: true,
     useHandlebarsScoping: true,
     render: null, // hook for shadow-DOM engines
   };
@@ -99,13 +98,12 @@ function switchTags(_this, tags) {
   var tgs = tags[0] === '{{' ? ['({{2,3}~*)', '(~*}{2,3})'] : tags;
   var chars = _this.options.characters + '\\][';
   var blockEnd = (tgs[0] + '\\/\\3' + tgs[1]).replace(/[()]/g, '');
-  var umu = _this.options.useMustageUnless ? '[#^]' : '[#]';
 
   _this.inlineRegExp = new RegExp(tgs[0] + '([>!&=])*\\s*([\\w\\' +
     chars + '\\.]+)\\s*([\\w' + chars + '|\\.\\s]*)' + tgs[1], 'g');
   _this.sectionRegExp = new RegExp(tgs[0] + '([#^][*%]*)\\s*([\\w' +
     chars + ']*)(?:\\s+([\\w$\\s|./' + chars + ']*))*' + tgs[1] +
-    '((?:(?!' + tgs[0] + umu + ')[\\S\\s])*?)(' + blockEnd + ')', 'g');
+    '((?:(?!' + tgs[0] + '[#])[\\S\\s])*?)(' + blockEnd + ')', 'g');
   _this.elseSplitter = new RegExp(tgs[0] + '(?:else|\\^)\\s*(.*?)' + tgs[1]);
 }
 
@@ -455,7 +453,6 @@ function getTagData(_this, root, vars, type, start, bodyFn) {
   return bodyFn && !_root ? { bodyFn: bodyFn } : {
     root: _root = getVar(_root.substr(active)),
     isPartial: type === '>',
-    isNot: type === '^',
     isEscaped: start.lastIndexOf(_this.options.tags[0]) < 1,
     hasAlias: varsArr[0] === 'as',
     helper: helper,
