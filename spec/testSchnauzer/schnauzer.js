@@ -49,6 +49,7 @@ var Schnauzer = function(template, options) {
     characters: '$"<>%-=@',
     splitter: '|##|',
     escapeHTML: true,
+    escapeBlocks: false,
     useMustageUnless: true,
     useHandlebarsScoping: true,
     render: null, // hook for shadow-DOM engines
@@ -453,8 +454,9 @@ function getTagData(_this, root, vars, type, start, bodyFn) {
   var _root = varsArr.shift() || '';
   var helper = /if|each|with|unless/.test(_root) ? _root : '';
   var active = getActiveState(_root = helper ? varsArr.shift() || '' : _root);
-  var isEscaped = start.lastIndexOf(_this.options.tags[0]) < 1;
-
+  var isEscaped = !!bodyFn && !_this.options.escapeBlocks ? false :
+    start.lastIndexOf(_this.options.tags[0]) < 1;
+  
   return bodyFn && !_root ? { bodyFn: bodyFn, isEscaped: isEscaped } : {
     root: _root = getVar(_root.substr(active)),
     isPartial: type === '>',
@@ -470,18 +472,24 @@ function getTagData(_this, root, vars, type, start, bodyFn) {
 
 // ---- sizzle inlines
 
+function doInline(_this, start, end, type, root, vars, trims, tags) {
+  var isEscaped = !_this.options.escapeBlocks ? false :
+    start.lastIndexOf(_this.options.tags[0]) < 1;
+
+  if (/^(?:!|=)/.test(type || '')) return '';
+  trims.push(getTrims(start, end));
+  tags.push(root === '-block-' ? { blockIndex: +vars, isEscaped: isEscaped } :
+    getTagData(_this, root, vars, type || '', start, null));
+
+  return _this.options.splitter;
+}
+
 function sizzleInlines(_this, text, blocks, tags) {
   var trims = [];
   var glues = text.replace(
     _this.inlineRegExp,
     function($, start, type, root, vars, end) {
-      if (/^(?:!|=)/.test(type || '')) return '';
-      trims.push(getTrims(start, end));
-      tags.push(root === '-block-' ? {
-        blockIndex: +vars,
-        isEscaped: start.lastIndexOf(_this.options.tags[0]) < 1,
-      } : getTagData(_this, root, vars, type || '', start, null));
-      return _this.options.splitter;
+      return doInline(_this, start, end, type, root, vars, trims, tags);
     }
   ).split(_this.options.splitter);
 
