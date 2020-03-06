@@ -477,7 +477,7 @@ function sizzleInlines(_this, text, blocks, tags) {
     vars = parts[4 + n] || '';
     trims = getTrims(!n ? '' : parts[1 + n - 6], !root ? '' : parts[5 + n]);
     glues.push(trim(parts[n], trims[0], trims[1]));
-    parts[1 + n] && tags.push(root === '-block-' ? { blockIndex: +vars } :
+    root && tags.push(root === '-block-' ? { blockIndex: +vars } :
       getTagData(_this, root, vars, parts[2 + n] || '', parts[1 + n], null));
   }
   return function executeInlines(data, extra) {
