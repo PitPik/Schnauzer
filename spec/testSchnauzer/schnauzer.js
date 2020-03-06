@@ -217,7 +217,7 @@ function collectValues(_this, data, model, vars, obj, arr) {
 }
 
 function pushAlias(tagData, variable, obj, key, value) {
-  if (tagData.hasAlias) {
+  if (tagData.root.isAlias) {
     obj[variable.name || variable.value] = value;
     obj[tagData.root.aliasKey] = key;
   }
@@ -273,6 +273,7 @@ function renderEach(_this, data, model, tagData, bodyFn) {
   for (var n = 0, l = _data.length, key = ''; n < l; n++) {
     key = isArr ? n : _data[n];
     helpers['@parent'] = data.value; // used in blick
+    console.log(variable);
     pushAlias(tagData, variable, helpers, key, data.value);
     model.scopes = shiftScope(
       model,
@@ -454,7 +455,6 @@ function getTagData(_this, root, vars, type, start, bodyFn) {
     root: _root = getVar(_root.substr(active)),
     isPartial: type === '>',
     isEscaped: start.lastIndexOf(_this.options.tags[0]) < 1,
-    hasAlias: varsArr[0] === 'as',
     helper: helper,
     vars: processVars(varsArr, [], _root),
     active: active,
