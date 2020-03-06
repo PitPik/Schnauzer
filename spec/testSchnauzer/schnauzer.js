@@ -494,12 +494,11 @@ function sizzleInlines(_this, text, blocks, tags) {
   var trims = [];
   var glues = [];
   var pts = text.split(_this.inlineRegExp);
-  var start = '', type = '', root = '', vars = '', end = '';
+  var start = '', root = '', vars = '', end = '';
 
   for (var n = 0, l = pts.length; n < l; n += 6) {
     if (/^(?:!|=)/.test(pts[2 + n] || '')) continue;
     start = pts[1 + n] || '';
-    type = pts[2 + n] || '';
     root = pts[3 + n] || '';
     vars = pts[4 + n] || '';
     end = pts[5 + n] || '';
@@ -507,7 +506,7 @@ function sizzleInlines(_this, text, blocks, tags) {
     trims = getTrims(n === 0 ? '' : pts[1 + n - 6], !end ? '' : end);
     glues.push(trim(pts[n], trims[0], trims[1]));
     start && tags.push(root === '-block-' ? { blockIndex: +vars } :
-      getTagData(_this, root, vars, type, start, null));
+      getTagData(_this, root, vars, pts[2 + n] || '', start, null));
   }
   return function executeInlines(data, extra) {
     data = extra && !data.extra ? getScope(data, extra || {}) : data;
