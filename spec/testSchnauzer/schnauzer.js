@@ -466,30 +466,6 @@ function getTagData(_this, root, vars, type, start, bodyFn) {
 
 // ---- sizzle inlines
 
-// function sizzleInlines(_this, text, blocks, tags) {
-//   var trims = [];
-//   var glues = text.replace( // split gets to complex
-//     _this.inlineRegExp,
-//     function($, start, type, root, vars, end) {
-//       if (/^(?:!|=)/.test(type || '')) return '';
-//       trims.push(getTrims(start, end));
-//       tags.push(root === '-block-' ? { blockIndex: +vars } :
-//         getTagData(_this, root, vars, type || '', start, null));
-//       return _this.options.splitter;
-//     }
-//   ).split(_this.options.splitter);
-
-//   for (var n = glues.length; n--; ) glues[n] = trim(
-//     glues[n],
-//     trims[n - 1] ? trims[n - 1][1] : false,
-//     trims[n] ? trims[n][0] : false
-//   );
-//   return function executeInlines(data, extra) {
-//     data = extra && !data.extra ? getScope(data, extra || {}) : data;
-//     return renderInlines(_this, tags, glues, blocks, data);
-//   }
-// }
-
 function sizzleInlines(_this, text, blocks, tags) {
   var trims = [];
   var glues = [];
