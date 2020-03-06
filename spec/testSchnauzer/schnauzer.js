@@ -182,7 +182,7 @@ function getData(_this, model, tagData) {
   var scopeData = scope.scope || {};
   var key = variable.value;
   var helper = !root.isStrict && _this.helpers[key] || null;
-  var partial = tagData.isPartial && _this.partials[key] || null; // TODO
+  var partial = tagData.isPartial && _this.partials[key] || null;
   var tmp = '';
   var value = variable.root ? getHelperData(_this, model, root) : 
     root.isString || variable.isLiteral ? key :
