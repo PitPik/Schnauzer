@@ -199,7 +199,7 @@ function getData(_this, model, root) {
 }
 
 function getValue(_this, data, model, tagData, bodyFn) {
-  return data.type === 'helper' ?
+  return data.type === 'helper' || isFunction(data.value) ?
     renderHelper(_this, data, model, tagData, [{bodyFn: bodyFn}]) : data.value;
 }
 
