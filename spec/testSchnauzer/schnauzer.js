@@ -306,8 +306,10 @@ function renderInline(_this, tagData, model) {
 
   return render(_this, tagData, model, data, false,
     data.value === undefined ? '' : tagData.isPartial ?
-      renderPartial(_this, model, tagData, data) : data.type === 'helper' ?
-      renderHelper(_this, data, model, tagData, []) : data.value);
+      renderPartial(_this, model, tagData, data) : 
+      escapeHtml(data.type === 'helper' ?
+        renderHelper(_this, data, model, tagData, []) : data.value,
+      _this, tagData.isEscaped));
 }
 
 function renderInlines(_this, tags, glues, blocks, data) {
@@ -315,8 +317,7 @@ function renderInlines(_this, tags, glues, blocks, data) {
     out += glues[n];
     if (!tags[n]) continue;
     out += tags[n].blockIndex > -1 ? blocks[tags[n].blockIndex](data) :
-      escapeHtml(renderInline(_this, tags[n], getScope(data, tags[n], true)),
-        _this, tags[n].isEscaped);
+      renderInline(_this, tags[n], getScope(data, tags[n], true));
   }
   return out;
 }
