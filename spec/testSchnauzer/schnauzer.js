@@ -230,16 +230,14 @@ function pushAlias(tagData, variable, obj, key, value) {
 function renderHelper(_this, data, model, tagData, bodyFns) {
   return data.value.apply({
     name: data.key,
-    getBody: function getBody(alt) {
+    scope: model.scopes[0].scope,
+    rootScope: model.scopes[model.scopes.length - 1].scope,
+    getBody: function(alt) {
       var idx = !!alt ? 1 : 0;
       return bodyFns[idx] ? bodyFns[idx].bodyFn(model) : '';
     },
-    escape: function escape(string) { return escapeHtml(string, _this, true) },
-    scope: model.scopes[0].scope,
-    rootScope: model.scopes[model.scopes.length - 1].scope,
-    getData: function getIntData(key) {
-      return getData(_this, model, getVar(key)).value;
-    }
+    getData: function(key) { return getData(_this, model, getVar(key)).value },
+    escape: function(string) { return escapeHtml(string, _this, true) },
   }, collectValues(_this, data, model, tagData.vars, {}, []).arr);
 }
 
@@ -481,8 +479,8 @@ function sizzleInlines(_this, text, blocks, tags) {
       getTagData(_this, root, vars, parts[2 + n] || '', parts[1 + n], null));
   }
   return function executeInlines(data, extra) {
-    data = extra && !data.extra ? getScope(data, extra || {}) : data;
-    return renderInlines(_this, tags, glues, blocks, data);
+    return renderInlines(_this, tags, glues, blocks, extra && !data.extra ?
+      getScope(data, extra || {}) : data);
   }
 }
 
