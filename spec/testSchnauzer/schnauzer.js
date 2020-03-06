@@ -152,13 +152,12 @@ function shiftScope(model, data, helpers) {
 }
 
 function getScope(data, tagData, isInline) {
-  var tagRoot = tagData.root || {};
   var model = { extra: data.extra, scopes: data.scopes };
 
-  return tagRoot.variable === undefined ?
+  return isInline === null ?
     { extra: tagData, scopes: [{ scope: data, helpers: { '@root': data } }] } :
-    { extra: data.extra, scopes: isInline ?
-      data.scopes : shiftScope(model, tagRoot.variable || {}, {}) };
+    { extra: data.extra, scopes: isInline ? data.scopes :
+      shiftScope(model, (tagData.root || {}).variable || {}, {}) };
 }
 
 function getDeepData(data, mainVar) {
@@ -257,7 +256,7 @@ function renderIfUnless(_this, data, model, tagData, bodyFns) {
     item = bodyFns[++idx];
     cond = !item.helper || item.helper === 'if' ? true : false;
     data = item.root ? getData(_this, model, item.root) : { value: cond };
-    value = getValue(_this, data, model, item, item.bodyFn);
+    value = getValue(_this, data, model, item, item.bodyFn); // else ??
   }
   return result ? item.bodyFn(model) : '';
 }
@@ -480,7 +479,7 @@ function sizzleInlines(_this, text, blocks, tags) {
   }
   return function executeInlines(data, extra) {
     return renderInlines(_this, tags, glues, blocks, extra && !data.extra ?
-      getScope(data, extra || {}) : data);
+      getScope(data, extra || {}, null) : data);
   }
 }
 
@@ -517,7 +516,7 @@ function doBlock(_this, blocks, start, end, close, body, type, root, vars) {
   var tagData = getTagData(_this, root, vars, type || '', start, null);
 
   blocks.push(function executeBlock(data) {
-    return renderBlock(_this, tagData, getScope(data, tagData), bodyFns);
+    return renderBlock(_this, tagData, getScope(data, tagData, false), bodyFns);
   });
   return (start + '-block- ' + (blocks.length - 1) + closeParts[1]);
 }
