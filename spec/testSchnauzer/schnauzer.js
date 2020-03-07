@@ -46,8 +46,7 @@ var Schnauzer = function(template, options) {
     helpers: {},
     partials: {},
     self: 'self',
-    characters: '$"<>%-=@',
-    splitter: '|##|',
+    nameCharacters: '$<>%',
     escapeHTML: true,
     useHandlebarsScoping: true,
     render: null, // hook for shadow-DOM engines
@@ -96,7 +95,7 @@ return Schnauzer;
 
 function switchTags(_this, tags) {
   var tgs = tags[0] === '{{' ? ['({{2,3}~*)', '(~*}{2,3})'] : tags;
-  var chars = _this.options.characters + '\\][';
+  var chars = _this.options.nameCharacters + '@"\'/\\-=\\][';
   var blockEnd = (tgs[0] + '\\/\\3' + tgs[1]).replace(/[()]/g, '');
 
   _this.inlineRegExp = new RegExp(tgs[0] + '([>!&=])*\\s*([\\w\\' +
