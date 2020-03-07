@@ -224,6 +224,11 @@ function pushAlias(tagData, variable, obj, key, value) {
 
 // ---- render blocks/inlines helpers (std. HBS helpers)
 
+function renderPartial(_this, data, model, tagData) {
+  collectValues(_this, data, model, tagData.vars, model.scopes[0].helpers,[]);
+  return data.value(model);
+}
+
 function renderHelper(_this, data, model, tagData, bodyFns) {
   return data.value.apply({
     name: data.key,
@@ -238,11 +243,6 @@ function renderHelper(_this, data, model, tagData, bodyFns) {
     },
     escape: function(string) { return escapeHtml(string, _this, true) },
   }, collectValues(_this, data, model, tagData.vars, {}, []).arr);
-}
-
-function renderPartial(_this, data, model, tagData) {
-  collectValues(_this, data, model, tagData.vars, model.scopes[0].helpers,[]);
-  return data.value(model);
 }
 
 function renderIfUnless(_this, data, model, tagData, bodyFns) {
