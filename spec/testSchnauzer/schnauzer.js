@@ -469,7 +469,7 @@ function sizzleInlines(_this, text, blocks, tags) {
   var parts = text.split(_this.inlineRegExp);
 
   for (var n = 0, l = parts.length, root = '', vars = ''; n < l; n += 6) {
-    if (parts[2 + n] && (/^(?:!|=)/.test(parts[2 + n]))) continue;
+    if (parts[2 + n] && /^(?:!|=)/.test(parts[2 + n])) continue;
     root = parts[3 + n] || '';
     vars = parts[4 + n] || '';
     trims = getTrims(!n ? '' : parts[5 + n - 6], !root ? '' : parts[1 + n]);
