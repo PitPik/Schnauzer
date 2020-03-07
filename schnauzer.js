@@ -213,7 +213,7 @@ function collectValues(_this, data, model, vars, obj, arr) {
 function pushAlias(tagData, variable, obj, key, value) {
   if (tagData.root.isAlias) {
     obj[variable.name || variable.value] = value;
-    obj[tagData.root.aliasKey] = key;
+    obj[tagData.root.aliasKey || '@key'] = key;
   }
 }
 
@@ -261,7 +261,7 @@ function renderEach(_this, data, model, tagData, bodyFns) {
   var out = '';
   var isArr = isArray(data.value);
   var _data = isArr ? data.value || [] : getObjectKeys(data.value || {});
-  var level = {};
+  var level = cloneObject(model.scopes[0].level, {});
   var variable = tagData.root.variable;
   var depth = _this.options.useHandlebarsScoping ? 1 : 2; // Whaaaat? bad HBS
 
@@ -281,14 +281,13 @@ function renderEach(_this, data, model, tagData, bodyFns) {
 }
 
 function renderWith(_this, data, model, tagData, bodyFns) {
-  var helpers = cloneObject(model.scopes[0].helpers, {});
   var variable = tagData.root.variable;
-  var level = { '.': data.value, 'this': data.value };
+  var level = cloneObject(model.scopes[0].level, {});
 
   pushAlias(tagData, variable, level, variable.value, data.value);
   model.scopes = shiftScope(model,
-    { parentDepth: 0, path: [data.key] }, helpers, level);
-  helpers['@parent'] = model.scopes[0].scope;
+    { parentDepth: 0, path: [data.key] }, {}, level);
+  model.scopes[0].helpers['@parent'] = model.scopes[0].scope;
 
   return bodyFns[0].bodyFn(model);
 }
