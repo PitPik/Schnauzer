@@ -261,7 +261,7 @@ function renderIfUnless(_this, data, model, tagData, bodyFns) {
   return result ? item.bodyFn(model) : '';
 }
 
-function renderEach(_this, data, model, tagData, bodyFn) {
+function renderEach(_this, data, model, tagData, bodyFns) {
   var out = '';
   var isArr = isArray(data.value);
   var _data = isArr ? data.value || [] : getObjectKeys(data.value || {});
@@ -278,12 +278,12 @@ function renderEach(_this, data, model, tagData, bodyFn) {
       { parentDepth: n ? depth : 0, path: [data.key, key], skip: depth === 1 },
       createHelper(n, key, l, isArr ? _data[n] : data.value[key], helpers)
     );
-    out += bodyFn.bodyFn(model);
+    out += bodyFns[0].bodyFn(model);
   }
   return out;
 }
 
-function renderWith(_this, data, model, tagData, bodyFn) {
+function renderWith(_this, data, model, tagData, bodyFns) {
   var helpers = cloneObject(model.scopes[0].helpers, {});
   var variable = tagData.root.variable;
 
@@ -291,12 +291,12 @@ function renderWith(_this, data, model, tagData, bodyFn) {
   pushAlias(tagData, variable, helpers, variable.value, data.value);
   model.scopes = shiftScope(model, {parentDepth: 0, path: [data.key]}, helpers);
 
-  return bodyFn.bodyFn(model);
+  return bodyFns[0].bodyFn(model);
 }
 
 // ---- render blocks and inlines
 
-function render(_this, tagData, model, data, isBlock, out) {
+function render(_this, data, model, tagData, isBlock, out) {
   return _this.options.render ? _this.options.render
     .call(_this, out, tagData, model, data, isBlock) : out;
 }
@@ -304,7 +304,7 @@ function render(_this, tagData, model, data, isBlock, out) {
 function renderInline(_this, tagData, model) {
   var data = getData(_this, model, tagData);
 
-  return render(_this, tagData, model, data, false,
+  return render(_this, data, model, tagData, false,
     data.value === undefined ? '' : tagData.isPartial ?
       renderPartial(_this, data, model, tagData) : 
       escapeHtml(data.type === 'helper' || isFunction(data.value) ?
@@ -325,14 +325,14 @@ function renderInlines(_this, tags, glues, blocks, data) {
 function renderBlock(_this, tagData, model, bodyFns) {
   var data = getData(_this, model, tagData);
   var helper = tagData.helper;
-  var ifHelper = helper === 'if' || helper === 'unless';
+  var renderFn = helper === 'if' || helper === 'unless' ?
+    renderIfUnless : data.type === 'helper' || isFunction(data.value) ?
+    renderHelper : helper === 'with' ?
+    renderWith :
+    renderEach;
 
-  return render(_this, tagData, model, data, true, ifHelper ?
-    renderIfUnless(_this, data, model, tagData, bodyFns) :
-      data.type === 'helper' || isFunction(data.value) ?
-    renderHelper(_this, data, model, tagData, bodyFns) : helper === 'with' ?
-    renderWith(_this, data, model, tagData, bodyFns[0]) :
-    renderEach(_this, data, model, tagData, bodyFns[0]));
+  return render(_this, data, model, tagData, true,
+    renderFn(_this, data, model, tagData, bodyFns));
 }
 
 // ---- parse (pre-render) helpers
