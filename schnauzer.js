@@ -48,8 +48,7 @@ var Schnauzer = function(template, options) {
     self: 'self',
     nameCharacters: '$<>%',
     escapeHTML: true,
-    useHandlebarsScoping: true,
-    resetPartialScope: false,
+    resetPartialScope: true, // HBS like: true
     render: null, // hook for shadow-DOM engines
   };
   initSchnauzer(this, options || {}, template);
@@ -129,27 +128,16 @@ function createHelper(idx, key, len, value, parent) {
   };
 }
 
-function shiftScope(model, data, helpers, level) {
-  var parentDepth = data.parentDepth;
-  var path = data.path;
-  var scopes = model.scopes;
-  
-  scopes = concatArrays(model.scopes, []); // copy
-  while (scopes.length && parentDepth--) scopes.shift();
-  for (var n = 0, l = path.length, scope = scopes[0].scope; n < l; n++) {
-    scope = scope[path[n]]; // data.skip: HBS scoping
-    if (!data.skip || n) scopes.unshift({
-      scope: scope, helpers: helpers, level: level
-    });
-  }
-  return scopes;
+function shiftScope(scopes, data, helpers, level, replace) {
+  data = { scope: data, helpers: helpers, level: level };
+  return replace ? (scopes[0] = data, scopes) : concatArrays(scopes, [data]);
 }
 
 function getScope(data, extra) {
-  return extra ?
-    { extra: extra,
-      scopes: [{ scope: data, helpers: { '@root': data }, level: {} }]
-    } : { extra: data.extra, scopes: data.scopes };
+  return {
+    extra: extra,
+    scopes: [{ scope: data, helpers: {}, level: { '@root': data } }],
+  };
 }
 
 function getDeepData(data, mainVar) {
@@ -181,11 +169,10 @@ function getData(_this, model, tagData) {
     (tmp = getDeepData(scope.level || {}, variable)) !== undefined ? tmp :
     (tmp = getDeepData(scope.helpers || {}, variable)) !== undefined ? tmp :
     (tmp = getDeepData(scopeData, variable)) !== undefined ? tmp :
-    helper || partial || // (scopeData[key] !== undefined ? scopeData[key] :
-    getDeepData(model.extra || {}, variable);
+    helper || partial || (scopeData[key] !== undefined ? scopeData[key] :
+    getDeepData(model.extra, variable));
 
   return {
-    key: key || '',
     value: value,
     type: value === undefined ? '' : helper ? 'helper' : partial ? 'partial' :
       typeof value === 'object' ? 'object' : 'literal',
@@ -215,12 +202,13 @@ function pushAlias(tagData, variable, obj, key, value) {
     obj[variable.name || variable.value] = value;
     obj[tagData.root.aliasKey || '@key'] = key;
   }
+  return obj;
 }
 
 // ---- render blocks/inlines helpers (std. HBS helpers)
 
 function renderPartial(_this, data, model, tagData) {
-  collectValues(_this, data, model, tagData.vars, model.scopes[0].level,[]);
+  collectValues(_this, data, model, tagData.vars, model.scopes[0].helpers, []);
   if (_this.options.resetPartialScope) model.scopes = [model.scopes[0]]; // HBS
   return data.value(model);
 }
@@ -261,35 +249,34 @@ function renderEach(_this, data, model, tagData, bodyFns) {
   var out = '';
   var isArr = isArray(data.value);
   var _data = isArr ? data.value || [] : getObjectKeys(data.value || {});
-  var level = cloneObject(model.scopes[0].level, {});
-  var variable = tagData.root.variable;
-  var depth = _this.options.useHandlebarsScoping ? 1 : 2; // Whaaaat? bad HBS
 
   for (var n = 0, l = _data.length, key = ''; n < l; n++) {
     key = isArr ? n : _data[n];
-    pushAlias(tagData, variable, level, key, data.value[key]);
     model.scopes = shiftScope(
-      model,
-      { parentDepth: n ? depth : variable.parentDepth,
-        path: [data.key, key], skip: depth === 1 },
+      model.scopes,
+      data.value[key],
       createHelper(n, key, l, isArr ? _data[n] : data.value[key], data.value),
-      level
+      pushAlias(tagData, tagData.root.variable, {}, key, data.value[key]),
+      !!n
     );
     out += bodyFns[0].bodyFn(model);
   }
+  model.scopes.shift(); // Whaaaat? bad HBS
   return out;
 }
 
 function renderWith(_this, data, model, tagData, bodyFns) {
   var variable = tagData.root.variable;
-  var level = cloneObject(model.scopes[0].level, {});
+  var level = cloneObject({ '.': data.value, 'this': data.value },
+    model.scopes[0].level);
+  var out = '';
 
-  pushAlias(tagData, variable, level, variable.value, data.value);
-  model.scopes = shiftScope(model,
-    { parentDepth: 0, path: [data.key] }, {}, level);
-  model.scopes[0].helpers['@parent'] = model.scopes[0].scope;
-
-  return bodyFns[0].bodyFn(model);
+  model.scopes = shiftScope(model.scopes, data.value,
+    { '@parent': model.scopes[0].scope },
+    pushAlias(tagData, variable, level, variable.value, data.value), false);
+  out = bodyFns[0].bodyFn(model);
+  model.scopes.shift();
+  return out;
 }
 
 // ---- render blocks and inlines
@@ -299,23 +286,21 @@ function render(_this, data, model, tagData, isBlock, out) {
     .call(_this, out, tagData, model, data, isBlock) : out;
 }
 
-function renderInline(_this, tagData, model) {
-  var data = getData(_this, model, tagData);
-
+function renderInline(_this, tagData, model, data) {
   return render(_this, data, model, tagData, false,
     data.value === undefined ? '' : tagData.isPartial ?
-      renderPartial(_this, data, model, tagData) : 
+      renderPartial(_this, data, model, tagData) :
       escapeHtml(data.type === 'helper' || isFunction(data.value) ?
         renderHelper(_this, data, model, tagData, []) : data.value,
       _this, tagData.isEscaped));
 }
 
-function renderInlines(_this, tags, glues, blocks, data) {
+function renderInlines(_this, tags, glues, blocks, model) {
   for (var n = 0, l = glues.length, out = ''; n < l; n++) {
     out += glues[n];
     if (!tags[n]) continue;
-    out += tags[n].blockIndex > -1 ? blocks[tags[n].blockIndex](data) :
-      renderInline(_this, tags[n], getScope(data));
+    out += tags[n].blockIndex > -1 ? blocks[tags[n].blockIndex](model) :
+      renderInline(_this, tags[n], model, getData(_this, model, tags[n]));
   }
   return out;
 }
@@ -324,12 +309,12 @@ function renderBlock(_this, tagData, model, bodyFns) {
   var data = getData(_this, model, tagData);
   var helper = tagData.helper;
   var isIfUnless = helper === 'if' || helper === 'unless';
-  var renderFn = data.type === 'helper' || isFunction(data.value) ?
+  var renderFn = data.type === 'helper' || isFunction(data.value) && !helper ?
     renderHelper : isIfUnless || data.value === undefined ?
-    renderIfUnless : helper === 'with' || !helper ?
+    renderIfUnless : helper === 'with' || !helper && !isArray(data.value) ?
     renderWith :
     renderEach;
-  
+
   return render(_this, data, model, tagData, true,
     renderFn(_this, data, model, tagData, bodyFns));
 }
@@ -514,9 +499,8 @@ function doBlock(_this, blocks, start, end, close, body, type, root, vars) {
   var bodyParts = trim(body, trims[0], trims[1]).split(_this.elseSplitter);
   var bodyFns = processBodyParts(_this, [], bodyParts, blocks, start);
   var tagData = getTagData(_this, root, vars, type || '', start, null);
-
-  blocks.push(function executeBlock(data) {
-    return renderBlock(_this, tagData, getScope(data), bodyFns);
+  blocks.push(function executeBlock(model) {
+    return renderBlock(_this, tagData, model, bodyFns);
   });
   return (start + '-block- ' + (blocks.length - 1) + closeParts[1]);
 }
@@ -526,7 +510,7 @@ function sizzleBlocks(_this, text, blocks) {
   var replaceCb = function($, start, type, root, vars, end, body, $$, close) {
     if (type === '#*') {
       _this.partials[name = vars.replace(/['"]/g, '')] = _this.partials[name] ||
-        sizzleBlocks(_this, body, []);
+        sizzleBlocks(_this, body, blocks);
       return '';
     }
     return doBlock(_this, blocks, start, end, close, body, type, root, vars);
