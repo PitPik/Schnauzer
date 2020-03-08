@@ -171,7 +171,7 @@ function getData(_this, model, tagData) {
     (tmp = getDeepData(scopeData, variable)) !== undefined ? tmp :
     helper || partial || (scopeData[key] !== undefined ? scopeData[key] :
     getDeepData(model.extra, variable));
-// console.log(123, key, scopeData, model.scopes.length)
+
   return {
     value: value,
     type: value === undefined ? '' : helper ? 'helper' : partial ? 'partial' :
@@ -190,7 +190,6 @@ function collectValues(_this, data, model, vars, obj, arr) {
     iVar = item.variable;
     scp = !!iVar.root ? getValue(_this, data, model, iVar, null) : null;
     key = scp || !iVar.name ? ('$' + n) : iVar.name;
-  // console.log(obj, key, item, model.scopes[0]);
     obj[key] = scp || getData(_this, model, { root: item }).value;
     arr.push(obj[key]);
     if (item.isAlias) model.scopes[0].level[key] = obj[key];
@@ -209,10 +208,7 @@ function pushAlias(tagData, variable, obj, key, value) {
 // ---- render blocks/inlines helpers (std. HBS helpers)
 
 function renderPartial(_this, data, model, tagData) {
-  var level = cloneObject(model.scopes[0].level,
-    { '.': data.value, 'this': data.value });
-    console.log(1234, tagData, model.scopes[0].scope);
-  collectValues(_this, data, model, tagData.vars, model.scopes[0].level, []);
+  collectValues(_this, data, model, tagData.vars, model.scopes[0].helpers, []);
   if (_this.options.resetPartialScope) model.scopes = [model.scopes[0]]; // HBS
   return data.value(model);
 }
@@ -271,14 +267,16 @@ function renderEach(_this, data, model, tagData, bodyFns) {
 
 function renderWith(_this, data, model, tagData, bodyFns) {
   var variable = tagData.root.variable;
-  var level = cloneObject(model.scopes[0].level,
-    { '.': data.value, 'this': data.value });
+  var level = cloneObject({ '.': data.value, 'this': data.value },
+    model.scopes[0].level);
+  var out = '';
 
-  model.scopes = shiftScope(model.scopes, getData(_this, model, tagData).value,
+  model.scopes = shiftScope(model.scopes, data.value,
     { '@parent': model.scopes[0].scope },
     pushAlias(tagData, variable, level, variable.value, data.value), false);
-// console.log(99999, model,  model.scopes.length, model.scopes[0]);
-  return bodyFns[0].bodyFn(model, model.scopes.shift());
+  out = bodyFns[0].bodyFn(model);
+  model.scopes.shift();
+  return out;
 }
 
 // ---- render blocks and inlines
@@ -316,7 +314,7 @@ function renderBlock(_this, tagData, model, bodyFns) {
     renderIfUnless : helper === 'with' || !helper && !isArray(data.value) ?
     renderWith :
     renderEach;
-// console.log(renderFn.name, tagData.root.variable, model.scopes[0].level)
+
   return render(_this, data, model, tagData, true,
     renderFn(_this, data, model, tagData, bodyFns));
 }
