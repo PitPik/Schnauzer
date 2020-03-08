@@ -286,7 +286,7 @@ function render(_this, data, model, tagData, isBlock, out) {
     .call(_this, out, tagData, model, data, isBlock) : out;
 }
 
-function renderInline(_this, tagData, model, data) {
+function renderInline(_this, data, model, tagData) {
   return render(_this, data, model, tagData, false,
     data.value === undefined ? '' : tagData.isPartial ?
       renderPartial(_this, data, model, tagData) :
@@ -300,7 +300,7 @@ function renderInlines(_this, tags, glues, blocks, model) {
     out += glues[n];
     if (!tags[n]) continue;
     out += tags[n].blockIndex > -1 ? blocks[tags[n].blockIndex](model) :
-      renderInline(_this, tags[n], model, getData(_this, model, tags[n]));
+      renderInline(_this, getData(_this, model, tags[n]), model, tags[n]);
   }
   return out;
 }
