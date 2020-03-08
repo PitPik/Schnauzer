@@ -48,7 +48,7 @@ var Schnauzer = function(template, options) {
     self: 'self',
     nameCharacters: '$<>%',
     escapeHTML: true,
-    useHandlebarsScoping: true,
+    resetPartialScope: true, // HBS like: true
     render: null, // hook for shadow-DOM engines
   };
   initSchnauzer(this, options || {}, template);
@@ -68,7 +68,7 @@ var initSchnauzer = function(_this, options, template) {
 
 Schnauzer.prototype = {
   render: function(data, extra) {
-    return this.partials[this.options.self](data, extra);
+    return this.partials[this.options.self](getScope(data, extra || {}));
   },
   parse: function(text) {
     return this.registerPartial(this.options.self, text);
@@ -115,46 +115,29 @@ function escapeHtml(string, _this, doEscape) {
     }) : string;
 }
 
-function createHelper(idx, key, len, value, extra) {
-  var fn = function(out, n, obj) { if (out[n] === undefined) out[n] = obj[n] };
-  var out = {
+function createHelper(idx, key, len, value, parent) {
+  return {
     '@index': idx,
     '@last': idx === len - 1,
     '@first': idx === 0,
     '@length': len,
+    '@parent': parent,
     '@key': key,
     'this': value,
     '.': value,
   };
-  if (extra) for (var n in extra) fn(out, n, extra);
-
-  return out;
 }
 
-function shiftScope(model, data, helpers) {
-  var parentDepth = data.parentDepth;
-  var path = data.path;
-  var scopes = model.scopes;
-
-  if (parentDepth && path.length && !scopes[0].scope[path[0]] && // TODO
-    (scopes[0].helpers[path[0]] || model.extra[path[0]])) return scopes;
-  
-  scopes = concatArrays(model.scopes, []); // copy
-  while (scopes.length && parentDepth--) scopes.shift();
-  for (var n = 0, l = path.length, scope = scopes[0].scope; n < l; n++) {
-    scope = scope[path[n]]; // data.skip: HBS scoping
-    if (!data.skip || n) scopes.unshift({ scope: scope, helpers: helpers });
-  }
-  return scopes;
+function shiftScope(scopes, data, helpers, level, replace) {
+  data = { scope: data, helpers: helpers, level: level };
+  return replace ? (scopes[0] = data, scopes) : concatArrays(scopes, [data]);
 }
 
-function getScope(data, tagData, isInline) {
-  var model = { extra: data.extra, scopes: data.scopes };
-
-  return isInline === null ?
-    { extra: tagData, scopes: [{ scope: data, helpers: { '@root': data } }] } :
-    { extra: data.extra, scopes: isInline ? data.scopes :
-      shiftScope(model, (tagData.root || {}).variable || {}, {}) };
+function getScope(data, extra) {
+  return {
+    extra: extra,
+    scopes: [{ scope: data, helpers: {}, level: { '@root': data } }],
+  };
 }
 
 function getDeepData(data, mainVar) {
@@ -181,15 +164,15 @@ function getData(_this, model, tagData) {
   var helper = !root.isStrict && _this.helpers[key] || null;
   var partial = tagData.isPartial && _this.partials[key] || null;
   var tmp = '';
-  var value = variable.root ? getHelperData(_this, model, root) : 
+  var value = variable.root ? getHelperData(_this, model, root) :
     root.isString || variable.isLiteral ? key :
-    helper || partial || (scopeData[key] !== undefined ? scopeData[key] :
+    (tmp = getDeepData(scope.level || {}, variable)) !== undefined ? tmp :
+    (tmp = getDeepData(scope.helpers || {}, variable)) !== undefined ? tmp :
     (tmp = getDeepData(scopeData, variable)) !== undefined ? tmp :
-    (tmp = getDeepData(scope.helpers || {}, variable)) !== undefined ? tmp : 
-    getDeepData(model.extra || {}, variable));
-
+    helper || partial || (scopeData[key] !== undefined ? scopeData[key] :
+    getDeepData(model.extra, variable));
+// console.log(123, key, scopeData, model.scopes.length)
   return {
-    key: key || '',
     value: value,
     type: value === undefined ? '' : helper ? 'helper' : partial ? 'partial' :
       typeof value === 'object' ? 'object' : 'literal',
@@ -206,11 +189,11 @@ function collectValues(_this, data, model, vars, obj, arr) {
     item = vars[n];
     iVar = item.variable;
     scp = !!iVar.root ? getValue(_this, data, model, iVar, null) : null;
-    key = scp || item.isString || (iVar.isLiteral && !iVar.name) ? ('$' + n) :
-      iVar.name || iVar.value;
+    key = scp || !iVar.name ? ('$' + n) : iVar.name;
+  // console.log(obj, key, item, model.scopes[0]);
     obj[key] = scp || getData(_this, model, { root: item }).value;
     arr.push(obj[key]);
-    if (item.isAlias) model.scopes[0].helpers[key] = obj[key];
+    if (item.isAlias) model.scopes[0].level[key] = obj[key];
   }
   return { obj: obj, arr: arr };
 }
@@ -218,14 +201,19 @@ function collectValues(_this, data, model, vars, obj, arr) {
 function pushAlias(tagData, variable, obj, key, value) {
   if (tagData.root.isAlias) {
     obj[variable.name || variable.value] = value;
-    obj[tagData.root.aliasKey] = key;
+    obj[tagData.root.aliasKey || '@key'] = key;
   }
+  return obj;
 }
 
 // ---- render blocks/inlines helpers (std. HBS helpers)
 
 function renderPartial(_this, data, model, tagData) {
-  collectValues(_this, data, model, tagData.vars, model.scopes[0].helpers,[]);
+  var level = cloneObject(model.scopes[0].level,
+    { '.': data.value, 'this': data.value });
+    console.log(1234, tagData, model.scopes[0].scope);
+  collectValues(_this, data, model, tagData.vars, model.scopes[0].level, []);
+  if (_this.options.resetPartialScope) model.scopes = [model.scopes[0]]; // HBS
   return data.value(model);
 }
 
@@ -252,11 +240,11 @@ function renderIfUnless(_this, data, model, tagData, bodyFns) {
   var result = false;
   var value = getValue(_this, data, model, tagData, item.bodyFn);
 
-  while (!(result = cond && value || !cond && !value) && bodyFns[idx + 1]) {
+  while (!(result = cond && !!value || !cond && !value) && bodyFns[idx + 1]) {
     item = bodyFns[++idx];
     cond = !item.helper || item.helper === 'if' ? true : false;
     data = item.root ? getData(_this, model, item) : { value: cond };
-    value = getValue(_this, data, model, item, item.bodyFn); // else ??
+    value = getValue(_this, data, model, item, item.bodyFn);
   }
   return result ? item.bodyFn(model) : '';
 }
@@ -265,33 +253,32 @@ function renderEach(_this, data, model, tagData, bodyFns) {
   var out = '';
   var isArr = isArray(data.value);
   var _data = isArr ? data.value || [] : getObjectKeys(data.value || {});
-  var helpers = cloneObject(model.scopes[0].helpers, {});
-  var variable = tagData.root.variable;
-  var depth = _this.options.useHandlebarsScoping ? 1 : 2; // Whaaaat? bad HBS
 
   for (var n = 0, l = _data.length, key = ''; n < l; n++) {
     key = isArr ? n : _data[n];
-    helpers['@parent'] = data.value; // used in blick
-    pushAlias(tagData, variable, helpers, key, data.value);
     model.scopes = shiftScope(
-      model,
-      { parentDepth: n ? depth : 0, path: [data.key, key], skip: depth === 1 },
-      createHelper(n, key, l, isArr ? _data[n] : data.value[key], helpers)
+      model.scopes,
+      data.value[key],
+      createHelper(n, key, l, isArr ? _data[n] : data.value[key], data.value),
+      pushAlias(tagData, tagData.root.variable, {}, key, data.value[key]),
+      !!n
     );
     out += bodyFns[0].bodyFn(model);
   }
+  model.scopes.shift(); // Whaaaat? bad HBS
   return out;
 }
 
 function renderWith(_this, data, model, tagData, bodyFns) {
-  var helpers = cloneObject(model.scopes[0].helpers, {});
   var variable = tagData.root.variable;
+  var level = cloneObject(model.scopes[0].level,
+    { '.': data.value, 'this': data.value });
 
-  helpers['@parent'] = data.value;
-  pushAlias(tagData, variable, helpers, variable.value, data.value);
-  model.scopes = shiftScope(model, {parentDepth: 0, path: [data.key]}, helpers);
-
-  return bodyFns[0].bodyFn(model);
+  model.scopes = shiftScope(model.scopes, getData(_this, model, tagData).value,
+    { '@parent': model.scopes[0].scope },
+    pushAlias(tagData, variable, level, variable.value, data.value), false);
+// console.log(99999, model,  model.scopes.length, model.scopes[0]);
+  return bodyFns[0].bodyFn(model, model.scopes.shift());
 }
 
 // ---- render blocks and inlines
@@ -301,23 +288,21 @@ function render(_this, data, model, tagData, isBlock, out) {
     .call(_this, out, tagData, model, data, isBlock) : out;
 }
 
-function renderInline(_this, tagData, model) {
-  var data = getData(_this, model, tagData);
-
+function renderInline(_this, tagData, model, data) {
   return render(_this, data, model, tagData, false,
     data.value === undefined ? '' : tagData.isPartial ?
-      renderPartial(_this, data, model, tagData) : 
+      renderPartial(_this, data, model, tagData) :
       escapeHtml(data.type === 'helper' || isFunction(data.value) ?
         renderHelper(_this, data, model, tagData, []) : data.value,
       _this, tagData.isEscaped));
 }
 
-function renderInlines(_this, tags, glues, blocks, data) {
+function renderInlines(_this, tags, glues, blocks, model) {
   for (var n = 0, l = glues.length, out = ''; n < l; n++) {
     out += glues[n];
     if (!tags[n]) continue;
-    out += tags[n].blockIndex > -1 ? blocks[tags[n].blockIndex](data) :
-      renderInline(_this, tags[n], getScope(data, tags[n], true));
+    out += tags[n].blockIndex > -1 ? blocks[tags[n].blockIndex](model) :
+      renderInline(_this, tags[n], model, getData(_this, model, tags[n]));
   }
   return out;
 }
@@ -325,12 +310,13 @@ function renderInlines(_this, tags, glues, blocks, data) {
 function renderBlock(_this, tagData, model, bodyFns) {
   var data = getData(_this, model, tagData);
   var helper = tagData.helper;
-  var renderFn = helper === 'if' || helper === 'unless' ?
-    renderIfUnless : data.type === 'helper' || isFunction(data.value) ?
-    renderHelper : helper === 'with' ?
+  var isIfUnless = helper === 'if' || helper === 'unless';
+  var renderFn = data.type === 'helper' || isFunction(data.value) && !helper ?
+    renderHelper : isIfUnless || data.value === undefined ?
+    renderIfUnless : helper === 'with' || !helper && !isArray(data.value) ?
     renderWith :
     renderEach;
-
+// console.log(renderFn.name, tagData.root.variable, model.scopes[0].level)
   return render(_this, data, model, tagData, true,
     renderFn(_this, data, model, tagData, bodyFns));
 }
@@ -383,6 +369,9 @@ function parseScope(text, name) {
   var parts = isString && !isDot ? text.split('../') : [];
   var pathParts = isString && !isDot ? parts.pop().split(/[.\/]/) : [text];
 
+  if (parts[0] === '@') { // HBS
+    pathParts[parts.length - 1] = parts[0] + pathParts[parts.length - 1];
+  }
   return !isString ? { name: name, value: text, isLiteral: true, path: [] } : {
     name: name,
     value: pathParts.pop(),
@@ -453,7 +442,7 @@ function getTagData(_this, root, vars, type, start, bodyFn) {
     root: _root = getVar(_root.substr(active)),
     isPartial: type === '>',
     isEscaped: start.lastIndexOf(_this.options.tags[0]) < 1,
-    helper: helper,
+    helper: type === '^' ? 'unless' : helper,
     vars: processVars(varsArr, [], _root),
     active: active,
     bodyFn: bodyFn || null,
@@ -476,9 +465,8 @@ function sizzleInlines(_this, text, blocks, tags) {
     root && tags.push(root === '-block-' ? { blockIndex: +vars } :
       getTagData(_this, root, vars, parts[2 + n] || '', parts[1 + n], null));
   }
-  return function executeInlines(data, extra) {
-    return renderInlines(_this, tags, glues, blocks, extra && !data.extra ?
-      getScope(data, extra || {}, null) : data);
+  return function executeInlines(data) {
+    return renderInlines(_this, tags, glues, blocks, data);
   }
 }
 
@@ -513,9 +501,8 @@ function doBlock(_this, blocks, start, end, close, body, type, root, vars) {
   var bodyParts = trim(body, trims[0], trims[1]).split(_this.elseSplitter);
   var bodyFns = processBodyParts(_this, [], bodyParts, blocks, start);
   var tagData = getTagData(_this, root, vars, type || '', start, null);
-
-  blocks.push(function executeBlock(data) {
-    return renderBlock(_this, tagData, getScope(data, tagData, false), bodyFns);
+  blocks.push(function executeBlock(model) {
+    return renderBlock(_this, tagData, model, bodyFns);
   });
   return (start + '-block- ' + (blocks.length - 1) + closeParts[1]);
 }
@@ -525,7 +512,7 @@ function sizzleBlocks(_this, text, blocks) {
   var replaceCb = function($, start, type, root, vars, end, body, $$, close) {
     if (type === '#*') {
       _this.partials[name = vars.replace(/['"]/g, '')] = _this.partials[name] ||
-        sizzleBlocks(_this, body, []);
+        sizzleBlocks(_this, body, blocks);
       return '';
     }
     return doBlock(_this, blocks, start, end, close, body, type, root, vars);
