@@ -499,6 +499,7 @@ function doBlock(_this, blocks, start, end, close, body, type, root, vars) {
   var bodyParts = trim(body, trims[0], trims[1]).split(_this.elseSplitter);
   var bodyFns = processBodyParts(_this, [], bodyParts, blocks, start);
   var tagData = getTagData(_this, root, vars, type || '', start, null);
+
   blocks.push(function executeBlock(model) {
     return renderBlock(_this, tagData, model, bodyFns);
   });
