@@ -141,11 +141,12 @@ function getScope(data, extra) {
 }
 
 function getDeepData(data, mainVar) {
-  for (var n = 0, l = mainVar.path.length; n < l; n++) {
-    data = data[mainVar.path[n]];
-    if (!data) return;
+  for (var n = 0, l = mainVar.path.length, _data = {}; n < l; n++) {
+    for (var x = 0, y = data.length; x < y; x++)
+      if (data[x] = _data = (data[x] || {})[mainVar.path[n]]) break;
+    if (!_data) return;
   }
-  return data[mainVar.value];
+  return _data[mainVar.value];
 }
 
 function getHelperData(_this, model, root) {
@@ -166,11 +167,10 @@ function getData(_this, model, tagData) {
   var tmp = '';
   var value = variable.root ? getHelperData(_this, model, root) :
     root.isString || variable.isLiteral ? key :
-    (tmp = getDeepData(scope.level || {}, variable)) !== undefined ? tmp :
-    (tmp = getDeepData(scope.helpers || {}, variable)) !== undefined ? tmp :
-    (tmp = getDeepData(scopeData, variable)) !== undefined ? tmp :
+    (tmp = getDeepData([scope.level, scope.helpers, scopeData],
+      variable)) !== undefined ? tmp :
     helper || partial || (scopeData[key] !== undefined ? scopeData[key] :
-    getDeepData(model.extra, variable));
+    getDeepData([model.extra], variable));
 
   return {
     value: value,
