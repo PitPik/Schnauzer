@@ -359,7 +359,7 @@ function splitVars(text, collection) {
   return collection;
 }
 
-function parseScope(text, name) {
+function parsePath(text, name) {
   var isString = typeof text === 'string';
   var isDot = text === '.';
   var parts = isString && !isDot ? text.split('../') : [];
@@ -397,8 +397,8 @@ function getVar(item) {
   }
   split = item.split('='); // /([=!<>]+)/
   out.variable = split[1] ?
-    parseScope(convertValue(split[1], out), split[0]) :
-    parseScope(convertValue(split[0], out), '');
+    parsePath(convertValue(split[1], out), split[0]) :
+    parsePath(convertValue(split[0], out), '');
   return out;
 }
 
