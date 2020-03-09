@@ -417,9 +417,7 @@ function processAlias(out, vars, n, key) { // TODO: clean up
 }
 
 function processVars(vars, collection, root) {
-  var out = root || {};
-
-  for (var n = 0, l = vars.length; n < l; n++) {
+  for (var n = 0, l = vars.length, out = root || {}; n < l; n++) {
     if (vars[n] === 'as') {
       n = processAlias(out, vars, ++n, '');
       continue;
