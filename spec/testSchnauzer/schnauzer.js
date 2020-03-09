@@ -48,8 +48,8 @@ var Schnauzer = function(template, options) {
     self: 'self',
     nameCharacters: '$<>%',
     escapeHTML: true,
-    resetPartialScope: true, // HBS like: true
-    render: null, // hook for shadow-DOM engines
+    resetPartialScope: true,
+    renderHook: null,
   };
   initSchnauzer(this, options || {}, template);
 };
@@ -148,7 +148,7 @@ function getDeepData(data, mainVar) {
   return data[mainVar.value];
 }
 
-function getHelperData(_this, model, root) { // TODO: integrate with other fns
+function getHelperData(_this, model, root) {
   var key = root.variable.root;
   var data = { key: key, value: _this.helpers[key], type: 'helper' };
 
@@ -209,7 +209,7 @@ function pushAlias(tagData, variable, obj, key, value) {
 
 function renderPartial(_this, data, model, tagData) {
   collectValues(_this, data, model, tagData.vars, model.scopes[0].helpers, []);
-  if (_this.options.resetPartialScope) model.scopes = [model.scopes[0]]; // HBS
+  if (_this.options.resetPartialScope) model.scopes = [model.scopes[0]];
   return data.value(model);
 }
 
@@ -261,7 +261,7 @@ function renderEach(_this, data, model, tagData, bodyFns) {
     );
     out += bodyFns[0].bodyFn(model);
   }
-  model.scopes.shift(); // Whaaaat? bad HBS
+  model.scopes.shift();
   return out;
 }
 
@@ -282,7 +282,7 @@ function renderWith(_this, data, model, tagData, bodyFns) {
 // ---- render blocks and inlines
 
 function render(_this, data, model, tagData, isBlock, out) {
-  return _this.options.render ? _this.options.render
+  return _this.options.renderHook ? _this.options.renderHook
     .call(_this, out, tagData, model, data, isBlock) : out;
 }
 
@@ -367,7 +367,7 @@ function parseScope(text, name) {
   var parts = isString && !isDot ? text.split('../') : [];
   var pathParts = isString && !isDot ? parts.pop().split(/[.\/]/) : [text];
 
-  if (parts[0] === '@') { // HBS
+  if (parts[0] === '@') { // HBS transform
     pathParts[parts.length - 1] = parts[0] + pathParts[parts.length - 1];
   }
   return !isString ? { name: name, value: text, isLiteral: true, path: [] } : {
@@ -384,7 +384,7 @@ function getVar(item) {
     variable: {},
     isAlias: false,
     aliasKey: '',
-    isString: false, // if value else variable
+    isString: false,
     isStrict: false,
     active: 0,
   };
@@ -397,7 +397,7 @@ function getVar(item) {
       root: split.shift(), vars: processVars(split, [], {}), path: []
     }};
   }
-  split = item.split('='); // item.split(/([=!<>]+)/);
+  split = item.split('='); // /([=!<>]+)/
   out.variable = split[1] ?
     parseScope(convertValue(split[1], out), split[0]) :
     parseScope(convertValue(split[0], out), '');
