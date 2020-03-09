@@ -4,7 +4,7 @@
 Schanuzer is largely compatible with Mustache and Handlebars templates. In most cases it is possible to swap out Mustache or Handlebars with Schanuzer and continue using your current templates.
 
 I call it "logic-less" because there are no if statements, else clauses, or for loops. Instead there are only tags. Some tags are replaced with a value, some nothing, and others a series of values. But as with Handlebars you can add helpers, or pass data to your partials.
-Schanuzer is also very small and fast. It has the power of Handlebars but is the size of Mustage (4.88KB minified, 2.17KB gZip) and therefore also perfectly suitable for mobile applications.
+Schanuzer is also very small and fast. It has the power of Handlebars but is almost the size of Mustage (7.71KB minified, 3.4KB gZip) and therefore also perfectly suitable for mobile applications.
 
 ## Where to use schnauzer.js?
 
@@ -14,34 +14,8 @@ schnauzer.js ships with support for both the [CommonJS](http://www.commonjs.org/
 
 ## Main differences to Handlebars
 
-Schnauzer and Handlebars do almost the same thing and use almost the same syntax, but there is a difference in size and performance. Schnauzer has the same power as Handlebars but the size of Mustache and a higher performance.
+Schnauzer and Handlebars do almost the same thing, but there is a difference in size and performance. Schnauzer has the same power as Handlebars but the size of Mustache and a higher performance.
 Schnauzer does not throw errors when markup is not valid, it only just doesn't process it at all.
-There are no checks for "ownProperty" therefore even faster and better usable for Web UI components. In case you need to check for objects' own properties you can create your own helper.
-
-### The ```as``` in ```with``` and ```each``` helpers
-
-```as``` works similar to Handlebar's ```as``` except that if you nest blocks, the variables don't get pushed to the next scope. So you would have to use ```../``` for a previous scoped variable:
-
-```handlebars
-{{#each array as |value key|}}
-  {{#each child as |childValue childKey|}}
-    {{../key}} - {{childKey}}. {{childValue}}
-  {{/each}}
-{{/each}}
-```
-
-Notice the ```{{../key}}``` that differs from Handlebars'.
-
-### ```@key``` in ```with``` and ```as |value key|``` in ```with```
-
-Handlebars doesn't support keys in those cases, Schnauzer does. In deeper contexts it can also be read out with ```../@key```, ```@../key``` or ```../key```, depending on the situation.
-
-### ```@key```, ```@index```, ```@first```, ```@last``` in upper contexts
-
-If you need to read out one of those helper variables further up in the tree there is 2 ways to do so.
-
- - The Handlebars way: ```@../key```, ...
- - Alternative way: ```../@key```, ...
 
 ### There is no tag switching on the fly in Schnauzer
 
@@ -111,17 +85,12 @@ new Schnauzer(template /*String*/, options /*Object*/ {
     helpers: {}, // name:function pair defining helpers
     partials: {}, // name:String pair defining partials
     recursion: 'self', // name of initial partial
-    characters: '$"<>%=@', // whitelist of chars for variables inside helpers, partials, functions...
-
-    // the following are internals and probably never need to be overwritten:
-    splitter: '|##|', // internal string splitter; change if this also used in template
+    characters: '', // whitelist of chars for variables inside helpers, partials, functions...
 })
 .render(data /*Object*/, extraData /*Object|Array*/) // => returns String
 .parse(text /*String*/)
 .registerHelper(name /*String*/, func  /*Function*/)
 .unregisterHelper(name /*String*/)
-.registerDecorator(name /*String*/, func  /*Function*/)
-.unregisterDecorator(name /*String*/)
 .registerPartial(name /*String*/, html  /*String*/)
 .unregisterPartial(name /*String*/)
 .setTags(tags /*Array*/)
