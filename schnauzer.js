@@ -46,10 +46,9 @@ var Schnauzer = function(template, options) {
     helpers: {},
     partials: {},
     self: 'self',
-    nameCharacters: '$<>%',
+    nameCharacters: '',
     escapeHTML: true,
-    resetPartialScope: true, // HBS like: true
-    render: null, // hook for shadow-DOM engines
+    renderHook: null,
   };
   initSchnauzer(this, options || {}, template);
 };
@@ -95,7 +94,7 @@ return Schnauzer;
 
 function switchTags(_this, tags) {
   var tgs = tags[0] === '{{' ? ['({{2,3}~*)', '(~*}{2,3})'] : tags;
-  var chars = _this.options.nameCharacters + '@"\'/\\-=\\][';
+  var chars = _this.options.nameCharacters + '!-;=?@[-`|~';
   var blockEnd = (tgs[0] + '\\/\\3' + tgs[1]).replace(/[()]/g, '');
 
   _this.inlineRegExp = new RegExp(tgs[0] + '([>!&=])*\\s*([\\w\\' +
@@ -148,7 +147,7 @@ function getDeepData(data, mainVar) {
   return data[mainVar.value];
 }
 
-function getHelperData(_this, model, root) { // TODO: integrate with other fns
+function getHelperData(_this, model, root) {
   var key = root.variable.root;
   var data = { key: key, value: _this.helpers[key], type: 'helper' };
 
@@ -209,7 +208,6 @@ function pushAlias(tagData, variable, obj, key, value) {
 
 function renderPartial(_this, data, model, tagData) {
   collectValues(_this, data, model, tagData.vars, model.scopes[0].helpers, []);
-  if (_this.options.resetPartialScope) model.scopes = [model.scopes[0]]; // HBS
   return data.value(model);
 }
 
@@ -261,18 +259,17 @@ function renderEach(_this, data, model, tagData, bodyFns) {
     );
     out += bodyFns[0].bodyFn(model);
   }
-  model.scopes.shift(); // Whaaaat? bad HBS
+  model.scopes.shift();
   return out;
 }
 
 function renderWith(_this, data, model, tagData, bodyFns) {
   var variable = tagData.root.variable;
-  var level = cloneObject({ '.': data.value, 'this': data.value },
-    model.scopes[0].level);
+  var scope0 = model.scopes[0];
+  var level = cloneObject({'.': data.value, 'this': data.value}, scope0.level);
   var out = '';
 
-  model.scopes = shiftScope(model.scopes, data.value,
-    { '@parent': model.scopes[0].scope },
+  model.scopes = shiftScope(model.scopes, data.value, {'@parent': scope0.scope},
     pushAlias(tagData, variable, level, variable.value, data.value), false);
   out = bodyFns[0].bodyFn(model);
   model.scopes.shift();
@@ -282,11 +279,11 @@ function renderWith(_this, data, model, tagData, bodyFns) {
 // ---- render blocks and inlines
 
 function render(_this, data, model, tagData, isBlock, out) {
-  return _this.options.render ? _this.options.render
+  return _this.options.renderHook ? _this.options.renderHook
     .call(_this, out, tagData, model, data, isBlock) : out;
 }
 
-function renderInline(_this, tagData, model, data) {
+function renderInline(_this, data, model, tagData) {
   return render(_this, data, model, tagData, false,
     data.value === undefined ? '' : tagData.isPartial ?
       renderPartial(_this, data, model, tagData) :
@@ -300,7 +297,7 @@ function renderInlines(_this, tags, glues, blocks, model) {
     out += glues[n];
     if (!tags[n]) continue;
     out += tags[n].blockIndex > -1 ? blocks[tags[n].blockIndex](model) :
-      renderInline(_this, tags[n], model, getData(_this, model, tags[n]));
+      renderInline(_this, getData(_this, model, tags[n]), model, tags[n]);
   }
   return out;
 }
@@ -361,13 +358,13 @@ function splitVars(text, collection) {
   return collection;
 }
 
-function parseScope(text, name) {
+function parsePath(text, name) {
   var isString = typeof text === 'string';
   var isDot = text === '.';
   var parts = isString && !isDot ? text.split('../') : [];
   var pathParts = isString && !isDot ? parts.pop().split(/[.\/]/) : [text];
 
-  if (parts[0] === '@') { // HBS
+  if (parts[0] === '@') { // HBS transform
     pathParts[parts.length - 1] = parts[0] + pathParts[parts.length - 1];
   }
   return !isString ? { name: name, value: text, isLiteral: true, path: [] } : {
@@ -384,7 +381,7 @@ function getVar(item) {
     variable: {},
     isAlias: false,
     aliasKey: '',
-    isString: false, // if value else variable
+    isString: false,
     isStrict: false,
     active: 0,
   };
@@ -397,10 +394,10 @@ function getVar(item) {
       root: split.shift(), vars: processVars(split, [], {}), path: []
     }};
   }
-  split = item.split('='); // item.split(/([=!<>]+)/);
+  split = item.split('='); // /([=!<>]+)/
   out.variable = split[1] ?
-    parseScope(convertValue(split[1], out), split[0]) :
-    parseScope(convertValue(split[0], out), '');
+    parsePath(convertValue(split[1], out), split[0]) :
+    parsePath(convertValue(split[0], out), '');
   return out;
 }
 
@@ -417,9 +414,7 @@ function processAlias(out, vars, n, key) { // TODO: clean up
 }
 
 function processVars(vars, collection, root) {
-  var out = root || {};
-
-  for (var n = 0, l = vars.length; n < l; n++) {
+  for (var n = 0, l = vars.length, out = root || {}; n < l; n++) {
     if (vars[n] === 'as') {
       n = processAlias(out, vars, ++n, '');
       continue;
@@ -499,6 +494,7 @@ function doBlock(_this, blocks, start, end, close, body, type, root, vars) {
   var bodyParts = trim(body, trims[0], trims[1]).split(_this.elseSplitter);
   var bodyFns = processBodyParts(_this, [], bodyParts, blocks, start);
   var tagData = getTagData(_this, root, vars, type || '', start, null);
+
   blocks.push(function executeBlock(model) {
     return renderBlock(_this, tagData, model, bodyFns);
   });
@@ -506,14 +502,10 @@ function doBlock(_this, blocks, start, end, close, body, type, root, vars) {
 }
 
 function sizzleBlocks(_this, text, blocks) {
-  var name = '';
   var replaceCb = function($, start, type, root, vars, end, body, $$, close) {
-    if (type === '#*') {
-      _this.partials[name = vars.replace(/['"]/g, '')] = _this.partials[name] ||
-        sizzleBlocks(_this, body, blocks);
-      return '';
-    }
-    return doBlock(_this, blocks, start, end, close, body, type, root, vars);
+    return type === '#*' ? _this.registerPartial(vars.replace(/['"]/g, ''),
+        sizzleBlocks(_this, body, blocks)) && '' :
+      doBlock(_this, blocks, start, end, close, body, type, root, vars);
   };
 
   while (text !== (text = text.replace(_this.sectionRegExp, replaceCb)));
