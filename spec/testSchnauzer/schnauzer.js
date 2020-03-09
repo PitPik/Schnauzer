@@ -48,7 +48,6 @@ var Schnauzer = function(template, options) {
     self: 'self',
     nameCharacters: '$<>%',
     escapeHTML: true,
-    resetPartialScope: true,
     renderHook: null,
   };
   initSchnauzer(this, options || {}, template);
@@ -209,7 +208,6 @@ function pushAlias(tagData, variable, obj, key, value) {
 
 function renderPartial(_this, data, model, tagData) {
   collectValues(_this, data, model, tagData.vars, model.scopes[0].helpers, []);
-  if (_this.options.resetPartialScope) model.scopes = [model.scopes[0]];
   return data.value(model);
 }
 
