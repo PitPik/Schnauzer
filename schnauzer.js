@@ -267,13 +267,10 @@ function renderWith(_this, data, model, tagData, bodyFns) {
   var variable = tagData.root.variable;
   var scope0 = model.scopes[0];
   var level = cloneObject({'.': data.value, 'this': data.value}, scope0.level);
-  var out = '';
 
   model.scopes = shiftScope(model.scopes, data.value, {'@parent': scope0.scope},
     pushAlias(tagData, variable, level, variable.value, data.value), false);
-  out = bodyFns[0].bodyFn(model);
-  model.scopes.shift();
-  return out;
+  return [bodyFns[0].bodyFn(model), model.scopes.shift()][0];
 }
 
 // ---- render blocks and inlines
@@ -358,11 +355,12 @@ function splitVars(text, collection) {
   return collection;
 }
 
-function parsePath(text, name) {
+function parsePath(text, name, string) {
   var isString = typeof text === 'string';
   var isDot = text === '.';
-  var parts = isString && !isDot ? text.split('../') : [];
-  var pathParts = isString && !isDot ? parts.pop().split(/[.\/]/) : [text];
+  var doOperate = isString && !isDot && !string;
+  var parts = doOperate ? text.split('../') : [];
+  var pathParts = doOperate ? parts.pop().split(/[.\/]/) : [text];
 
   if (parts[0] === '@') { // HBS transform
     pathParts[parts.length - 1] = parts[0] + pathParts[parts.length - 1];
@@ -396,8 +394,8 @@ function getVar(item) {
   }
   split = item.split('='); // /([=!<>]+)/
   out.variable = split[1] ?
-    parsePath(convertValue(split[1], out), split[0]) :
-    parsePath(convertValue(split[0], out), '');
+    parsePath(convertValue(split[1], out), split[0], out.isString) :
+    parsePath(convertValue(split[0], out), '', out.isString);
   return out;
 }
 
