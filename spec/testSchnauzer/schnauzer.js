@@ -265,12 +265,11 @@ function renderEach(_this, data, model, tagData, bodyFns) {
 
 function renderWith(_this, data, model, tagData, bodyFns) {
   var variable = tagData.root.variable;
-  var level = cloneObject({ '.': data.value, 'this': data.value },
-    model.scopes[0].level);
+  var scope0 = model.scopes[0];
+  var level = cloneObject({'.': data.value, 'this': data.value}, scope0.level);
   var out = '';
 
-  model.scopes = shiftScope(model.scopes, data.value,
-    { '@parent': model.scopes[0].scope },
+  model.scopes = shiftScope(model.scopes, data.value, {'@parent': scope0.scope},
     pushAlias(tagData, variable, level, variable.value, data.value), false);
   out = bodyFns[0].bodyFn(model);
   model.scopes.shift();
