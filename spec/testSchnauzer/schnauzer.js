@@ -506,14 +506,10 @@ function doBlock(_this, blocks, start, end, close, body, type, root, vars) {
 }
 
 function sizzleBlocks(_this, text, blocks) {
-  var name = '';
   var replaceCb = function($, start, type, root, vars, end, body, $$, close) {
-    if (type === '#*') {
-      _this.partials[name = vars.replace(/['"]/g, '')] = _this.partials[name] ||
-        sizzleBlocks(_this, body, blocks);
-      return '';
-    }
-    return doBlock(_this, blocks, start, end, close, body, type, root, vars);
+    return type === '#*' ? _this.registerPartial(vars.replace(/['"]/g, ''),
+        sizzleBlocks(_this, body, blocks)) && '' :
+      doBlock(_this, blocks, start, end, close, body, type, root, vars);
   };
 
   while (text !== (text = text.replace(_this.sectionRegExp, replaceCb)));
