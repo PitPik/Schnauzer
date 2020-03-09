@@ -94,7 +94,7 @@ return Schnauzer;
 
 function switchTags(_this, tags) {
   var tgs = tags[0] === '{{' ? ['({{2,3}~*)', '(~*}{2,3})'] : tags;
-  var chars = _this.options.nameCharacters + '!-;=?@';
+  var chars = _this.options.nameCharacters + '!-;=?@[-`|~';
   var blockEnd = (tgs[0] + '\\/\\3' + tgs[1]).replace(/[()]/g, '');
 
   _this.inlineRegExp = new RegExp(tgs[0] + '([>!&=])*\\s*([\\w\\' +
