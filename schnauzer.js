@@ -464,15 +464,12 @@ function sizzleInlines(_this, text, blocks, tags) {
 // ---- sizzle blocks
 
 function processBodyParts(_this, bodyFns, parts, blocks, mainStart, _trims) {
-  var trims = [];
-  var prevTrim = false;
-
-  for (var n = 0, l = parts.length; n < l; n += 4) {
-    prevTrim = trims[1] !== undefined ? trims[1] : _trims[0];
+  for (var n = 0, l = parts.length, prev = false, trims = []; n < l; n += 4) {
+    prev = trims[1] !== undefined ? trims[1] : _trims[0];
     trims = parts[1 + n] ? getTrims(parts[1 + n], parts[3 + n]) : [_trims[1]];
     bodyFns.push(getTagData(_this, parts[2 + n - 4] || '', '', '',
       n !== 0 ? parts[1 + n - 4] || '' : mainStart,
-      sizzleInlines(_this, trim(parts[n], prevTrim, trims[0]), blocks, [])));
+      sizzleInlines(_this, trim(parts[n], prev, trims[0]), blocks, [])));
   }
   return bodyFns;
 }
