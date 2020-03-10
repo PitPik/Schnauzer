@@ -98,7 +98,7 @@ function switchTags(_this, tags) {
   var blockEnd = (tgs[0] + '\\/\\3' + tgs[1]).replace(/[()]/g, '');
 
   _this.inlineRegExp = new RegExp(tgs[0] + '([>!&=])*\\s*([\\w\\' +
-    chars + '\\.]+)\\s*([\\w' + chars + '<>|\\.\\s]*)' + tgs[1], 'g');
+    chars + '<>|\\.\\s]*)' + tgs[1], 'g');
   _this.sectionRegExp = new RegExp(tgs[0] + '([#^][*%]*)\\s*([\\w' +
     chars + '~]*)(?:\\s+([\\w$\\s|./' + chars + ']*))*' + tgs[1] +
     '((?:(?!' + tgs[0] + '[#])[\\S\\s])*?)(' + blockEnd + ')', 'g');
@@ -164,7 +164,7 @@ function getData(_this, model, tagData) {
   var partial = tagData.isPartial && _this.partials[key] || null;
   var tmp = '';
   var value = variable.root ? getHelperData(_this, model, root) :
-    root.isString || variable.isLiteral ? key :
+    (root.isString && variable.name) || variable.isLiteral ? key :
     (tmp = getDeepData(scope.level || {}, variable)) !== undefined ? tmp :
     (tmp = getDeepData(scope.helpers || {}, variable)) !== undefined ? tmp :
     (tmp = getDeepData(scopeData, variable)) !== undefined ? tmp :
@@ -443,18 +443,17 @@ function getTagData(_this, root, vars, type, start, bodyFn) {
 // ---- sizzle inlines
 
 function sizzleInlines(_this, text, blocks, tags) {
-  var trims = [];
   var glues = [];
   var parts = text.split(_this.inlineRegExp);
 
-  for (var n = 0, l = parts.length, root = '', vars = ''; n < l; n += 6) {
+  for (var n = 0, l = parts.length, vars = '', trims = []; n < l; n += 5) {
     if (parts[2 + n] && /^(?:!|=)/.test(parts[2 + n])) continue;
-    root = parts[3 + n] || '';
-    vars = parts[4 + n] || '';
-    trims = getTrims(!n ? '' : parts[5 + n - 6], !root ? '' : parts[1 + n]);
+    vars = parts[3 + n] || '';
+    trims = getTrims(!n ? '' : parts[4 + n - 5], !vars ? '' : parts[1 + n]);
     glues.push(trim(parts[n], trims[0], trims[1]));
-    root && tags.push(root === '-block-' ? { blockIndex: +vars } :
-      getTagData(_this, root, vars, parts[2 + n] || '', parts[1 + n], null));
+    vars && tags.push(vars.indexOf('-block-') !== -1 ?
+      { blockIndex: +vars.substr(8) } :
+      getTagData(_this, vars, '', parts[2 + n] || '', parts[1 + n], null));
   }
   return function executeInlines(data) {
     return renderInlines(_this, tags, glues, blocks, data);
