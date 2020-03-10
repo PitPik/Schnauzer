@@ -442,8 +442,7 @@ function getTagData(_this, root, vars, type, start, bodyFn) {
 
 // ---- sizzle inlines
 
-function sizzleInlines(_this, text, blocks, tags) {
-  var glues = [];
+function sizzleInlines(_this, text, blocks, tags, glues) {
   var parts = text.split(_this.inlineRegExp);
 
   for (var n = 0, l = parts.length, vars = '', trims = []; n < l; n += 5) {
@@ -468,7 +467,7 @@ function processBodyParts(_this, bodyFns, parts, blocks, mainStart, _trims) {
     trims = parts[1 + n] ? getTrims(parts[1 + n], parts[3 + n]) : [_trims[1]];
     bodyFns.push(getTagData(_this, parts[2 + n - 4] || '', '', '',
       n !== 0 ? parts[1 + n - 4] || '' : mainStart,
-      sizzleInlines(_this, trim(parts[n], prev, trims[0]), blocks, [])));
+      sizzleInlines(_this, trim(parts[n], prev, trims[0]), blocks, [], [])));
   }
   return bodyFns;
 }
@@ -494,7 +493,7 @@ function sizzleBlocks(_this, text, blocks) {
   };
 
   while (text !== (text = text.replace(_this.sectionRegExp, replaceCb)));
-  return sizzleInlines(_this, text, blocks, []);
+  return sizzleInlines(_this, text, blocks, [], []);
 }
 
 }));
