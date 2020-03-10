@@ -426,7 +426,7 @@ function processVars(vars, collection, root) {
 function getTagData(_this, root, vars, type, start, bodyFn) {
   var varsArr = splitVars(root + (vars ? ' ' + vars : ''), []);
   var _root = varsArr.shift() || '';
-  var helper = /if|each|with|unless/.test(_root) ? _root : '';
+  var helper = /^(?:if|each|with|unless)$/.test(_root) ? _root : '';
   var active = getActiveState(_root = helper ? varsArr.shift() || '' : _root);
 
   return bodyFn && !_root ? { bodyFn: bodyFn } : {
