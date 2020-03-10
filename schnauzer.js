@@ -94,13 +94,13 @@ return Schnauzer;
 
 function switchTags(_this, tags) {
   var tgs = tags[0] === '{{' ? ['({{2,3}~*)', '(~*}{2,3})'] : tags;
-  var chars = _this.options.nameCharacters + '!-;=?@[-`|~';
+  var chars = _this.options.nameCharacters + '!-;=?@[-`|';
   var blockEnd = (tgs[0] + '\\/\\3' + tgs[1]).replace(/[()]/g, '');
 
   _this.inlineRegExp = new RegExp(tgs[0] + '([>!&=])*\\s*([\\w\\' +
     chars + '\\.]+)\\s*([\\w' + chars + '|\\.\\s]*)' + tgs[1], 'g');
   _this.sectionRegExp = new RegExp(tgs[0] + '([#^][*%]*)\\s*([\\w' +
-    chars + ']*)(?:\\s+([\\w$\\s|./' + chars + ']*))*' + tgs[1] +
+    chars + '~]*)(?:\\s+([\\w$\\s|./' + chars + ']*))*' + tgs[1] +
     '((?:(?!' + tgs[0] + '[#])[\\S\\s])*?)(' + blockEnd + ')', 'g');
   _this.elseSplitter = new RegExp(tgs[0] + '(?:else|\\^)\\s*(.*?)' + tgs[1]);
 }
@@ -463,7 +463,7 @@ function sizzleInlines(_this, text, blocks, tags) {
 
 // ---- sizzle blocks
 
-function processBodyParts(_this, bodyFns, parts, blocks, mainStartTag) {
+function processBodyParts(_this, bodyFns, parts, blocks, mainStart, _trims) {
   var trims = [];
   var prevTagData = '';
   var prevTrim = false;
@@ -471,15 +471,15 @@ function processBodyParts(_this, bodyFns, parts, blocks, mainStartTag) {
 
   for (var n = 0, l = parts.length; n < l; n += 4) {
     prevTagData = parts[2 + n - 4] || '';
-    separator = prevTagData ? prevTagData.indexOf(' ') : 0,
-    prevTrim = trims[1] || false;
-    trims = parts[1 + n] ? getTrims(parts[1 + n], parts[3 + n]) : [false];
+    separator = prevTagData ? prevTagData.indexOf(' ') : 0;
+    prevTrim = trims[1] !== undefined ? trims[1] : _trims[0];
+    trims = parts[1 + n] ? getTrims(parts[1 + n], parts[3 + n]) : [_trims[1]];
     bodyFns.push(getTagData(
       _this,
       prevTagData ? prevTagData.substr(0, separator) : '',
       prevTagData ? prevTagData.substr(separator) : '',
       '',
-      n !== 0 ? parts[1 + n - 4] || '' : mainStartTag,
+      n !== 0 ? parts[1 + n - 4] || '' : mainStart,
       sizzleInlines(_this, trim(parts[n], prevTrim, trims[0]), blocks, [])
     ));
   }
@@ -489,8 +489,8 @@ function processBodyParts(_this, bodyFns, parts, blocks, mainStartTag) {
 function doBlock(_this, blocks, start, end, close, body, type, root, vars) {
   var closeParts = close.split(root);
   var trims = getTrims(end, closeParts[0]);
-  var bodyParts = trim(body, trims[0], trims[1]).split(_this.elseSplitter);
-  var bodyFns = processBodyParts(_this, [], bodyParts, blocks, start);
+  var bodyParts = body.split(_this.elseSplitter);
+  var bodyFns = processBodyParts(_this, [], bodyParts, blocks, start, trims);
   var tagData = getTagData(_this, root, vars, type || '', start, null);
 
   blocks.push(function executeBlock(model) {
