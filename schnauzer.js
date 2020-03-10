@@ -197,7 +197,7 @@ function collectValues(_this, data, model, vars, obj, arr, restore) {
   return { obj: obj, arr: arr, restore: restore };
 }
 
-function restoreData(vars, data, obj) {
+function restoreValues(vars, data, obj) {
   for (var n = 0, l = vars.length, key = ''; n < l; n++) {
     key = vars[n].variable.name;
     obj[key] = data.restore[key];
@@ -218,7 +218,7 @@ function renderPartial(_this, data, model, tagData) {
   var helpers = model.scopes[0].helpers;
   var restore = collectValues(_this, data, model, tagData.vars, helpers,[],{});
 
-  return [data.value(model), restoreData(tagData.vars, restore, helpers)][0];
+  return [data.value(model), restoreValues(tagData.vars, restore, helpers)][0];
 }
 
 function renderHelper(_this, data, model, tagData, bodyFns) {
