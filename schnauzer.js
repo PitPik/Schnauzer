@@ -183,17 +183,25 @@ function getValue(_this, data, model, tagData, bodyFn) {
     renderHelper(_this, data, model, tagData, [{bodyFn: bodyFn}]) : data.value;
 }
 
-function collectValues(_this, data, model, vars, obj, arr) {
+function collectValues(_this, data, model, vars, obj, arr, restore) {
   for (var n = vars.length, item = {}, key = '', scp = null, iVar = ''; n--; ) {
     item = vars[n];
     iVar = item.variable;
     scp = !!iVar.root ? getValue(_this, data, model, iVar, null) : null;
     key = scp || !iVar.name ? ('$' + n) : iVar.name;
+    if (iVar.name) restore[key] = obj[key];
     obj[key] = scp || getData(_this, model, { root: item }).value;
     arr.push(obj[key]);
     if (item.isAlias) model.scopes[0].level[key] = obj[key];
   }
-  return { obj: obj, arr: arr };
+  return { obj: obj, arr: arr, restore: restore };
+}
+
+function restoreData(vars, data, obj) {
+  for (var n = 0, l = vars.length, key = ''; n < l; n++) {
+    key = vars[n].variable.name;
+    obj[key] = data.restore[key];
+  }
 }
 
 function pushAlias(tagData, variable, obj, key, value) {
@@ -207,8 +215,10 @@ function pushAlias(tagData, variable, obj, key, value) {
 // ---- render blocks/inlines helpers (std. HBS helpers)
 
 function renderPartial(_this, data, model, tagData) {
-  collectValues(_this, data, model, tagData.vars, model.scopes[0].helpers, []);
-  return data.value(model);
+  var helpers = model.scopes[0].helpers;
+  var restore = collectValues(_this, data, model, tagData.vars, helpers,[],{});
+
+  return [data.value(model), restoreData(tagData.vars, restore, helpers)][0];
 }
 
 function renderHelper(_this, data, model, tagData, bodyFns) {
@@ -224,7 +234,7 @@ function renderHelper(_this, data, model, tagData, bodyFns) {
       return getData(_this, model, { root: getVar(key) }).value;
     },
     escape: function(string) { return escapeHtml(string, _this, true) },
-  }, collectValues(_this, data, model, tagData.vars, {}, []).arr);
+  }, collectValues(_this, data, model, tagData.vars, {}, [], {}).arr);
 }
 
 function renderIfUnless(_this, data, model, tagData, bodyFns) {
