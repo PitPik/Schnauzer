@@ -207,7 +207,7 @@ function restoreData(vars, data, obj) {
 function pushAlias(tagData, variable, obj, key, value) {
   if (tagData.root.isAlias) {
     obj[variable.name || variable.value] = value;
-    obj[tagData.root.aliasKey || '@key'] = key;
+    if (key !== undefined) obj[tagData.root.aliasKey || '@key'] = key;
   }
   return obj;
 }
@@ -279,7 +279,7 @@ function renderWith(_this, data, model, tagData, bodyFns) {
   var level = cloneObject({'.': data.value, 'this': data.value}, scope0.level);
 
   model.scopes = shiftScope(model.scopes, data.value, {'@parent': scope0.scope},
-    pushAlias(tagData, variable, level, variable.value, data.value), false);
+    pushAlias(tagData, variable, level, undefined, data.value), false);
   return [bodyFns[0].bodyFn(model), model.scopes.shift()][0];
 }
 
