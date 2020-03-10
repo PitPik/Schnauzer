@@ -406,8 +406,8 @@ function processAlias(out, vars, n, key) { // TODO: clean up
   out.variable.name = cleanText(vars[n]);
   out.aliasKey = key;
   out.isAlias = true;
-  if (vars[n + 2] === '|') n++;
   if (key) n++;
+  if (vars[n + 1] === '|') n++;
   return n;
 }
 
