@@ -461,10 +461,10 @@ function sizzleInlines(_this, text, blocks, tags, glues) {
 
 // ---- sizzle blocks
 
-function processBodyParts(_this, bodyFns, parts, blocks, mainStart, _trims) {
+function processBodyParts(_this, parts, blocks, mainStart, blkTrims, bodyFns) {
   for (var n = 0, l = parts.length, prev = false, trims = []; n < l; n += 4) {
-    prev = trims[1] !== undefined ? trims[1] : _trims[0];
-    trims = parts[1 + n] ? getTrims(parts[1 + n], parts[3 + n]) : [_trims[1]];
+    prev = trims[1] !== undefined ? trims[1] : blkTrims[0];
+    trims = parts[1 + n] ? getTrims(parts[1 + n], parts[3 + n]) : [blkTrims[1]];
     bodyFns.push(getTagData(_this, parts[2 + n - 4] || '', '', '',
       n !== 0 ? parts[1 + n - 4] || '' : mainStart,
       sizzleInlines(_this, trim(parts[n], prev, trims[0]), blocks, [], [])));
@@ -474,10 +474,9 @@ function processBodyParts(_this, bodyFns, parts, blocks, mainStart, _trims) {
 
 function doBlock(_this, blocks, start, end, close, body, type, root, vars) {
   var closeParts = close.split(root);
-  var trims = getTrims(end, closeParts[0]);
-  var bodyParts = body.split(_this.elseSplitter);
-  var bodyFns = processBodyParts(_this, [], bodyParts, blocks, start, trims);
   var tagData = getTagData(_this, root, vars, type || '', start, null);
+  var bodyFns = processBodyParts(_this, body.split(_this.elseSplitter),
+    blocks, start, getTrims(end, closeParts[0]), []);
 
   blocks.push(function executeBlock(model) {
     return renderBlock(_this, tagData, model, bodyFns);
