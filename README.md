@@ -91,10 +91,10 @@ new Schnauzer(template: string, options: { [key: string]: any }) {
 .render(data { [key: string]: any }, extraData { [key: string]: any }): string
 .parse(text: string): Function
 .registerHelper(name: string, func: Function): void
-.unregisterHelper(name: string)
-.registerPartial(name: string, html: string : Function)
-.unregisterPartial(name: string)
-.setTags(tags: [string, string])
+.unregisterHelper(name: string): void
+.registerPartial(name: string, html: string : Function): Function
+.unregisterPartial(name: string): void
+.setTags(tags: [string, string]): void
 ```
 `parse()` is only needed if the template was not passed to `Schnauzer()` in the first place. This might be handy if you're not sure if this template will ever be used...
 
