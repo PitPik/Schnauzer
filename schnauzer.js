@@ -171,12 +171,10 @@ function getData(_this, model, tagData) {
     (tmp = getDeepData(scopeData, variable)) !== undefined ? tmp :
     helper || partial || (scopeData[key] !== undefined ? scopeData[key] :
     getDeepData(model.extra, variable));
+  var type = value === undefined ? '' : helper ? 'helper' :
+    partial ? 'partial' : typeof value;
 
-  return {
-    value: value,
-    type: value === undefined ? '' : helper ? 'helper' :
-      partial ? 'partial' : typeof value,
-  };
+  return { value: value, type: type };
 }
 
 function getValue(_this, data, model, tagData, bodyFn) {
