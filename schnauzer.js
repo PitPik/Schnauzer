@@ -174,8 +174,8 @@ function getData(_this, model, tagData) {
 
   return {
     value: value,
-    type: value === undefined ? '' : helper ? 'helper' : partial ? 'partial' :
-      typeof value === 'object' ? 'object' : 'literal',
+    type: value === undefined ? '' : helper ? 'helper' :
+      partial ? 'partial' : typeof value,
   };
 }
 
@@ -290,7 +290,8 @@ function renderInline(_this, data, model, tagData) {
       renderPartial(_this, data, model, tagData) :
       escapeHtml(data.type === 'helper' || isFunction(data.value) ?
         renderHelper(_this, data, model, tagData, []) : data.value,
-      _this, tagData.isEscaped));
+      _this, data.type !== 'boolean' &&  data.type !== 'number' &&
+      tagData.isEscaped));
 }
 
 function renderInlines(_this, tags, glues, blocks, model) {
