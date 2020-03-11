@@ -100,8 +100,8 @@ function switchTags(_this, tags) {
   _this.inlineRegExp = new RegExp(tgs[0] + '([>!&=])*\\s*([\\w\\' +
     chars + '<>|\\.\\s]*)' + tgs[1], 'g');
   _this.sectionRegExp = new RegExp(tgs[0] + '([#^][*%]*)\\s*([\\w' +
-    chars + '~]*)(?:\\s+([\\w$\\s|./' + chars + ']*))*' + tgs[1] +
-    '((?:(?!' + tgs[0] + '[#])[\\S\\s])*?)(' + blockEnd + ')', 'g');
+    chars + '~]*)(?:\\s+([\\w$\\s|.\\/' + chars + ']*))*' + tgs[1] +
+    '((?:(?!' + tgs[0] + '[#])[\\S\\s])*?)(?:\\s*)(' + blockEnd + ')', 'g');
   _this.elseSplitter = new RegExp(tgs[0] + '(?:else|\\^)\\s*(.*?)' + tgs[1]);
 }
 
@@ -276,7 +276,7 @@ function renderWith(_this, data, model, tagData, bodyFns) {
   return [bodyFns[0](model), model.scopes.shift()][0];
 }
 
-// ---- render blocks and inlines
+// ---- render blocks and inlines; delegations only
 
 function render(_this, data, model, tagData, isBlock, out) {
   return _this.options.renderHook ? _this.options.renderHook
