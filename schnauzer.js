@@ -102,8 +102,8 @@ function switchTags(_this, tags) {
   _this.sectionRegExp = new RegExp(tgs[0] + '([#^][*%]*)\\s*([\\w' +
     chars + '~]*)(?:\\s+([\\w$\\s|.\\/' + chars + ']*))*' + tgs[1] +
     '((?:(?!' + tgs[0] + '[#])[\\S\\s])*?)(?:\\s*)(' + blockEnd + ')', 'g');
-  _this.elseSplitter = new RegExp('(?:\\s*)' + tgs[0] +
-    '(?:else|\\^)\\s*(.*?)' + tgs[1]);
+  _this.elseSplitter = new RegExp(tgs[0] + '(?:else|\\^)\\s*(.*?)' +
+    tgs[1] + '(?:\\s*)');
 }
 
 // ---- render data helpers
