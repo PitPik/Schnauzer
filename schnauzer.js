@@ -180,7 +180,7 @@ function getData(_this, model, tagData) {
 
 function getValue(_this, data, model, tagData, bodyFn) {
   return data.type === 'helper' || isFunction(data.value) ?
-    renderHelper(_this, data, model, tagData, [{bodyFn: bodyFn}]) : data.value;
+    renderHelper(_this, data, model, tagData, [bodyFn]) : data.value;
 }
 
 function collectValues(_this, data, model, vars, obj, arr, restore) {
@@ -221,7 +221,7 @@ function renderHelper(_this, data, model, tagData, bodyFns) {
     rootScope: model.scopes[model.scopes.length - 1].scope,
     getBody: function(alt) {
       var idx = !!alt ? 1 : 0;
-      return bodyFns[idx] ? bodyFns[idx].bodyFn(model) : '';
+      return bodyFns[idx] ? bodyFns[idx](model) : '';
     },
     getData: function(key) {
       return getData(_this, model, { root: getVar(key) }).value;
@@ -243,7 +243,7 @@ function renderIfUnless(_this, data, model, tagData, bodyFns) {
     data = item.root ? getData(_this, model, item) : { value: cond };
     value = getValue(_this, data, model, item, item.bodyFn);
   }
-  return result ? item.bodyFn(model) : '';
+  return result ? item(model) : '';
 }
 
 function renderEach(_this, data, model, tagData, bodyFns) {
@@ -260,7 +260,7 @@ function renderEach(_this, data, model, tagData, bodyFns) {
       pushAlias(tagData, tagData.root.variable, {}, key, data.value[key]),
       !!n
     );
-    out += bodyFns[0].bodyFn(model);
+    out += bodyFns[0](model);
   }
   model.scopes.shift();
   return out;
@@ -273,7 +273,7 @@ function renderWith(_this, data, model, tagData, bodyFns) {
 
   model.scopes = shiftScope(model.scopes, data.value, {'@parent': scope0.scope},
     pushAlias(tagData, variable, level, undefined, data.value), false);
-  return [bodyFns[0].bodyFn(model), model.scopes.shift()][0];
+  return [bodyFns[0](model), model.scopes.shift()][0];
 }
 
 // ---- render blocks and inlines
@@ -432,7 +432,7 @@ function getTagData(_this, root, vars, type, start, bodyFn) {
   var helper = /^(?:if|each|with|unless)$/.test(_root) ? _root : '';
   var active = getActiveState(_root = helper ? varsArr.shift() || '' : _root);
 
-  return bodyFn && !_root ? { bodyFn: bodyFn } : {
+  return bodyFn && !_root ? bodyFn : {
     root: _root = getVar(_root.substr(active)),
     isPartial: type === '>',
     isEscaped: start.lastIndexOf(_this.options.tags[0]) < 1,
