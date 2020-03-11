@@ -69,7 +69,7 @@ In this example `Schnauzer()` is initialized with the template as first argument
 ## API
 
 ```js
-new Schnauzer(template /*String*/, options /*Object*/ {
+new Schnauzer(template: string, options: { [key: string]: any }) {
     tags: ['{{', '}}'], // used tags: default is {{}}
     entityMap: { // characters to be escaped
       '&': '&amp;',
@@ -81,19 +81,20 @@ new Schnauzer(template /*String*/, options /*Object*/ {
       '`': '&#x60;',
       '=': '&#x3D;'
     },
-    doEscape: true, // if set to false it reacts like {{{}}}
+    escapeHTML: true, // if set to false it reacts like {{{}}}
     helpers: {}, // name:function pair defining helpers
     partials: {}, // name:String pair defining partials
-    recursion: 'self', // name of initial partial
-    characters: '', // whitelist of chars for variables inside helpers, partials, functions...
+    self: 'self', // name of initial partial
+    nameCharacters: '', // whitelist of chars for variables inside helpers, partials, functions...
+    renderHook: Function
 })
-.render(data /*Object*/, extraData /*Object|Array*/) // => returns String
-.parse(text /*String*/)
-.registerHelper(name /*String*/, func  /*Function*/)
-.unregisterHelper(name /*String*/)
-.registerPartial(name /*String*/, html  /*String*/)
-.unregisterPartial(name /*String*/)
-.setTags(tags /*Array*/)
+.render(data { [key: string]: any }, extraData { [key: string]: any }): string
+.parse(text: string): Function
+.registerHelper(name: string, func: Function): void
+.unregisterHelper(name: string)
+.registerPartial(name: string, html: string : Function)
+.unregisterPartial(name: string)
+.setTags(tags: [string, string])
 ```
 `parse()` is only needed if the template was not passed to `Schnauzer()` in the first place. This might be handy if you're not sure if this template will ever be used...
 
