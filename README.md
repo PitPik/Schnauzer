@@ -72,7 +72,7 @@ new Schnauzer(template: string, options: { [key: string]: any }) {
 .parse(text: string): Function
 .registerHelper(name: string, func: Function): void
 .unregisterHelper(name: string): void
-.registerPartial(name: string, html: string : Function): Function
+.registerPartial(name: string, html: string): Function
 .unregisterPartial(name: string): void
 .setTags(tags: [string, string]): void
 ```
