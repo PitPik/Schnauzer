@@ -343,7 +343,7 @@ function cleanText(text, obj) {
   return text.replace(/^(?:this[/.]|\.\/)/, function($) {
     if ($) obj.isStrict = true;
     return '';
-  }).replace(/[[\]|]/g, '');
+  }).replace(/[[\]]/g, '');
 }
 
 function getActiveState(text) {
@@ -352,7 +352,7 @@ function getActiveState(text) {
 
 function splitVars(text, collection) {
   if (!text) return collection;
-  text.replace(/\(.*?\)|(?:\S*?"(?:\\.|[^\"])*\")|\S+/g, function(match) {
+  text.replace(/\(.*?\)|(?:\S*?("|\|)(?:\\.|[^\"])*?\1)|\S+/g, function(match) {
     if (match) collection.push(match); // TODO: regexp
   });
   return collection;
@@ -402,22 +402,18 @@ function getVar(item) {
   return out;
 }
 
-function processAlias(out, vars, n, key) { // TODO: clean up
-  if (vars[n] === '|') n++;
-  key = vars[n + 1] || '';
-  key = key.indexOf('|') !== -1 || vars[n + 2] === '|' ? cleanText(key) : '';
-  out.variable.name = cleanText(vars[n]);
-  out.aliasKey = key;
+function processAlias(out, text) {
+  var parts = text.replace(/\s*\|\s*/g, '').split(/\s+/);
+
+  out.variable.name = parts[0];
+  out.aliasKey = parts[1] || '';
   out.isAlias = true;
-  if (key) n++;
-  if (vars[n + 1] === '|') n++;
-  return n;
 }
 
 function processVars(vars, collection, root) {
   for (var n = 0, l = vars.length, out = root || {}; n < l; n++) {
     if (vars[n] === 'as') {
-      n = processAlias(out, vars, ++n, '');
+      processAlias(out, vars[++n], n++);
       continue;
     }
     out = getVar(vars[n]);
