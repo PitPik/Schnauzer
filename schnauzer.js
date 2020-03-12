@@ -413,7 +413,7 @@ function processAlias(out, text) {
 function processVars(vars, collection, root) {
   for (var n = 0, l = vars.length, out = root || {}; n < l; n++) {
     if (vars[n] === 'as') {
-      processAlias(out, vars[++n], n++);
+      processAlias(out, vars[++n]);
       continue;
     }
     out = getVar(vars[n]);
