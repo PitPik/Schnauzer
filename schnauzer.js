@@ -164,8 +164,7 @@ function getData(_this, model, tagData) {
     (tmp = getDeepData(scope.helpers || {}, variable)) !== undefined ? tmp :
     (tmp = getDeepData(scopeData, variable)) !== undefined ? tmp :
     helper || partial || (scopeData[key] !== undefined ? scopeData[key] :
-    root.isString ? key :
-    getDeepData(model.extra, variable));
+    root.isString ? key : getDeepData(model.extra, variable));
   var type = value === undefined ? '' : helper ? 'helper' :
     partial ? 'partial' : value.constructor === Array ? 'array' : typeof value;
 
