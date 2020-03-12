@@ -344,12 +344,12 @@ function getActiveState(text) {
   return text.charAt(1) === '%' ? 2 : text.charAt(0) === '%' ? 1 : 0;
 }
 
-function splitVars(text, collection) {
-  if (!text) return collection;
-  text.replace(/\(.*?\)|(?:\S*?("|\|)(?:\\.|[^\"])*?\1)|\S+/g, function(match) {
-    if (match) collection.push(match); // TODO: regexp
+function splitVars(text, out) {
+  if (!text) return out;
+  text.replace(/\(.*?\)|(?:("|\|).*?\1)|\S+/g, function(match) {
+    if (match) out.push(match);
   });
-  return collection;
+  return out;
 }
 
 function parsePath(text, name, string) {
