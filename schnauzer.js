@@ -6,9 +6,6 @@
   else global.Schnauzer = factory(global);
 }(this && this.window || global, function(global, undefined) { 'use strict';
 
-var isFunction = function(obj) {
-  return !!obj && obj.constructor === Function;
-};
 var isArray = Array.isArray || function(obj) {
   return !!obj && obj.constructor === Array;
 };
@@ -80,7 +77,7 @@ Schnauzer.prototype = {
   },
   registerPartial: function(name, text) {
     return this.partials[name] = this.partials[name] ||
-      (isFunction(text) ? text : sizzleBlocks(this, text, []));
+      (text.constructor === Function ? text : sizzleBlocks(this, text, []));
   },
   unregisterPartial: function(name) {
     delete this.partials[name];
@@ -165,11 +162,11 @@ function getData(_this, model, tagData) {
   var partial = tagData.isPartial && _this.partials[key] || null;
   var tmp = '';
   var value = variable.root ? getHelperData(_this, model, root) :
-    (root.isString && variable.name) || variable.isLiteral ? key :
     (tmp = getDeepData(scope.level || {}, variable)) !== undefined ? tmp :
     (tmp = getDeepData(scope.helpers || {}, variable)) !== undefined ? tmp :
     (tmp = getDeepData(scopeData, variable)) !== undefined ? tmp :
     helper || partial || (scopeData[key] !== undefined ? scopeData[key] :
+    root.isString || variable.name || variable.isLiteral ? key :
     getDeepData(model.extra, variable));
   var type = value === undefined ? '' : helper ? 'helper' :
     partial ? 'partial' : typeof value;
@@ -178,7 +175,7 @@ function getData(_this, model, tagData) {
 }
 
 function getValue(_this, data, model, tagData, bodyFn) {
-  return data.type === 'helper' || isFunction(data.value) ?
+  return data.type === 'helper' || data.type === 'function' ?
     renderHelper(_this, data, model, tagData, [{bodyFn: bodyFn}]) : data.value;
 }
 
@@ -286,7 +283,7 @@ function renderInline(_this, data, model, tagData) {
   return render(_this, data, model, tagData, false,
     data.value === undefined ? '' : tagData.isPartial ?
       renderPartial(_this, data, model, tagData) :
-      escapeHtml(data.type === 'helper' || isFunction(data.value) ?
+      escapeHtml(data.type === 'helper' || data.type === 'function' ?
         renderHelper(_this, data, model, tagData, []) : data.value,
       _this, data.type !== 'boolean' &&  data.type !== 'number' &&
       tagData.isEscaped));
@@ -306,7 +303,7 @@ function renderBlock(_this, tagData, model, bodyFns) {
   var data = getData(_this, model, tagData);
   var helper = tagData.helper;
   var isIfUnless = helper === 'if' || helper === 'unless';
-  var renderFn = data.type === 'helper' || isFunction(data.value) && !helper ?
+  var renderFn = data.type === 'helper' || data.type === 'function' && !helper ?
     renderHelper : isIfUnless || data.value === undefined ?
     renderIfUnless : helper === 'with' || !helper && !isArray(data.value) ?
     renderWith :
