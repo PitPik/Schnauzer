@@ -159,11 +159,12 @@ function getData(_this, model, tagData) {
   var partial = tagData.isPartial && _this.partials[key] || null;
   var tmp = '';
   var value = variable.root ? getHelperData(_this, model, root) :
+    (root.isString && variable.name) || variable.isLiteral ? key :
     (tmp = getDeepData(scope.level || {}, variable)) !== undefined ? tmp :
     (tmp = getDeepData(scope.helpers || {}, variable)) !== undefined ? tmp :
     (tmp = getDeepData(scopeData, variable)) !== undefined ? tmp :
     helper || partial || (scopeData[key] !== undefined ? scopeData[key] :
-    root.isString || variable.name || variable.isLiteral ? key :
+    root.isString ? key :
     getDeepData(model.extra, variable));
   var type = value === undefined ? '' : helper ? 'helper' :
     partial ? 'partial' : value.constructor === Array ? 'array' : typeof value;
