@@ -6,9 +6,6 @@
   else global.Schnauzer = factory(global);
 }(this && this.window || global, function(global, undefined) { 'use strict';
 
-var isArray = Array.isArray || function(obj) {
-  return !!obj && obj.constructor === Array;
-};
 var getObjectKeys = Object.keys || function(obj) {
   var fn = function(obj, key, keys) {obj.hasOwnProperty(key) && keys.push(key)};
   var keys = [];
@@ -169,7 +166,7 @@ function getData(_this, model, tagData) {
     root.isString || variable.name || variable.isLiteral ? key :
     getDeepData(model.extra, variable));
   var type = value === undefined ? '' : helper ? 'helper' :
-    partial ? 'partial' : typeof value;
+    partial ? 'partial' : value.constructor === Array ? 'array' : typeof value;
 
   return { value: value, type: type };
 }
@@ -244,7 +241,7 @@ function renderIfUnless(_this, data, model, tagData, bodyFns) {
 
 function renderEach(_this, data, model, tagData, bodyFns) {
   var out = '';
-  var isArr = isArray(data.value);
+  var isArr = data.type === 'array';
   var _data = isArr ? data.value || [] : getObjectKeys(data.value || {});
 
   for (var n = 0, l = _data.length, key = ''; n < l; n++) {
@@ -305,7 +302,7 @@ function renderBlock(_this, tagData, model, bodyFns) {
   var isIfUnless = helper === 'if' || helper === 'unless';
   var renderFn = data.type === 'helper' || data.type === 'function' && !helper ?
     renderHelper : isIfUnless || data.value === undefined ?
-    renderIfUnless : helper === 'with' || !helper && !isArray(data.value) ?
+    renderIfUnless : helper === 'with' || !helper && data.type !== 'array' ?
     renderWith :
     renderEach;
 
