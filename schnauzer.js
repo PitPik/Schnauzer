@@ -16,7 +16,7 @@ var cloneObject = function(obj, newObj) {
   var fn = function(obj, newObj, key) { newObj[key] = obj[key] };
   for (var key in obj) fn(obj, newObj, key);
   return newObj;
-}
+};
 var concatArrays = function(array, host) {
   for (var n = 0, l = array.length; n < l; n++) host[host.length] = array[n];
   return host;
@@ -277,21 +277,25 @@ function render(_this, data, model, tagData, isBlock, out) {
 }
 
 function renderInline(_this, data, model, tagData) {
-  return render(_this, data, model, tagData, false,
-    data.value === undefined ? '' : tagData.isPartial ?
-      renderPartial(_this, data, model, tagData) :
-      escapeHtml(data.type === 'helper' || data.type === 'function' ?
-        renderHelper(_this, data, model, tagData, []) : data.value,
-      _this, data.type !== 'boolean' &&  data.type !== 'number' &&
-      tagData.isEscaped));
+  return data.value === undefined ? '' : tagData.isPartial ?
+    renderPartial(_this, data, model, tagData) :
+    escapeHtml(data.type === 'helper' || data.type === 'function' ?
+      renderHelper(_this, data, model, tagData, []) : data.value,
+    _this, data.type !== 'boolean' &&  data.type !== 'number' &&
+    tagData.isEscaped);
 }
 
 function renderInlines(_this, tags, glues, blocks, model) {
-  for (var n = 0, l = glues.length, out = ''; n < l; n++) {
+  var out = '';
+
+  for (var n = 0, l = glues.length, data = {}, isBlock = false; n < l; n++) {
     out += glues[n];
     if (!tags[n]) continue;
-    out += tags[n].blockIndex > -1 ? blocks[tags[n].blockIndex](model) :
-      renderInline(_this, getData(_this, model, tags[n]), model, tags[n]);
+    isBlock = tags[n].blockIndex > -1;
+    data = isBlock ? null : getData(_this, model, tags[n] || {});
+    out += render(_this, data, model, tags[n], isBlock,
+      isBlock ? blocks[tags[n].blockIndex](model) : // TODO: check execute later
+      renderInline(_this, data, model, tags[n]));
   }
   return out;
 }
