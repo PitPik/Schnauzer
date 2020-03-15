@@ -134,12 +134,12 @@ function getScope(data, extra) {
   };
 }
 
-function getDeepData(data, mainVar) {
+function getDeepData(data, mainVar, getParent) {
   for (var n = 0, l = mainVar.path.length; n < l; n++) {
     data = data[mainVar.path[n]];
     if (!data) return;
   }
-  return data[mainVar.value];
+  return getParent ? data : data[mainVar.value];
 }
 
 function getHelperData(_this, model, root) {
@@ -264,8 +264,9 @@ function renderWith(_this, data, model, tagData, bodyFns) {
   var scope0 = model.scopes[0];
   var level = cloneObject({'.': data.value, 'this': data.value}, scope0.level);
 
-  model.scopes = shiftScope(model.scopes, data.value, {'@parent': scope0.scope},
-    pushAlias(tagData, variable, level, undefined, data.value), false);
+  model.scopes = shiftScope(model.scopes, data.value, {
+    '@parent': getDeepData(model.scopes[variable.parentDepth], variable, true),
+  }, pushAlias(tagData, variable, level, undefined, data.value), false);
   return [bodyFns[0].bodyFn(model), model.scopes.shift()][0];
 }
 
@@ -273,29 +274,30 @@ function renderWith(_this, data, model, tagData, bodyFns) {
 
 function render(_this, data, model, tagData, isBlock, out) {
   return _this.options.renderHook ? _this.options.renderHook
-    .call(_this, out, tagData, model, data, isBlock) : out;
+    .call(
+      _this, out, tagData, model, data, isBlock,
+      tagData.root ? tagData.root.variable.value : '',
+      model.scopes[0].level['@parent'] || model.scopes[0].scope
+    ) : out;
 }
 
 function renderInline(_this, data, model, tagData) {
-  return data.value === undefined ? '' : tagData.isPartial ?
-    renderPartial(_this, data, model, tagData) :
-    escapeHtml(data.type === 'helper' || data.type === 'function' ?
-      renderHelper(_this, data, model, tagData, []) : data.value,
-    _this, data.type !== 'boolean' &&  data.type !== 'number' &&
-    tagData.isEscaped);
+  return render(_this, data, model, tagData, false,
+    data.value === undefined ? '' : tagData.isPartial ?
+      renderPartial(_this, data, model, tagData) :
+      escapeHtml(data.type === 'helper' || data.type === 'function' ?
+        renderHelper(_this, data, model, tagData, []) : data.value,
+      _this, data.type !== 'boolean' &&  data.type !== 'number' &&
+      tagData.isEscaped));
 }
 
 function renderInlines(_this, tags, glues, blocks, model) {
-  var out = '';
-
-  for (var n = 0, l = glues.length, data = {}, isBlock = false; n < l; n++) {
+  for (var n = 0, l = glues.length, out = ''; n < l; n++) {
     out += glues[n];
     if (!tags[n]) continue;
-    isBlock = tags[n].blockIndex > -1;
-    data = isBlock ? null : getData(_this, model, tags[n] || {});
-    out += render(_this, data, model, tags[n], isBlock,
-      isBlock ? blocks[tags[n].blockIndex](model) : // TODO: check execute later
-      renderInline(_this, data, model, tags[n]));
+    out += renderInline(_this, tags[n].blockIndex > -1 ?
+      { value: blocks[tags[n].blockIndex](model), type: 'block' } :
+      getData(_this, model, tags[n]), model, tags[n]);
   }
   return out;
 }
