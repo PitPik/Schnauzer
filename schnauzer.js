@@ -273,12 +273,11 @@ function renderWith(_this, data, model, tagData, bodyFns) {
 // ---- render blocks and inlines; delegations only
 
 function render(_this, data, model, tagData, isBlock, out) {
-  return _this.options.renderHook ? _this.options.renderHook
-    .call(
-      _this, out, tagData, model, data, isBlock,
-      tagData.root ? tagData.root.variable.value : '',
-      model.scopes[0].level['@parent'] || model.scopes[0].scope
-    ) : out;
+  return _this.options.renderHook ? _this.options.renderHook.call(
+    _this, out, tagData, model, data, isBlock,
+    tagData.root ? tagData.root.variable.value : '',
+    model.scopes[0].level['@parent'] || model.scopes[0].scope
+  ) : out;
 }
 
 function renderInline(_this, data, model, tagData) {
