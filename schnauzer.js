@@ -208,7 +208,7 @@ function renderPartial(_this, data, model, tagData) {
 
 function renderHelper(_this, data, model, tagData, bodyFns) {
   return data.value.apply({
-    name: tagData.root.variable.value,
+    name: tagData.root ? tagData.root.variable.value : '',
     scope: model.scopes[0].scope,
     rootScope: model.scopes[model.scopes.length - 1].scope,
     getBody: function() {
