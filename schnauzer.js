@@ -25,6 +25,8 @@ var concatArrays = function(array, host) {
 var Schnauzer = function(template, options) {
   this.version = '1.5.0';
   this.partials = {};
+  this.helpers = {};
+  this.regexps = {};
   this.options = {
     tags: ['{{', '}}'],
     entityMap: {
@@ -48,10 +50,9 @@ var Schnauzer = function(template, options) {
 };
 
 var initSchnauzer = function(_this, options, template) {
-  for (var option in options) _this.options[option] = options[option];
-  options = _this.options;
+  options = cloneObject(options, _this.options);
   switchTags(_this, options.tags);
-  _this.entityRegExp =
+  _this.regexps.entity =
     new RegExp('[' + getObjectKeys(options.entityMap).join('') + ']', 'g');
   _this.helpers = options.helpers;
   for (var name in options.partials)
@@ -91,19 +92,19 @@ function switchTags(_this, tags) {
   var chars = _this.options.nameCharacters + '!-;=?@[-`|';
   var blockEnd = (tgs[0] + '\\/\\3' + tgs[1]).replace(/[()]/g, '');
 
-  _this.inlineRegExp = new RegExp(tgs[0] + '([>!&=])*\\s*([\\w\\' +
+  _this.regexps.inline = new RegExp(tgs[0] + '([>!&=])*\\s*([\\w\\' +
     chars + '<>|\\.\\s]*)' + tgs[1], 'g');
-  _this.sectionRegExp = new RegExp(tgs[0] + '([#^][*%]*)\\s*([\\w' +
+  _this.regexps.block = new RegExp(tgs[0] + '([#^][*%]*)\\s*([\\w' +
     chars + '~]*)(?:\\s+([\\w$\\s|.\\/' + chars + ']*))*' + tgs[1] +
     '(?:\\n*)((?:(?!' + tgs[0] + '[#])[\\S\\s])*?)(' + blockEnd + ')', 'g');
-  _this.elseSplitter = new RegExp(tgs[0] + '(?:else|\\^)\\s*(.*?)' + tgs[1]);
+  _this.regexps.else = new RegExp(tgs[0] + '(?:else|\\^)\\s*(.*?)' + tgs[1]);
 }
 
 // ---- render data helpers
 
 function escapeHtml(string, _this, doEscape) {
   return doEscape && _this.options.escapeHTML ?
-    String(string).replace(_this.entityRegExp, function(char) {
+    String(string).replace(_this.regexps.entity, function(char) {
       return _this.options.entityMap[char];
     }) : string;
 }
@@ -444,7 +445,7 @@ function getTagData(_this, root, vars, type, start, bodyFn) {
 // ---- sizzle inlines
 
 function sizzleInlines(_this, text, blocks, tags, glues) {
-  var parts = text.split(_this.inlineRegExp);
+  var parts = text.split(_this.regexps.inline);
 
   for (var n = 0, l = parts.length, vars = '', trims = []; n < l; n += 5) {
     if (parts[2 + n] && /^(?:!|=)/.test(parts[2 + n])) continue;
@@ -476,7 +477,7 @@ function processBodyParts(_this, parts, blocks, mainStart, blkTrims, bodyFns) {
 function doBlock(_this, blocks, start, end, close, body, type, root, vars) {
   var closeParts = close.split(root);
   var tagData = getTagData(_this, root, vars, type || '', start, null);
-  var bodyFns = processBodyParts(_this, body.split(_this.elseSplitter),
+  var bodyFns = processBodyParts(_this, body.split(_this.regexps.else),
     blocks, start, getTrims(end, closeParts[0]), []);
 
   blocks.push(function executeBlock(model) {
@@ -492,7 +493,7 @@ function sizzleBlocks(_this, text, blocks) {
       doBlock(_this, blocks, start, end, close, body, type, root, vars);
   };
 
-  while (text !== (text = text.replace(_this.sectionRegExp, replaceCb)));
+  while (text !== (text = text.replace(_this.regexps.block, replaceCb)));
   return sizzleInlines(_this, text, blocks, [], []);
 }
 
