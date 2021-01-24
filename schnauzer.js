@@ -1,4 +1,4 @@
-/**! @license schnauzer v1.5.0; Copyright (C) 2017-2020 by Peter Dematté */
+/**! @license schnauzer v1.5.1; Copyright (C) 2017-2021 by Peter Dematté */
 (function(global, factory) {
   if (typeof exports === 'object') module.exports = factory(global);
   else if (typeof define === 'function' && define.amd)
@@ -23,7 +23,7 @@ var concatArrays = function(array, host) {
 };
 
 var Schnauzer = function(template, options) {
-  this.version = '1.5.0';
+  this.version = '1.5.1';
   this.partials = {};
   this.helpers = {};
   this.regexps = {};
@@ -425,20 +425,20 @@ function processVars(vars, collection, root) {
   return collection;
 }
 
-function getTagData(_this, root, vars, type, start, bodyFn) {
-  var varsArr = splitVars(root + (vars ? ' ' + vars : ''), []);
-  var _root = varsArr.shift() || '';
-  var helper = /^(?:if|each|with|unless)$/.test(_root) ? _root : '';
-  var active = getActiveState(_root = helper ? varsArr.shift() || '' : _root);
+function getTagData(_this, vars, type, start, bodyFn) {
+  var varsArr = splitVars(vars, []);
+  var root = varsArr.shift() || '';
+  var helper = /^(?:if|each|with|unless)$/.test(root) ? root : '';
+  var active = getActiveState(root = helper ? varsArr.shift() || '' : root);
 
-  return bodyFn && !_root ? { bodyFn: bodyFn } : {
-    root: _root = getVar(_root.substr(active)),
+  return bodyFn && !root ? { bodyFn: bodyFn } : {
+    root: root = getVar(root.substr(active)),
     isPartial: type === '>',
     isEscaped: start.lastIndexOf(_this.options.tags[0]) < 1,
     helper: type === '^' ? 'unless' : helper,
-    vars: processVars(varsArr, [], _root),
-    active: active,
-    bodyFn: bodyFn || null,
+    vars: processVars(varsArr, [], root),
+    active: active, // TODO: ../../%foo
+    bodyFn: bodyFn || null, // bodyFn -> else if...
   };
 }
 
@@ -454,7 +454,7 @@ function sizzleInlines(_this, text, blocks, tags, glues) {
     glues.push(trim(parts[n], trims[0], trims[1]));
     vars && tags.push(vars.indexOf('-block-') !== -1 ?
       { blockIndex: +vars.substr(8) } :
-      getTagData(_this, vars, '', parts[2 + n] || '', parts[1 + n], null));
+      getTagData(_this, vars, parts[2 + n] || '', parts[1 + n], null));
   }
   return function executeInlines(data) {
     return renderInlines(_this, tags, glues, blocks, data);
@@ -467,7 +467,7 @@ function processBodyParts(_this, parts, blocks, mainStart, blkTrims, bodyFns) {
   for (var n = 0, l = parts.length, prev = false, trims = []; n < l; n += 4) {
     prev = trims[1] !== undefined ? trims[1] : blkTrims[0];
     trims = parts[1 + n] ? getTrims(parts[1 + n], parts[3 + n]) : [blkTrims[1]];
-    bodyFns.push(getTagData(_this, parts[2 + n - 4] || '', '', '',
+    bodyFns.push(getTagData(_this, parts[2 + n - 4] || '', '',
       n !== 0 ? parts[1 + n - 4] || '' : mainStart,
       sizzleInlines(_this, trim(parts[n], prev, trims[0]), blocks, [], [])));
   }
@@ -476,7 +476,8 @@ function processBodyParts(_this, parts, blocks, mainStart, blkTrims, bodyFns) {
 
 function doBlock(_this, blocks, start, end, close, body, type, root, vars) {
   var closeParts = close.split(root);
-  var tagData = getTagData(_this, root, vars, type || '', start, null);
+  var rootAndVars = root + (vars ? ' ' + vars : '');
+  var tagData = getTagData(_this, rootAndVars, type || '', start, null);
   var bodyFns = processBodyParts(_this, body.split(_this.regexps.else),
     blocks, start, getTrims(end, closeParts[0]), []);
 
