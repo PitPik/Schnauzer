@@ -147,9 +147,8 @@ function getDeepData(scope, mainVar, getParent) {
 
 function getData(_this, model, tagData) {
   if (!tagData || !tagData.vars) return [];
-  if (!tagData.helper && tagData.vars[0].orig &&_this.helpers[
-      tagData.helper.orig || !tagData.helper && tagData.vars[0].orig
-  ]) tagData.helper = tagData.vars.shift();
+  if (!tagData.helper && _this.helpers[tagData.vars[0].orig])
+    tagData.helper = tagData.vars.shift();
   for (var n = 0, l = tagData.vars.length, main = {}, scope = {}, value = '',
       out = []; n < l; n++) {
     main = tagData.vars[n];
