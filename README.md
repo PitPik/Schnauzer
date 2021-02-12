@@ -16,12 +16,6 @@ schnauzer.js ships with support for both the [CommonJS](http://www.commonjs.org/
 Schnauzer and Handlebars do almost the same thing, but there is a difference in size and performance. Schnauzer has almost the same power as Handlebars but the size of Mustache and a higher performance.
 Schnauzer does not throw errors when markup is not valid.
 
-### Helpers
-
-do the same in Schnauzer although the API is different. See below on how to make helpers.
-The ```this``` keyword is like the ```options``` in Handlebars helpers.
-The variables get passed as arguments to the function.
-Decorators are gone from this verion just like they are deprecated in Handlebars already.
 
 * * *
 
@@ -116,14 +110,15 @@ var data = {
 }
 
 function helper([$1, $2,...]) { // can also be passed as option or registered via .registerHelper()
-  var txt = this.encode($1);
+  var args = [];
+  var options = arguments[arguments.length - 1];
 
-  return txt + ' ' + this.getBody();
+  return $1 + ' ' + options.fn();
 }
 ```
 In this case you would get "This would be some text with some more meaning" in the block and "This would be  " if used as inline helper.
 $1 etc. represent the String passed with the block (here "foo").
-```this.getBody()``` is the text that was rendered if it was inside a block element (empty if inline usage), ```this.getAltBody()``` the block after an else (if exists, else undefined). If the body was split by several ```{{else}}``` sections, you can pass and index to the body function like ```this.getBody(1)```
+```options.fn()``` is the text that was rendered if it was inside a block element (empty if inline usage), ```options.inverse()``` the block after an else (if exists, else undefined).
 
 Inline helpers can be used for something like the following:
 
