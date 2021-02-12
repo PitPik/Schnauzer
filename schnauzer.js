@@ -87,6 +87,7 @@ Schnauzer.prototype = {
   setTags: function(tags) {
     switchTags(this, tags);
   },
+  escapeExpression: function(txt) { return escapeHtml(this, txt, true); },
 };
 
 return Schnauzer;
@@ -191,7 +192,6 @@ function getOptions(_this, model, tagData, data, newData, bodyFns) {
     options.fn = bodyFns[0].bodyFn;
     options.inverse = bodyFns[1] && bodyFns[1].bodyFn || noop;
   }
-  options.escapeExpression = function(txt){return escapeHtml(_this, txt, true)};
   return options;
 }
 
@@ -249,7 +249,7 @@ function renderConditions(_this, data, model, tagData, bodyFns, track) {
   var isIfUnless = false;
   var isLoop = false;
 
-  while(bodyFns[idx + 1] && !canGo) {
+  while (bodyFns[idx + 1] && !canGo) {
     bodyFn = bodyFns[++idx];
     helper = bodyFn.helper;
     cond = /^(?:if|each|with)$/.test(helper);
