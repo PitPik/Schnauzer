@@ -191,6 +191,7 @@ function getOptions(_this, model, tagData, data, newData, bodyFns) {
     options.fn = bodyFns[0].bodyFn;
     options.inverse = bodyFns[1] && bodyFns[1].bodyFn || noop;
   }
+  options.escapeExpression = function(txt){return escapeHtml(_this, txt, true)};
   return options;
 }
 
