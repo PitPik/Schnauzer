@@ -147,6 +147,9 @@ function getDeepData(scope, mainVar, getParent) {
 
 function getData(_this, model, tagData) {
   if (!tagData || !tagData.vars) return [];
+  if (!tagData.helper && tagData.vars[0].orig &&_this.helpers[
+      tagData.helper.orig || !tagData.helper && tagData.vars[0].orig
+  ]) tagData.helper = tagData.vars.shift();
   for (var n = 0, l = tagData.vars.length, main = {}, scope = {}, value = '',
       out = []; n < l; n++) {
     main = tagData.vars[n];
@@ -180,7 +183,7 @@ function getOptions(_this, model, tagData, data, newData, bodyFns) {
   var options = { name: name, hash: {}, data: {
     root: model.scopes[model.scopes.length - 1].scope,
   }};
-  
+
   for (var n = data.length; n--; ) {
     if (data[n].name) options.hash[data[n].name] = data[n].value;
     else newData.unshift(data[n].value);
@@ -210,8 +213,7 @@ function renderHelper(_this, data, model, tagData, bodyFns, track) {
   var newData = [];
 
   if (helperFn) return helperFn(_this, data, model, tagData, bodyFns, track);
-  if (data.length) newData.push(
-    getOptions(_this, model, tagData, data, newData, bodyFns));
+  newData.push(getOptions(_this, model, tagData, data, newData, bodyFns));
   return helper ? helper.apply(scope, newData) : '';
 }
 
