@@ -122,10 +122,6 @@ function createHelper(idx, key, len, value, parent) {
   };
 }
 
-function setSimpleHelper(model, data) {
-  model.scopes[0].helpers = createHelper('', '', 0, data, model.scopes[1]);
-}
-
 function shiftScope(scopes, data, helpers, level) {
   level = cloneObject(scopes[0].level, level);
   return concatArrays(scopes, [{scope: data, helpers: helpers, level: level}]);
@@ -267,7 +263,8 @@ function renderConditions(_this, data, model, tagData, bodyFns, track) {
       return main.type === 'array' || main.type === 'object' ?
         renderEach(_this, main.value, main, model, bodyFn.bodyFn) : '';
     }
-    setSimpleHelper(model, isVarOnly ? value : model.scopes[0].scope);
+    model.scopes[0].helpers = createHelper('', '', 0,
+      isVarOnly ? value : model.scopes[0].scope, model.scopes[1]);
   }
   return [canGo ? bodyFn.bodyFn(model) : '', shift && model.scopes.shift()][0];
 }
