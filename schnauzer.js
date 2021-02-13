@@ -68,26 +68,21 @@ Schnauzer.prototype = {
       scopes: [{ scope: data, helpers: helpers, level: { '@root': data } }],
     });
   },
-  parse: function(text) {
-    return this.registerPartial(this.options.self, text);
-  },
+  parse: function(txt) { return this.registerPartial(this.options.self, txt) },
   registerHelper: function(name, helperFn) {
-    this.helpers[name] = helperFn;
+    if (typeof name === 'string') return this.helpers[name] = helperFn;
+    for (var key in name) this.helpers[key] = name[key];
   },
-  unregisterHelper: function(name) {
-    delete this.helpers[name];
+  unregisterHelper: function(name) { delete this.helpers[name] },
+  registerPartial: function(name, txt) {
+    if (typeof name === 'string') return this.partials[name] =
+      this.partials[name] || (txt.constructor === Function ?
+        txt : sizzleBlocks(this, txt, []));
+    for (var key in name) this.registerPartial(key, name[key]);
   },
-  registerPartial: function(name, text) {
-    return this.partials[name] = this.partials[name] ||
-      (text.constructor === Function ? text : sizzleBlocks(this, text, []));
-  },
-  unregisterPartial: function(name) {
-    delete this.partials[name];
-  },
-  setTags: function(tags) {
-    switchTags(this, tags);
-  },
-  escapeExpression: function(txt) { return escapeHtml(this, txt, true); },
+  unregisterPartial: function(name) { delete this.partials[name] },
+  setTags: function(tags) { switchTags(this, tags) },
+  escapeExpression: function(txt) { return escapeHtml(this, txt, true) }
 };
 
 return Schnauzer;
@@ -131,10 +126,9 @@ function setSimpleHelper(model, data) {
   model.scopes[0].helpers = createHelper('', '', 0, data, model.scopes[1]);
 }
 
-function shiftScope(scopes, data, helpers, level, replace) {
+function shiftScope(scopes, data, helpers, level) {
   level = cloneObject(scopes[0].level, level);
-  data = { scope: data, helpers: helpers, level: level };
-  return replace ? (scopes[0] = data, scopes) : concatArrays(scopes, [data]);
+  return concatArrays(scopes, [{scope: data, helpers: helpers, level: level}]);
 }
 
 function getDeepData(scope, mainVar, getParent) {
@@ -166,7 +160,7 @@ function getData(_this, model, tagData) {
     if (value === undefined || value === '.' || value === 'this') {
       value = scope.helpers[main.value];
     }
-    if (value === undefined) value = model.extra[main.value];
+    if (value === undefined) value = model.extra[main.orig];
     out.push({
       value: value === undefined ? '' : value,
       alias: main.alias,
@@ -188,6 +182,7 @@ function getOptions(_this, model, tagData, data, newData, bodyFns) {
     if (data[n].name) options.hash[data[n].name] = data[n].value;
     else newData.unshift(data[n].value);
   }
+  options.escapeExpression = _this.escapeExpression;
   if (bodyFns) {
     options.fn = bodyFns[0].bodyFn;
     options.inverse = bodyFns[1] && bodyFns[1].bodyFn || noop;
@@ -225,7 +220,7 @@ function renderPartial(_this, data, model, tagData) {
   for (var n = 0, l = data.length; n < l; n++) {
     main = data[n];
     if (n === 0 && !main.name) {
-      model.scopes = shiftScope(model.scopes, data[0].value, {}, {}, false);
+      model.scopes = shiftScope(model.scopes, data[0].value, {}, {});
       shift = true;
     } else if (main.name) {
       model.scopes[0].level[main.name] = data[n].value;
@@ -266,7 +261,7 @@ function renderConditions(_this, data, model, tagData, bodyFns, track) {
   isLoop = helper === 'each' || (!isIfUnless && main.type === 'array');
   if (helper === 'with' || isLoop) {
     shift = true;
-    model.scopes = shiftScope(model.scopes, main.value, {}, {}, false);
+    model.scopes = shiftScope(model.scopes, main.value, {}, {});
     if (main.alias && !isLoop) model.scopes[0].level[main.alias[0]] = value;
     if (isLoop) {
       return main.type === 'array' || main.type === 'object' ?
