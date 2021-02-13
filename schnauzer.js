@@ -259,10 +259,7 @@ function renderConditions(_this, data, model, tagData, bodyFns, track) {
     shift = true;
     model.scopes = shiftScope(model.scopes, main.value, {}, {});
     if (main.alias && !isLoop) model.scopes[0].level[main.alias[0]] = value;
-    if (isLoop) {
-      return main.type === 'array' || main.type === 'object' ?
-        renderEach(_this, main.value, main, model, bodyFn.bodyFn) : '';
-    }
+    if (isLoop) return renderEach(_this, main.value, main, model, bodyFn.bodyFn);
     model.scopes[0].helpers = createHelper('', '', 0,
       isVarOnly ? value : model.scopes[0].scope, model.scopes[1]);
   }
@@ -273,7 +270,8 @@ function renderEach(_this, data, main, model, bodyFn) {
   var alias = main.alias;
   var scope = model.scopes[0];
   var isArr = main.type === 'array';
-  var _data = isArr ? data || [] : getObjectKeys(data);
+  var _data = main.type !== 'array' && main.type !== 'object' ? [] :
+    isArr ? data : getObjectKeys(data);
 
   for (var n = 0, l = _data.length, key = '', out = ''; n < l; n++) {
     key = '' + (isArr ? n : _data[n]);
