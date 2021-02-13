@@ -267,8 +267,8 @@ function renderConditions(_this, data, model, tagData, bodyFns, track) {
       return main.type === 'array' || main.type === 'object' ?
         renderEach(_this, main.value, main, model, bodyFn.bodyFn) : '';
     }
+    setSimpleHelper(model, isVarOnly ? value : model.scopes[0].scope);
   }
-  setSimpleHelper(model, isVarOnly ? value : model.scopes[0].scope);
   return [canGo ? bodyFn.bodyFn(model) : '', shift && model.scopes.shift()][0];
 }
 
