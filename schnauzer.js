@@ -111,9 +111,9 @@ function escapeHtml(_this, string, doEscape) {
 
 function createHelper(idx, key, len, value, parent) {
   return {
-    '@index': +idx,
-    '@last': +idx === len - 1,
-    '@first': +idx === 0,
+    '@index': idx,
+    '@last': idx === len - 1,
+    '@first': idx === 0,
     '@length': len,
     '@parent': parent,
     '@key': key,
@@ -265,24 +265,28 @@ function renderConditions(_this, data, model, tagData, bodyFns, track) {
     if (main.alias && !isLoop) model.scopes[0].level[main.alias[0]] = value;
     if (isLoop) {
       return main.type === 'array' || main.type === 'object' ?
-        renderEach(_this, main.value, model, bodyFn.bodyFn, main.alias) : '';
+        renderEach(_this, main.value, main, model, bodyFn.bodyFn) : '';
     }
   }
   setSimpleHelper(model, isVarOnly ? value : model.scopes[0].scope);
   return [canGo ? bodyFn.bodyFn(model) : '', shift && model.scopes.shift()][0];
 }
 
-function renderEach(_this, data, model, bodyFn, alias) {
+function renderEach(_this, data, main, model, bodyFn) {
+  var alias = main.alias;
   var scope = model.scopes[0];
-  var out = '';
-  var executor = function(n) {
-    scope.helpers = createHelper(n, n, data.length, data[n], data);
-    scope.scope = data[n];
-    if (alias) { scope.level[alias[0]] = data[n]; scope.level[alias[1]] = n; }
-    out += bodyFn(model);
-  };
+  var isArr = main.type === 'array';
+  var _data = isArr ? data || [] : getObjectKeys(data);
 
-  for (var n in data) executor(n);
+  for (var n = 0, l = _data.length, key = '', out = ''; n < l; n++) {
+    key = '' + (isArr ? n : _data[n]);
+    scope.helpers = createHelper(n, key, l, data[key], data);
+    scope.scope = data[key];
+    if (alias) {
+      scope.level[alias[0]] = data[key]; scope.level[alias[1]] = key;
+    }
+    out += bodyFn(model);
+  }
   return [ out, model.scopes.shift() ][0];
 }
 
