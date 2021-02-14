@@ -12,16 +12,15 @@ var getObjectKeys = Object.keys || function(obj) {
   for (var key in obj) fn(obj, key, keys);
   return keys;
 };
-var cloneObject = function(obj, newObj) {
+var cloneObject = function(newObj, obj) {
   var fn = function(obj, newObj, key) { newObj[key] = obj[key] };
   for (var key in obj) fn(obj, newObj, key);
   return newObj;
 };
-var concatArrays = function(array, host) {
+var concatArrays = function(host, array) {
   for (var n = 0, l = array.length; n < l; n++) host[host.length] = array[n];
   return host;
 };
-var SafeString = function(text) { return { escapeHTML: false, value: text } };
 
 var Schnauzer = function(template, options) {
   this.version = '1.6.2';
@@ -51,7 +50,7 @@ var Schnauzer = function(template, options) {
 };
 
 var initSchnauzer = function(_this, options, template) {
-  options = cloneObject(options, _this.options);
+  options = cloneObject(_this.options, options);
   switchTags(_this, options.tags);
   _this.regexps.entity =
     new RegExp('[' + getObjectKeys(options.entityMap).join('') + ']', 'g');
@@ -86,6 +85,10 @@ Schnauzer.prototype = {
   escapeExpression: function(txt) { return escapeHtml(this, txt, true) }
 };
 
+Schnauzer.SafeString = function(text) { this.string = text; };
+Schnauzer.SafeString.prototype.toString =
+Schnauzer.SafeString.prototype.toHTML = function() { return '' + this.string };
+
 return Schnauzer;
 
 function switchTags(_this, tags) {
@@ -104,7 +107,7 @@ function switchTags(_this, tags) {
 // ---- render data helpers
 
 function escapeHtml(_this, string, doEscape) {
-  return string.escapeHTML !== undefined ? string.value :
+  return string.constructor === Schnauzer.SafeString ? string.string :
     doEscape && _this.options.escapeHTML ?
     String(string).replace(_this.regexps.entity, function(char) {
       return _this.options.entityMap[char];
@@ -125,8 +128,8 @@ function createHelper(idx, key, len, value, parent) {
 }
 
 function shiftScope(scopes, data, helpers, level) {
-  level = cloneObject(scopes[0].level, level);
-  return concatArrays(scopes, [{scope: data, helpers: helpers, level: level}]);
+  level = cloneObject(level, scopes[0].level);
+  return concatArrays([{scope: data, helpers: helpers, level: level}], scopes);
 }
 
 function tweakScope(scopes, data, save) {
@@ -183,7 +186,7 @@ function getOptions(_this, model, tagData, data, newData, bodyFns) {
   }, utils: {
     escapeExpression:
       function(txt) { return _this.escapeExpression.call(_this, txt) },
-    SafeString: SafeString,
+    SafeString: Schnauzer.SafeString,
     keys: getObjectKeys,
     extend: cloneObject,
     concat: concatArrays,
@@ -194,12 +197,12 @@ function getOptions(_this, model, tagData, data, newData, bodyFns) {
     else newData.unshift(data[n].value);
   }
   if (bodyFns) {
-    options.fn = function(context) {
-      var save = tweakScope(model.scopes, context, {});
+    options.fn = function(context, save) {
+      save = tweakScope(model.scopes, context, {});
       return [ bodyFns[0].bodyFn(model), save() ][0];
     };
-    options.inverse = bodyFns[1] && function(context) {
-      var save = tweakScope(model.scopes, context, {});
+    options.inverse = bodyFns[1] && function(context, save) {
+      save = tweakScope(model.scopes, context, {});
       return [ bodyFns[1].bodyFn(model), save() ][0];
     } || noop;
   }
