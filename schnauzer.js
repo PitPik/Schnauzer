@@ -21,7 +21,7 @@ var concatArrays = function(array, host) {
   for (var n = 0, l = array.length; n < l; n++) host[host.length] = array[n];
   return host;
 };
-var SafeString = function(text) { return { escapeHTML: false, value: text }};
+var SafeString = function(text) { return { escapeHTML: false, value: text } };
 
 var Schnauzer = function(template, options) {
   this.version = '1.6.2';
@@ -129,6 +129,12 @@ function shiftScope(scopes, data, helpers, level) {
   return concatArrays(scopes, [{scope: data, helpers: helpers, level: level}]);
 }
 
+function tweakScope(scopes, data, save) {
+  save = scopes[0].scope;
+  scopes[0].scope = data || {};
+  return function() { scopes[0].scope = save; };
+}
+
 function getDeepData(scope, mainVar, getParent) {
   if (!mainVar.path) return mainVar.value;
   for (var n = 0, l = mainVar.path.length; n < l; n++) {
@@ -188,8 +194,14 @@ function getOptions(_this, model, tagData, data, newData, bodyFns) {
     else newData.unshift(data[n].value);
   }
   if (bodyFns) {
-    options.fn = bodyFns[0].bodyFn;
-    options.inverse = bodyFns[1] && bodyFns[1].bodyFn || noop;
+    options.fn = function(context) {
+      var save = tweakScope(model.scopes, context, {});
+      return [ bodyFns[0].bodyFn(model), save() ][0];
+    };
+    options.inverse = bodyFns[1] && function(context) {
+      var save = tweakScope(model.scopes, context, {});
+      return [ bodyFns[1].bodyFn(model), save() ][0];
+    } || noop;
   }
   return options;
 }
