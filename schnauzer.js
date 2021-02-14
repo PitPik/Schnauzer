@@ -158,7 +158,7 @@ function getData(_this, model, tagData) {
     value = getDeepData(scope.scope || {}, main);
     if (main.helper) {
       value = renderHelper(_this, getData(_this, model, main), model, main);
-    } else if (main.name && tagData.helperFn) {
+    } else if (main.name) { //  && tagData.helperFn
       scope.level[main.name] = main.value;
     } else if (!main.depth) {
       value = (!main.name && scope.scope[value]) /* funky strings */ ||
