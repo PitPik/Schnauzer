@@ -1,4 +1,4 @@
-/**! @license schnauzer v1.6.2; Copyright (C) 2017-2021 by Peter Dematté */
+/**! @license schnauzer v1.6.3; Copyright (C) 2017-2021 by Peter Dematté */
 (function(global, factory) {
   if (typeof exports === 'object') module.exports = factory(global);
   else if (typeof define === 'function' && define.amd)
@@ -23,7 +23,7 @@ var concatArrays = function(host, array) {
 };
 
 var Schnauzer = function(template, options) {
-  this.version = '1.6.2';
+  this.version = '1.6.3';
   this.partials = {};
   this.helpers = {};
   this.regexps = {};
@@ -132,7 +132,7 @@ function shiftScope(scopes, data, helpers, level) {
   return concatArrays([{scope: data, helpers: helpers, level: level}], scopes);
 }
 
-function tweakScope(scopes, data, save) {
+function tweakScope(scopes, data, save, options) {
   save = scopes[0].scope;
   scopes[0].scope = data || {};
   return function() { scopes[0].scope = save; };
@@ -159,7 +159,7 @@ function getData(_this, model, tagData) {
     if (main.helper) {
       value = renderHelper(_this, getData(_this, model, main), model, main);
     } else if (main.name) { //  && tagData.helperFn
-      scope.level[main.name] = main.value;
+      scope.level[main.name] = !main.path ? main.value : '' + value;
     } else if (!main.depth) {
       value = (!main.name && scope.scope[value]) /* funky strings */ ||
         getDeepData(scope.level, main) || value;
@@ -181,7 +181,7 @@ function getData(_this, model, tagData) {
 function getOptions(_this, model, tagData, data, newData, bodyFns) {
   var noop = function noop() { return ''; };
   var name = tagData.helper ? tagData.helper.orig : '';
-  var options = { name: name, hash: {}, data: {
+  var options = { name: name, hash: {}, blockParams: [], data: {
     root: model.scopes[model.scopes.length - 1].scope,
   }, utils: {
     escapeExpression: _this.escapeExpression,
@@ -194,14 +194,15 @@ function getOptions(_this, model, tagData, data, newData, bodyFns) {
   for (var n = data.length; n--; ) {
     if (data[n].name) options.hash[data[n].name] = data[n].value;
     else newData.unshift(data[n].value);
+    // options.blockParams.unshift(data[n].value); // HBS: wild guess
   }
   if (bodyFns) {
-    options.fn = function(context, save) {
-      save = tweakScope(model.scopes, context, {});
+    options.fn = function(context, options, save) {
+      save = tweakScope(model.scopes, context, {}, options);
       return [ bodyFns[0].bodyFn(model), save() ][0];
     };
-    options.inverse = bodyFns[1] && function(context, save) {
-      save = tweakScope(model.scopes, context, {});
+    options.inverse = bodyFns[1] && function(context, options, save) {
+      save = tweakScope(model.scopes, context, {}, options);
       return [ bodyFns[1].bodyFn(model), save() ][0];
     } || noop;
   }
