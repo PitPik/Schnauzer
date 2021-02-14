@@ -1,4 +1,4 @@
-/**! @license schnauzer v1.6.1; Copyright (C) 2017-2021 by Peter Dematté */
+/**! @license schnauzer v1.6.2; Copyright (C) 2017-2021 by Peter Dematté */
 (function(global, factory) {
   if (typeof exports === 'object') module.exports = factory(global);
   else if (typeof define === 'function' && define.amd)
@@ -21,9 +21,10 @@ var concatArrays = function(array, host) {
   for (var n = 0, l = array.length; n < l; n++) host[host.length] = array[n];
   return host;
 };
+var SafeString = function(text) { return { escapeHTML: false, value: text }};
 
 var Schnauzer = function(template, options) {
-  this.version = '1.6.1';
+  this.version = '1.6.2';
   this.partials = {};
   this.helpers = {};
   this.regexps = {};
@@ -103,7 +104,8 @@ function switchTags(_this, tags) {
 // ---- render data helpers
 
 function escapeHtml(_this, string, doEscape) {
-  return doEscape && _this.options.escapeHTML ?
+  return string.escapeHTML !== undefined ? string.value :
+    doEscape && _this.options.escapeHTML ?
     String(string).replace(_this.regexps.entity, function(char) {
       return _this.options.entityMap[char];
     }) : string;
@@ -175,6 +177,7 @@ function getOptions(_this, model, tagData, data, newData, bodyFns) {
   }, utils: {
     escapeExpression:
       function(txt) { return _this.escapeExpression.call(_this, txt) },
+    SafeString: SafeString,
     keys: getObjectKeys,
     extend: cloneObject,
     concat: concatArrays,
@@ -212,7 +215,7 @@ function renderHelper(_this, data, model, tagData, bodyFns, track) {
   if (helperFn) return helperFn(_this, data, model, tagData, bodyFns, track);
   newData.push(getOptions(_this, model, tagData, data, newData, bodyFns));
   out = helper ? helper.apply(scope, newData) : '';
-  return out === undefined ? '' : out + '';
+  return out === undefined ? '' : out;
 }
 
 function renderPartial(_this, data, model, tagData) {
@@ -278,16 +281,14 @@ function renderEach(_this, data, main, model, bodyFn) {
   var alias = main.alias;
   var scope = model.scopes[0];
   var isArr = main.type === 'array';
-  var _data = !isArr && main.type !== 'object' ? [] :
-    isArr ? data : getObjectKeys(data);
+  var _data = !isArr && main.type !== 'object' ? [] : isArr ?
+    data : getObjectKeys(data);
 
   for (var n = 0, l = _data.length, key = '', out = ''; n < l; n++) {
     key = '' + (isArr ? n : _data[n]);
     scope.helpers = createHelper(n, key, l, data[key], data);
     scope.scope = data[key];
-    if (alias) {
-      scope.level[alias[0]] = data[key]; scope.level[alias[1]] = key;
-    }
+    if (alias) {scope.level[alias[0]] = data[key]; scope.level[alias[1]] = key}
     out += bodyFn(model);
   }
   return [ out, model.scopes.shift() ][0];
