@@ -172,13 +172,18 @@ function getOptions(_this, model, tagData, data, newData, bodyFns) {
   var name = tagData.helper ? tagData.helper.orig : '';
   var options = { name: name, hash: {}, data: {
     root: model.scopes[model.scopes.length - 1].scope,
+  }, utils: {
+    escapeExpression:
+      function(txt) { return _this.escapeExpression.call(_this, txt) },
+    keys: getObjectKeys,
+    extend: cloneObject,
+    concat: concatArrays,
   }};
 
   for (var n = data.length; n--; ) {
     if (data[n].name) options.hash[data[n].name] = data[n].value;
     else newData.unshift(data[n].value);
   }
-  options.escapeExpression = _this.escapeExpression;
   if (bodyFns) {
     options.fn = bodyFns[0].bodyFn;
     options.inverse = bodyFns[1] && bodyFns[1].bodyFn || noop;
