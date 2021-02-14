@@ -207,10 +207,12 @@ function renderHelper(_this, data, model, tagData, bodyFns, track) {
   var helperFn = !tagData.helper && bodyFns &&
     (data[0] ? renderConditions : undefined) || tagData.helperFn;
   var newData = [];
+  var out = '';
 
   if (helperFn) return helperFn(_this, data, model, tagData, bodyFns, track);
   newData.push(getOptions(_this, model, tagData, data, newData, bodyFns));
-  return helper ? helper.apply(scope, newData) : '';
+  out = helper ? helper.apply(scope, newData) : '';
+  return out === undefined ? '' : out + '';
 }
 
 function renderPartial(_this, data, model, tagData) {
