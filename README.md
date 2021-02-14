@@ -125,7 +125,7 @@ $1 etc. represent the String passed with the block (here "foo").
 ```options.fn()``` is the text that was rendered if it was inside a block element (empty if inline usage), ```options.inverse()``` the block after an else (if exists, else undefined).
 
 Options inside helper functions work almost like with Handlebars:
-```
+```js
   options: {
     blockParams: [], // not yet clear what this should be used for
     data: {root: {…}},
