@@ -17,7 +17,7 @@ var cloneObject = function(newObj, obj) {
   for (var key in obj) fn(obj, newObj, key);
   return newObj;
 };
-var concatArrays = function(host, array) {
+var concatArrays = function(array, host) {
   for (var n = 0, l = array.length; n < l; n++) host[host.length] = array[n];
   return host;
 };
@@ -129,7 +129,7 @@ function createHelper(idx, key, len, value, parent) {
 
 function shiftScope(scopes, data, helpers, level) {
   level = cloneObject(level, scopes[0].level);
-  return concatArrays([{scope: data, helpers: helpers, level: level}], scopes);
+  return concatArrays(scopes, [{scope: data, helpers: helpers, level: level}]);
 }
 
 function tweakScope(scopes, data, save, options) {
@@ -229,6 +229,7 @@ function renderHelper(_this, data, model, tagData, bodyFns, track) {
   if (helperFn) return helperFn(_this, data, model, tagData, bodyFns, track);
   newData.push(getOptions(_this, model, tagData, data, newData, bodyFns));
   out = helper ? helper.apply(scope, newData) : '';
+  for (var n in newData[newData.length-1].hash) model.scopes[0].level[n] = null;
   return out === undefined ? '' : out;
 }
 
