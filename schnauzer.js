@@ -57,6 +57,7 @@ var initSchnauzer = function(_this, options, template) {
   _this.helpers = options.helpers;
   for (var name in options.partials)
     _this.registerPartial(name, options.partials[name]);
+  _this.escapeExpression = function(txt) { return escapeHtml(_this, txt, true) }
   if (template) _this.parse(template);
 };
 
@@ -82,10 +83,9 @@ Schnauzer.prototype = {
   },
   unregisterPartial: function(name) { delete this.partials[name] },
   setTags: function(tags) { switchTags(this, tags) },
-  escapeExpression: function(txt) { return escapeHtml(this, txt, true) }
 };
 
-Schnauzer.SafeString = function(text) { this.string = text; };
+Schnauzer.SafeString = function(text) { this.string = text }; // WTF
 Schnauzer.SafeString.prototype.toString =
 Schnauzer.SafeString.prototype.toHTML = function() { return '' + this.string };
 
@@ -184,8 +184,7 @@ function getOptions(_this, model, tagData, data, newData, bodyFns) {
   var options = { name: name, hash: {}, data: {
     root: model.scopes[model.scopes.length - 1].scope,
   }, utils: {
-    escapeExpression:
-      function(txt) { return _this.escapeExpression.call(_this, txt) },
+    escapeExpression: _this.escapeExpression,
     SafeString: Schnauzer.SafeString,
     keys: getObjectKeys,
     extend: cloneObject,
