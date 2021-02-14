@@ -158,18 +158,17 @@ function getData(_this, model, tagData) {
     value = getDeepData(scope.scope || {}, main);
     if (main.helper) {
       value = renderHelper(_this, getData(_this, model, main), model, main);
-    } else if (main.name) { //  && tagData.helperFn
-      scope.level[main.name] = !main.path ? main.value : '' + value;
-    } else if (!main.depth) {
-      value = (!main.name && scope.scope[value]) /* funky strings */ ||
-        getDeepData(scope.level, main) || value;
+    } else if (!main.depth && !main.name) { /* funky strings */
+      value = scope.scope[value] || getDeepData(scope.level, main) || value;
     }
     if (value === undefined || value === '.' || value === 'this') {
       value = scope.helpers[main.value];
     }
     if (value === undefined) value = model.extra[main.orig];
+    value = value === undefined ? '' : value;
+    if (main.name) scope.level[main.name] = !main.path ? main.value :'' + value;
     out.push({
-      value: value === undefined ? '' : value,
+      value: value,
       alias: main.alias,
       type: value && value.constructor === Array ? 'array' : typeof value,
       name: main.name,
