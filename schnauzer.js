@@ -96,7 +96,7 @@ function switchTags(_this, tags) {
     chars + '<>|\\.\\s]*)' + tgs[1], 'g');
   _this.regexps.block = new RegExp(tgs[0] + '([#^][*%]*)\\s*([\\w' +
     chars + '<>~]*)(?:\\s+([\\w$\\s|.\\/' + chars + ']*))*' + tgs[1] +
-    '(?:\\n*)((?:(?!' + tgs[0] + '[#])[\\S\\s])*?)(' + blockEnd + ')', 'g');
+    '(?:\\n*)((?:(?!' + tgs[0] + '[#^])[\\S\\s])*?)(' + blockEnd + ')', 'g');
   _this.regexps.else = new RegExp(tgs[0] + '(?:else|\\^)\\s*(.*?)' + tgs[1]);
 }
 
