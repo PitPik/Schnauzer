@@ -1,6 +1,6 @@
 {
   "name": "schnauzer",
-  "version": "1.6.3",
+  "version": "1.6.4",
   "description": "Fast and tiny template rendering engine using templates similar to Mustage or Handlebars",
   "main": "schnauzer.js",
   "repository": {
