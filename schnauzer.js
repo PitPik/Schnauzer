@@ -1,4 +1,4 @@
-/**! @license schnauzer v1.6.4; Copyright (C) 2017-2021 by Peter Dematté */
+/**! @license schnauzer v1.6.5; Copyright (C) 2017-2021 by Peter Dematté */
 (function(global, factory) {
   if (typeof exports === 'object') module.exports = factory(global);
   else if (typeof define === 'function' && define.amd)
@@ -23,7 +23,7 @@ var concatArrays = function(array, host) {
 };
 
 var Schnauzer = function(template, options) {
-  this.version = '1.6.4';
+  this.version = '1.6.5';
   this.partials = {};
   this.helpers = {};
   this.regexps = {};
@@ -58,7 +58,7 @@ var initSchnauzer = function(_this, options, template) {
   for (var name in options.partials)
     _this.registerPartial(name, options.partials[name]);
   _this.escapeExpression = function(txt) { return escapeHtml(_this, txt, true) }
-  if (template) _this.parse(template);
+  if (template !== undefined) _this.parse(template);
 };
 
 Schnauzer.prototype = {
@@ -66,7 +66,7 @@ Schnauzer.prototype = {
     var helpers = createHelper('', '', 0, undefined, null);
     return this.partials[this.options.self]({
       extra: extra || {},
-      scopes: [{ scope: data, helpers: helpers, level: [{ '@root': data }], values: null }],
+      scopes: [{ scope: data, helpers: helpers, level: [], values: null }],
     });
   },
   parse: function(txt) { return this.registerPartial(this.options.self, txt) },
@@ -134,8 +134,7 @@ function shiftScope(model, data) {
   var level = concatArrays(scopes[0].level, newLevel);
   var values = model.values || {};
 
-  model.alias = null; // TODO
-  model.values = null; // TODO
+  model.alias = null; model.values = null; // TODO
   return concatArrays(scopes, [{
     scope: data, helpers: {}, level: level, values: values,
   }]);
@@ -151,6 +150,7 @@ function getDeepData(scope, mainVar, getParent) { // TODO: remove getParent
   if (mainVar.value === '.' || mainVar.value === 'this') return scope;
   if (!mainVar.path) return mainVar.value;
   for (var n = 0, l = mainVar.path.length; n < l; n++) {
+    if (mainVar.path[n] === '@root') continue;
     scope = scope[mainVar.path[n]];
     if (!scope) return;
   }
@@ -165,39 +165,26 @@ function getAliasValue(level, main) {
 }
 
 function getData(_this, model, tagData) {
-  var out = [];
   var vars = tagData.vars;
-  var alias = {};
-  var values = {};
-  var hasAlias = false;
-  var hasValues = false;
 
   if (!tagData || !vars) return [];
   if (!tagData.helper && _this.helpers[vars[0].orig]) tagData.helper = vars.shift();
 
-  for (var n = 0, l = vars.length, main = {}, scope = {}, value; n < l; n++) {
+  for (var n = 0, l = vars.length, main = {}, scope = {}, value, out = []; n < l; n++) {
     main = vars[n];
-    scope = model.scopes[main.depth || 0] || { scope: {}, helpers: {}, level: [] };
-    value = scope.helpers[main.value]; // if (!tagData.partial) 
-    if (value === undefined && scope.values) // && !main.depth // && !main.isStrict
-      value = getDeepData(scope.values, main);
-    if (value === undefined && !main.isStrict) // && !main.depth
-      value = getAliasValue(scope.level, main);
+    scope = main.path && main.path[0] === '@root' ? model.scopes[model.scopes.length - 1] :
+      model.scopes[main.depth || 0] || { scope: {}, helpers: {}, level: [] };
+    value = main.value === '@root' ? scope : scope.helpers[main.value];
+    if (value === undefined && scope.values) value = getDeepData(scope.values, main);
+    if (value === undefined && !main.isStrict) value = getAliasValue(scope.level, main);
     if (value === undefined) value = main.helper ?
       renderHelper(_this, getData(_this, model, main), model, main) :
       !main.path && !main.name && !main.vars ? // TODO: check/re-think
         tagData.isInline ? scope.scope[main.value] : main.value :
       getDeepData(scope.scope, main);
     if (value === undefined) value = getDeepData(model.extra, main);
-
-    if (main.alias) {
-      alias[main.alias[0]] = value;
-      hasAlias = true;
-    }
-    if (main.name) { //  && !tagData.helperFn -> send to function only
-      values[main.name] = value;
-      hasValues = true;
-    }
+    if (main.alias) { if (!model.alias) model.alias = {}; model.alias[main.alias[0]] = value; }
+    if (main.name) { if (!model.values) model.values = {}; model.values[main.name] = value; }
     out.push({
       value: value,
       alias: main.alias,
@@ -206,8 +193,6 @@ function getData(_this, model, tagData) {
       level: main.name ? !main.path ? main.value : '' + value : undefined,
     });
   }
-  if (hasAlias) model.alias = alias; // TODO...
-  if (hasValues) model.values = values; // TODO...
   return out;
 }
 
@@ -260,24 +245,15 @@ function renderHelper(_this, data, model, tagData, bodyFns, track) {
   var newData = [];
   var out = '';
 
-  if (helperFn) {
-    return helperFn(_this, data, model, tagData, bodyFns, track);
-  }
-  // TODO: ceck following line
+  if (helperFn) return helperFn(_this, data, model, tagData, bodyFns, track);
   if (!helper && data.length === 1 && data[0].type === 'function') return data[0].value();
-  if (model.alias) {
-    model.scopes[0].level.unshift(model.alias);
-    delete model.alias;
-  }
-  if (model.values) {
-    model.scopes[0].values = model.values;
-    delete model.values;
-  }
+  if (model.alias) { model.scopes[0].level.unshift(model.alias); model.alias = null; }
+  if (model.values) { model.scopes[0].values = model.values; model.values = null; }
 
   newData.push(getOptions(_this, model, tagData, data, newData, bodyFns));
   out = helper ? helper.apply(scope, newData) : '';
   model.scopes[0].level.shift();
-  delete model.scopes[0].values;
+  model.scopes[0].values = null;
   return out === undefined ? '' : out;
 }
 
@@ -330,8 +306,7 @@ function renderEach(_this, data, main, model, bodyFn) {
   var alias = main.alias;
   var level = scope.level[0];
   var isArr = main.type === 'array';
-  var _data = !isArr && main.type !== 'object' ? [] : isArr ?
-    data : getObjectKeys(data);
+  var _data = !isArr && main.type !== 'object' ? [] : isArr ? data : getObjectKeys(data);
 
   for (var n = 0, l = _data.length, key = '', out = ''; n < l; n++) {
     key = '' + (isArr ? n : _data[n]);
@@ -345,8 +320,7 @@ function renderEach(_this, data, main, model, bodyFn) {
 
 // ---- render blocks and inlines; delegations only
 
-function render(_this, model, data, tagData, isBlock, out,
-    renderFn, bodyFns, track) {
+function render(_this, model, data, tagData, isBlock, out, renderFn, bodyFns, track) {
   return !_this.options.renderHook ? out : _this.options.renderHook.call(
     _this, out, data, tagData, model, isBlock, track || {fnIdx: 0}, function() {
       return renderFn(_this, tagData, model, bodyFns, track || {fnIdx: 0});
@@ -431,12 +405,9 @@ function parseAlias(value, out, spread) {
 function getVars(text, collection, out, type) {
   var txtParts = type === 'string' ? [text] : text.split(/[,;]*\s+[,;]*/);
   var isAliasOrString = type === 'alias' || type === 'string';
-  var parts = [];
-  var value = '';
-  var data = {};
-  var paths = {};
 
-  for (var n = 0, l = txtParts.length; n < l; n++) {
+  for (var n = 0, l = txtParts.length,
+      parts = [], value = '', data = {}, paths = {}; n < l; n++) {
     parts = txtParts[n].split('=');
     value = parts[1] !== undefined ? parts[1] : parts[0];
     if (value === '' || value === 'as') continue;
@@ -444,10 +415,8 @@ function getVars(text, collection, out, type) {
     data = collection[(value.match(/--(\d+)--/) || [])[1]] || { value: value };
     if (typeof data.value === 'object' && data.value[0].single) return data.value;
     if (parts[1] !== undefined) data.name = parts[0];
-    if (data.type === 'string') {
-      data.value = data.value[0].value;
-      delete data.type;
-    } else if (data.value && typeof data.value === 'string') {
+    if (data.type === 'string') data.value = data.value[0].value;
+    else if (data.value && typeof data.value === 'string') {
       data.value = data.value.replace(/%+/, function($) {
         data.active = $.length; return '';
       });
