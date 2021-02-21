@@ -146,26 +146,28 @@ function tweakScope(scope, data, options) {
   return function() { scope.scope = savedScope; };
 }
 
-function getDeepData(scope, mainVar, getParent) { // TODO: remove getParent
+function getDeepData(scope, mainVar, parent) {
   if (mainVar.value === '.' || mainVar.value === 'this') return scope;
   if (!mainVar.path) return mainVar.value;
+  parent._ = scope;
   for (var n = 0, l = mainVar.path.length; n < l; n++) {
     if (mainVar.path[n] === '@root') continue;
-    scope = scope[mainVar.path[n]];
+    scope = parent._ = scope[mainVar.path[n]];
     if (!scope) return;
   }
-  return getParent ? scope : scope && scope[mainVar.value];
+  return scope[mainVar.value];
 }
 
-function getAliasValue(level, main) {
+function getAliasValue(level, main, parent) {
   for (var n = 0, l = level.length, value = ''; n < l; n++) {
-    value = getDeepData(level[n], main);
+    value = getDeepData(level[n], main, parent);
     if (value !== undefined) return value;
   }
 }
 
 function getData(_this, model, tagData) {
   var vars = tagData.vars;
+  var parent = { _: null };
 
   if (!tagData || !vars) return [];
   if (!tagData.helper && _this.helpers[vars[0].orig]) tagData.helper = vars.shift();
@@ -175,14 +177,14 @@ function getData(_this, model, tagData) {
     scope = main.path && main.path[0] === '@root' ? model.scopes[model.scopes.length - 1] :
       model.scopes[main.depth || 0] || { scope: {}, helpers: {}, level: [] };
     value = main.value === '@root' ? scope : scope.helpers[main.value];
-    if (value === undefined && scope.values) value = getDeepData(scope.values, main);
-    if (value === undefined && !main.isStrict) value = getAliasValue(scope.level, main);
+    if (value === undefined && scope.values) value = getDeepData(scope.values, main, parent);
+    if (value === undefined && !main.isStrict) value = getAliasValue(scope.level, main, parent);
     if (value === undefined) value = main.helper ?
       renderHelper(_this, getData(_this, model, main), model, main) :
       !main.path && !main.name && !main.vars ? // TODO: check/re-think
         tagData.isInline ? scope.scope[main.value] : main.value :
-      getDeepData(scope.scope, main);
-    if (value === undefined) value = getDeepData(model.extra, main);
+      getDeepData(scope.scope, main, parent);
+    if (value === undefined) value = getDeepData(model.extra, main, parent);
     if (main.alias) { if (!model.alias) model.alias = {}; model.alias[main.alias[0]] = value; }
     if (main.name) { if (!model.values) model.values = {}; model.values[main.name] = value; }
     out.push({
@@ -191,6 +193,7 @@ function getData(_this, model, tagData) {
       type: value && value.constructor === Array ? 'array' : typeof value,
       name: main.name,
       level: main.name ? !main.path ? main.value : '' + value : undefined,
+      parent: parent._,
     });
   }
   return out;
@@ -232,7 +235,7 @@ function getHelperFn(_this, model, tagData) {
   var helperFn = _this.helpers[tagData.helper.orig];
 
   return tagData.helperFn || (tagData.helper.isStrict || !helperFn ?
-    getDeepData(scope, tagData.helper) : helperFn);
+    getDeepData(scope, tagData.helper, {}) : helperFn);
 }
 
 // ---- render blocks/inlines helpers (std. HBS helpers)
@@ -320,9 +323,9 @@ function renderEach(_this, data, main, model, bodyFn) {
 
 // ---- render blocks and inlines; delegations only
 
-function render(_this, model, data, tagData, isBlock, out, renderFn, bodyFns, track) {
+function render(_this, model, data, tagData, out, renderFn, bodyFns, track) {
   return !_this.options.renderHook ? out : _this.options.renderHook.call(
-    _this, out, data, tagData, model, isBlock, track || {fnIdx: 0}, function() {
+    _this, out, data, tagData, model, track || {fnIdx: 0}, function() {
       return renderFn(_this, tagData, model, bodyFns, track || {fnIdx: 0});
     });
 }
@@ -335,7 +338,7 @@ function renderInline(_this, tagData, model) {
       renderHelper(_this, data, model, tagData) : data[0] && data[0].value,
       type !== 'boolean' && type !== 'number' && tagData.isEscaped);
 
-  return render(_this, model, data, tagData, false, out, renderInline, null);
+  return render(_this, model, data, tagData, out, renderInline, null);
 }
 
 function renderInlines(_this, tags, glues, blocks, model) {
@@ -351,8 +354,8 @@ function renderBlock(_this, tagData, model, bodyFns, recursive) {
   var track = recursive || { fnIdx: 0 }; // TODO: renderPartial on blocks? 
   var out = renderHelper(_this, data, model, tagData, bodyFns, track);
   
-  return recursive ? out : render(_this, model, data, tagData, true,
-    out, renderBlock, bodyFns, track);
+  return recursive ? out :
+    render(_this, model, data, tagData, out, renderBlock, bodyFns, track);
 }
 
 // ---- parse (pre-render) helpers
