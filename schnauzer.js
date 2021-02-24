@@ -169,7 +169,7 @@ function getAliasValue(level, main, parent) {
 
 function createLookup(key, model, aliasKey, main, scope, value) {
   if (!model[key]) model[key] = {};
-  model[key][aliasKey] = !main.path ? value :
+  model[key][aliasKey] = !main.path ? value : // || main.path.length
     { __isAlias: true, key: main.value, value: value, scope: scope };
 }
 
@@ -349,7 +349,7 @@ function renderEach(_this, data, main, model, bodyFn) {
 
 function render(_this, model, data, tagData, out, renderFn, bodyFns, track) {
   return !_this.options.renderHook ? out : _this.options.renderHook.call(
-    _this, out, data, tagData, model, track || {fnIdx: 0}, function() {
+    _this, out, data, tagData, track || {fnIdx: 0}, function() {
       return renderFn(_this, tagData, model, bodyFns, track || {fnIdx: 0});
     });
 }
