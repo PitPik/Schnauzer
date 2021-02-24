@@ -173,15 +173,29 @@ function createLookup(key, model, aliasKey, main, scope, value) {
     { __isAlias: true, key: main.value, value: value, scope: scope };
 }
 
+function collectData(scope, value, main, _parent) {
+  var key = scope.helpers['@key'] && value !== undefined &&
+    scope.helpers['@parent'].constructor !== Array ? scope.helpers['@key'] : '';
+  var parent = main.name && !main.path ? null : key ?
+    scope.helpers['@parent'] || scope.scope || null : _parent;
+  var _scope = parent && parent[key || main.value] || {};
+
+  return {
+    key: _scope.__isAlias ? _scope.key : key || main.value,
+    parent: _scope.__isAlias ? _scope.scope : parent,
+  };
+}
+
 function getData(_this, model, tagData) {
   var vars = tagData.vars;
   var parent = { _: null };
   var out = [];
+  var data = {};
 
   if (!tagData || !vars) return [];
   if (!tagData.helper && _this.helpers[vars[0].orig]) tagData.helper = vars.shift();
 
-  for (var n = 0, l = vars.length, main = {}, scope = {}, value, key = ''; n < l; n++) {
+  for (var n = 0, l = vars.length, main = {}, scope = {}, value; n < l; n++) {
     main = vars[n];
     scope = main.path && main.path[0] === '@root' ? model.scopes[model.scopes.length - 1] :
       model.scopes[main.depth || 0] || { scope: {}, helpers: {}, level: [] };
@@ -189,7 +203,6 @@ function getData(_this, model, tagData) {
   
     if (value === undefined && scope.values) value = getDeepData(scope.values, main, parent);
     if (value === undefined && !main.isStrict) value = getAliasValue(scope.level, main, parent);
-    if (value && value.__isAlias) value = value.value;
     if (value === undefined) value = main.helper ?
       renderHelper(_this, getData(_this, model, main), model, main) :
       !main.path && !main.name && !main.vars ?
@@ -199,16 +212,12 @@ function getData(_this, model, tagData) {
 
     if (main.alias) createLookup('alias', model, main.alias[0], main, scope.scope, value);
     if (main.name) createLookup('values', model, main.name, main, scope.scope, value);
-    key = scope.helpers['@key'] && value !== undefined &&
-      scope.helpers['@parent'].constructor !== Array ? scope.helpers['@key'] : '';
+    if (_this.options.renderHook) data = collectData(scope, value, main, parent._);
     out.push({
-      value: value, // && value.__isAlias ? value.value : value,
+      value: value && value.__isAlias ? value.value : value,
       alias: main.alias,
       type: value && value.constructor === Array ? 'array' : typeof value,
-      name: main.name,
-      parent: main.name && !main.path ? null : key ?
-        scope.helpers['@parent'] || scope.scope : parent._,
-      key: key || main.value,
+      name: main.name, parent: data.parent, key: data.key,
     });
   }
   return out;
