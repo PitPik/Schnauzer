@@ -44,6 +44,7 @@ var Schnauzer = function(template, options) {
     self: 'self',
     nameCharacters: '',
     escapeHTML: true,
+    limitPartialScope: true, // HBS style; new in v1.6.5
     renderHook: null,
   };
   initSchnauzer(this, options || {}, template);
@@ -153,6 +154,7 @@ function getDeepData(scope, mainVar, parent) {
   for (var n = 0, l = mainVar.path.length; n < l; n++) {
     if (mainVar.path[n] === '@root') continue;
     scope = parent._ = scope[mainVar.path[n]];
+    if (scope && scope.__isAlias) scope = parent._ = scope.value;
     if (!scope) return;
   }
   return scope[mainVar.value];
@@ -165,35 +167,48 @@ function getAliasValue(level, main, parent) {
   }
 }
 
+function createLookup(key, model, aliasKey, main, scope, value) {
+  if (!model[key]) model[key] = {};
+  model[key][aliasKey] = !main.path ? value :
+    { __isAlias: true, key: main.value, value: value, scope: scope };
+}
+
 function getData(_this, model, tagData) {
   var vars = tagData.vars;
   var parent = { _: null };
+  var out = [];
 
   if (!tagData || !vars) return [];
   if (!tagData.helper && _this.helpers[vars[0].orig]) tagData.helper = vars.shift();
 
-  for (var n = 0, l = vars.length, main = {}, scope = {}, value, out = []; n < l; n++) {
+  for (var n = 0, l = vars.length, main = {}, scope = {}, value, key = ''; n < l; n++) {
     main = vars[n];
     scope = main.path && main.path[0] === '@root' ? model.scopes[model.scopes.length - 1] :
       model.scopes[main.depth || 0] || { scope: {}, helpers: {}, level: [] };
     value = main.value === '@root' ? scope : scope.helpers[main.value];
+  
     if (value === undefined && scope.values) value = getDeepData(scope.values, main, parent);
     if (value === undefined && !main.isStrict) value = getAliasValue(scope.level, main, parent);
+    if (value && value.__isAlias) value = value.value;
     if (value === undefined) value = main.helper ?
       renderHelper(_this, getData(_this, model, main), model, main) :
-      !main.path && !main.name && !main.vars ? // TODO: check/re-think
+      !main.path && !main.name && !main.vars ?
         tagData.isInline ? scope.scope[main.value] : main.value :
       getDeepData(scope.scope, main, parent);
     if (value === undefined) value = getDeepData(model.extra, main, parent);
-    if (main.alias) { if (!model.alias) model.alias = {}; model.alias[main.alias[0]] = value; }
-    if (main.name) { if (!model.values) model.values = {}; model.values[main.name] = value; }
+
+    if (main.alias) createLookup('alias', model, main.alias[0], main, scope.scope, value);
+    if (main.name) createLookup('values', model, main.name, main, scope.scope, value);
+    key = scope.helpers['@key'] && value !== undefined &&
+      scope.helpers['@parent'].constructor !== Array ? scope.helpers['@key'] : '';
     out.push({
-      value: value,
+      value: value, // && value.__isAlias ? value.value : value,
       alias: main.alias,
       type: value && value.constructor === Array ? 'array' : typeof value,
       name: main.name,
-      level: main.name ? !main.path ? main.value : '' + value : undefined,
-      parent: parent._,
+      parent: main.name && !main.path ? null : key ?
+        scope.helpers['@parent'] || scope.scope : parent._,
+      key: key || main.value,
     });
   }
   return out;
@@ -265,7 +280,7 @@ function renderPartial(_this, data, model, tagData) {
   var scope = !data[0].name ? data[0].value : model.scopes[0].scope;
   var tmp = model.scopes = shiftScope(model, scope);
 
-  model.scopes = [model.scopes[0]]; // limits scope...
+  if (_this.options.limitPartialScope) model.scopes = [model.scopes[0]];
   return [ partial ? partial(model) : '', model.scopes = tmp, model.scopes.shift() ][0];
 }
 
@@ -299,7 +314,7 @@ function renderConditions(_this, data, model, tagData, bodyFns, track) {
     model.scopes = shiftScope(model, value);
     if (helper === 'each') return renderEach(_this, value, main, model, bodyFn.bodyFn);
     model.scopes[0].helpers = createHelper('', '', 0,
-      isVarOnly ? value : model.scopes[0].scope ,model.scopes[1]);
+      isVarOnly ? value : model.scopes[0].scope, model.scopes[1]);
   }
   return [canGo ? bodyFn.bodyFn(model) : '', shift && model.scopes.shift()][0];
 }
@@ -424,7 +439,7 @@ function getVars(text, collection, out, type) {
         data.active = $.length; return '';
       });
       paths = parsePath(data.value, data, isAliasOrString);
-      data.value = convertValue(paths.value, isAliasOrString || !paths.path);
+      data.value = convertValue(paths.value, isAliasOrString || paths.name !== paths.value);
       if (paths.name) data.orig = paths.name;
       if (typeof data.value === 'string' && paths.path && !isAliasOrString) {
         data.path = paths.path;
