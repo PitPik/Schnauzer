@@ -45,6 +45,7 @@ var Schnauzer = function(template, options) {
     nameCharacters: '',
     escapeHTML: true,
     limitPartialScope: true, // HBS style; new in v1.6.5
+    loopHelper: function(txt) { return txt },
     renderHook: null,
   };
   initSchnauzer(this, options || {}, template);
@@ -333,26 +334,27 @@ function renderConditions(_this, data, model, tagData, bodyFns, track) {
   if (helper === 'with' || helper === 'each' && value) {
     shift = true;
     model.scopes = shiftScope(model, value);
-    if (helper === 'each') return renderEach(_this, value, main, model, bodyFn.bodyFn, objKeys._);
+    if (helper === 'each') return renderEach(_this, value, main, model,
+      bodyFn.bodyFn, objKeys._, _this.options.loopHelper);
     model.scopes[0].helpers = createHelper('', '', 0,
       isVarOnly ? value : model.scopes[0].scope, model.scopes[1]);
   }
   return [canGo ? bodyFn.bodyFn(model) : '', shift && model.scopes.shift()][0];
 }
 
-function renderEach(_this, data, main, model, bodyFn, objKeys) {
+function renderEach(_this, data, main, model, bodyFn, objKeys, loopHelper) {
   var scope = model.scopes[0];
   var alias = main.alias;
   var level = scope.level[0];
   var isArr = main.type === 'array';
-  var _data = !isArr && main.type !== 'object' ? [] : isArr ? data : objKeys;
+  var value = !isArr && main.type !== 'object' ? [] : isArr ? data : objKeys;
 
-  for (var n = 0, l = _data.length, key = '', out = ''; n < l; n++) {
-    key = '' + (isArr ? n : _data[n]);
+  for (var n = 0, l = value.length, key = '', out = ''; n < l; n++) {
+    key = '' + (isArr ? n : value[n]);
     scope.helpers = createHelper(n, key, l, data[key], data);
     scope.scope = data[key];
     if (alias) { level[alias[0]] = data[key]; level[alias[1]] = key; }
-    out += bodyFn(model);
+    out += loopHelper(bodyFn(model), n, isArr);
   }
   return [ out, model.scopes.shift() ][0];
 }
