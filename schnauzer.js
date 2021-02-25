@@ -1,4 +1,4 @@
-/**! @license schnauzer v1.6.6; Copyright (C) 2017-2021 by Peter Dematté */
+/**! @license schnauzer v1.6.7; Copyright (C) 2017-2021 by Peter Dematté */
 (function(global, factory) {
   if (typeof exports === 'object') module.exports = factory(global);
   else if (typeof define === 'function' && define.amd)
@@ -23,7 +23,7 @@ var concatArrays = function(array, host) {
 };
 
 var Schnauzer = function(template, options) {
-  this.version = '1.6.6';
+  this.version = '1.6.7';
   this.partials = {};
   this.helpers = {};
   this.regexps = {};
@@ -359,7 +359,7 @@ function renderEach(_this, data, main, model, bodyFn, objKeys) {
 // ---- render blocks and inlines; delegations only
 
 function render(_this, model, data, tagData, out, renderFn, bodyFns, track) {
-  return !_this.options.renderHook ? out : _this.options.renderHook.call(
+  return !_this.options.renderHook ? out : _this.options.renderHook(
     _this, out, data, tagData, track || {fnIdx: 0}, function() {
       return renderFn(_this, tagData, model, bodyFns, track || {fnIdx: 0});
     });
