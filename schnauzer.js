@@ -51,6 +51,7 @@ var Schnauzer = function(template, options) {
 };
 
 var initSchnauzer = function(_this, options, template) {
+  if (typeof template !== 'string') { options = template; template = '' }
   options = cloneObject(_this.options, options);
   switchTags(_this, options.tags);
   _this.regexps.entity =
@@ -59,7 +60,7 @@ var initSchnauzer = function(_this, options, template) {
   for (var name in options.partials)
     _this.registerPartial(name, options.partials[name]);
   _this.escapeExpression = function(txt) { return escapeHtml(_this, txt, true) }
-  if (template !== undefined) _this.parse(template);
+  if (template) _this.parse(template);
 };
 
 Schnauzer.prototype = {
