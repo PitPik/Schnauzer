@@ -1,4 +1,4 @@
-/**! @license schnauzer v1.6.5; Copyright (C) 2017-2021 by Peter Dematté */
+/**! @license schnauzer v1.6.6; Copyright (C) 2017-2021 by Peter Dematté */
 (function(global, factory) {
   if (typeof exports === 'object') module.exports = factory(global);
   else if (typeof define === 'function' && define.amd)
@@ -23,7 +23,7 @@ var concatArrays = function(array, host) {
 };
 
 var Schnauzer = function(template, options) {
-  this.version = '1.6.5';
+  this.version = '1.6.6';
   this.partials = {};
   this.helpers = {};
   this.regexps = {};
@@ -205,9 +205,8 @@ function getData(_this, model, tagData) {
     if (value === undefined && !main.isStrict) value = getAliasValue(scope.level, main, parent);
     if (value === undefined) value = main.helper ?
       renderHelper(_this, getData(_this, model, main), model, main) :
-      !main.path && !main.name && !main.vars ?
-        tagData.isInline ? scope.scope[main.value] : main.value :
-      getDeepData(scope.scope, main, parent);
+      main.path || main.name || main.vars ? getDeepData(scope.scope, main, parent) :
+        tagData.isInline ? scope.scope[main.value] : main.value;
     if (value === undefined) value = getDeepData(model.extra, main, parent);
 
     if (main.alias) createLookup('alias', model, main.alias[0], main, scope.scope, value);
@@ -221,6 +220,15 @@ function getData(_this, model, tagData) {
     });
   }
   return out;
+}
+
+function checkObjectLength(main, helper, keys) {
+  var value = main.value;
+  var isObject = main.type === 'object';
+
+  if (helper !== 'each' || value === undefined) return value;
+  if (isObject) keys._ = getObjectKeys(value);
+  return isObject ? keys._.length && value : value.length && value;
 }
 
 function getOptions(_this, model, tagData, data, newData, bodyFns) {
@@ -295,12 +303,13 @@ function renderPartial(_this, data, model, tagData) {
 
 function renderConditions(_this, data, model, tagData, bodyFns, track) {
   var idx = 0;
+  var objKeys = { _: [] };
   var bodyFn = bodyFns[idx];
   var helper = tagData.helper;
   var cond = /^(?:if|each|with)$/.test(helper);
   var isVarOnly = !helper && data.length === 1;
   var main = data[0] || {};
-  var value = main.value;
+  var value = checkObjectLength(main, helper, objKeys);
   var canGo = ((cond || isVarOnly) && value) || (helper === 'unless' && !value);
   var shift = false;
 
@@ -311,7 +320,7 @@ function renderConditions(_this, data, model, tagData, bodyFns, track) {
     data = bodyFn.vars.length ? getData(_this, model, bodyFn) : [];
     isVarOnly = !helper && data.length === 1;
     main = data[0] || {};
-    value = main.value;
+    value = checkObjectLength(main, helper, objKeys);
     canGo = ((cond || isVarOnly) && value) || (helper === 'unless' && !value) ||
       (!helper && !data.length && bodyFn.bodyFn); // isElese
   }
@@ -321,19 +330,19 @@ function renderConditions(_this, data, model, tagData, bodyFns, track) {
   if (helper === 'with' || helper === 'each' && value) {
     shift = true;
     model.scopes = shiftScope(model, value);
-    if (helper === 'each') return renderEach(_this, value, main, model, bodyFn.bodyFn);
+    if (helper === 'each') return renderEach(_this, value, main, model, bodyFn.bodyFn, objKeys._);
     model.scopes[0].helpers = createHelper('', '', 0,
       isVarOnly ? value : model.scopes[0].scope, model.scopes[1]);
   }
   return [canGo ? bodyFn.bodyFn(model) : '', shift && model.scopes.shift()][0];
 }
 
-function renderEach(_this, data, main, model, bodyFn) {
+function renderEach(_this, data, main, model, bodyFn, objKeys) {
   var scope = model.scopes[0];
   var alias = main.alias;
   var level = scope.level[0];
   var isArr = main.type === 'array';
-  var _data = !isArr && main.type !== 'object' ? [] : isArr ? data : getObjectKeys(data);
+  var _data = !isArr && main.type !== 'object' ? [] : isArr ? data : objKeys;
 
   for (var n = 0, l = _data.length, key = '', out = ''; n < l; n++) {
     key = '' + (isArr ? n : _data[n]);
