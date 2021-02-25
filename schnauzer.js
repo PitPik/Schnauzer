@@ -225,8 +225,10 @@ function getData(_this, model, tagData) {
 function checkObjectLength(main, helper, keys) {
   var value = main.value;
   var isObject = main.type === 'object';
+  var go = helper === 'each' || (main.type === 'array' &&
+    (helper === 'if' || helper === 'unless'));
 
-  if (helper !== 'each' || value === undefined) return value;
+  if (!go || value === undefined) return value;
   if (isObject) keys._ = getObjectKeys(value);
   return isObject ? keys._.length && value : value.length && value;
 }

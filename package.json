@@ -1,25 +1,20 @@
 {
   "name": "schnauzer",
-  "version": "1.6.5",
+  "version": "1.6.6",
+  "license": "MIT",
+  "author": "Peter Dematté",
   "description": "Fast and tiny template rendering engine using templates similar to Mustage or Handlebars",
-  "main": "schnauzer.js",
+  "keywords": [ "template", "parse", "render", "engine", "handlebars", "mustage" ],
   "repository": {
     "type": "git",
     "url": "http://github.com/PitPik/Schnauer.git"
   },
+  "main": "schnauzer.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "uglify": "uglifyjs schnauzer.js -o schnauzer.min.js --comments --source-map -c -m"
   },
-  "keywords": [
-    "template",
-    "render",
-    "handlebars",
-    "mustage"
-  ],
-  "author": "Peter Dematté",
-  "license": "MIT",
-  "dependencies": {
+  "devDependencies": {
     "uglify-js": "^3.4.2"
   }
 }
