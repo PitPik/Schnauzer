@@ -170,14 +170,15 @@ function getAliasValue(level, main, parent) {
 }
 
 function createLookup(key, model, aliasKey, main, scope, value) {
+  if (value === undefined) return;
   if (!model[key]) model[key] = {};
-  model[key][aliasKey] = !main.path ? value : // || main.path.length
+  model[key][aliasKey] = !main.path || scope[aliasKey] !== value ? value :
     { __isAlias: true, key: main.value, value: value, scope: scope };
 }
 
 function collectData(scope, value, main, _parent) {
   var key = scope.helpers['@key'] && value !== undefined &&
-    scope.helpers['@parent'].constructor !== Array ? scope.helpers['@key'] : '';
+    (scope.helpers['@parent'].constructor !== Array || !_parent) ? scope.helpers['@key'] : '';
   var parent = main.name && !main.path ? null : key ?
     scope.helpers['@parent'] || scope.scope || null : _parent;
   var _scope = parent && parent[key || main.value] || {};
@@ -283,16 +284,17 @@ function renderHelper(_this, data, model, tagData, bodyFns, track) {
     (data[0] ? renderConditions : undefined) || tagData.helperFn;
   var newData = [];
   var out = '';
+  var restore = model.scopes[0].values;
 
   if (helperFn) return helperFn(_this, data, model, tagData, bodyFns, track);
   if (!helper && data.length === 1 && data[0].type === 'function') return data[0].value();
-  if (model.alias) { model.scopes[0].level.unshift(model.alias); model.alias = null; }
-  if (model.values) { model.scopes[0].values = model.values; model.values = null; }
+  if (model.alias) { model.scopes[0].level.unshift(model.alias); }
+  if (model.values) { model.scopes[0].values = model.values; }
 
   newData.push(getOptions(_this, model, tagData, data, newData, bodyFns));
   out = helper ? helper.apply(scope, newData) : '';
   model.scopes[0].level.shift();
-  model.scopes[0].values = null;
+  model.scopes[0].values = restore;
   return out === undefined ? '' : out;
 }
 
@@ -362,6 +364,7 @@ function renderEach(_this, data, main, model, bodyFn, objKeys, loopHelper) {
 // ---- render blocks and inlines; delegations only
 
 function render(_this, model, data, tagData, out, renderFn, bodyFns, track) {
+  model.values = null; model.alias = null;
   return !_this.options.renderHook ? out : _this.options.renderHook(
     _this, out, data, tagData, track || {fnIdx: 0}, function() {
       return renderFn(_this, tagData, model, bodyFns, track || {fnIdx: 0});
