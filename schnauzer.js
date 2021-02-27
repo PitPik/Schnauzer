@@ -177,16 +177,12 @@ function createLookup(key, model, aliasKey, main, scope, value) {
 }
 
 function collectData(scope, value, main, _parent) {
-  var key = scope.helpers['@key'] && value !== undefined &&
-    (scope.helpers['@parent'].constructor !== Array || !_parent) ? scope.helpers['@key'] : '';
-  var parent = main.name && !main.path ? null : key ?
-    scope.helpers['@parent'] || scope.scope || null : _parent;
-  var _scope = parent && parent[key || main.value] || {};
+  var stright = _parent === scope.scope;
+  var parent = stright ? _parent : scope.helpers['@parent'] || _parent || scope.scope;
+  var key = stright ? main.value : scope.helpers['@key'] || main.value;
+  var isSame = parent[key] === value;
 
-  return {
-    key: _scope.__isAlias ? _scope.key : key || main.value,
-    parent: _scope.__isAlias ? _scope.scope : parent,
-  };
+  return { key: isSame ? key : main.value, parent: isSame ? parent : _parent };
 }
 
 function getData(_this, model, tagData) {
@@ -355,7 +351,7 @@ function renderEach(_this, data, main, model, bodyFn, objKeys, loopHelper) {
     key = '' + (isArr ? n : value[n]);
     scope.helpers = createHelper(n, key, l, data[key], data);
     scope.scope = data[key];
-    if (alias) { level[alias[0]] = data[key]; level[alias[1]] = key; }
+    if (alias) { level[alias[0]] = data[key]; if (alias[1]) level[alias[1]] = key; }
     out += loopHelper(bodyFn(model), n, isArr);
   }
   return [ out, model.scopes.shift() ][0];
