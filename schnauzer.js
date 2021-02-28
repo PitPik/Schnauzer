@@ -363,13 +363,12 @@ function renderEach(_this, data, main, model, bodyFn, objKeys, loopHelper) {
 function render(_this, model, data, tagData, out, renderFn, bodyFns, track) {
   model.values = null; model.alias = null;
   return !_this.options.renderHook ? out : _this.options.renderHook(
-    _this, out, data, tagData, track || {fnIdx: 0}, function() {
-      return renderFn(_this, tagData, model, bodyFns, track || {fnIdx: 0});
+    _this, out, data, tagData, track || {fnIdx: 0}, function(data) {
+      return renderFn(_this, tagData, data, model, bodyFns, track || {fnIdx: 0});
     });
 }
 
-function renderInline(_this, tagData, model) {
-  var data = getData(_this, model, tagData);
+function renderInline(_this, tagData, data, model) {
   var type = data[0] && data[0].type;
   var out = tagData.partial ? renderPartial(_this, data, model, tagData) :
     escapeHtml(_this, tagData.helper || type === 'function' ? // helper
@@ -382,13 +381,13 @@ function renderInline(_this, tagData, model) {
 function renderInlines(_this, tags, glues, blocks, model) {
   for (var n = 0, l = glues.length, out = ''; n < l; n++) {
     out += glues[n] + (!tags[n] ? '' : tags[n].blockIndex > -1 ?
-      blocks[tags[n].blockIndex](model) : renderInline(_this, tags[n], model));
+      blocks[tags[n].blockIndex](model) :
+      renderInline(_this, tags[n], getData(_this, model, tags[n]), model));
   }
   return out;
 }
 
-function renderBlock(_this, tagData, model, bodyFns, recursive) {
-  var data = getData(_this, model, tagData);
+function renderBlock(_this, tagData, data, model, bodyFns, recursive) {
   var track = recursive || { fnIdx: 0 }; // TODO: renderPartial on blocks? 
   var out = renderHelper(_this, data, model, tagData, bodyFns, track);
   
@@ -546,7 +545,7 @@ function doBlock(_this, blocks, start, end, close, body, type, root, vars) {
     blocks, start, getTrims(end, closeParts[0]), []);
 
   blocks.push(function executeBlock(model) {
-    return renderBlock(_this, tagData, model, bodyFns);
+    return renderBlock(_this, tagData, getData(_this, model, tagData), model, bodyFns);
   });
   return (start + '--block-- ' + (blocks.length - 1) + closeParts[1]);
 }
