@@ -156,7 +156,7 @@ function getDeepData(scope, mainVar, parent) {
   for (var n = 0, l = mainVar.path.length; n < l; n++) {
     if (mainVar.path[n] === '@root') continue;
     scope = parent._ = scope[mainVar.path[n]];
-    if (scope && scope.__isAlias) scope = parent._ = scope.value;
+    if (scope && scope.__isAlias) scope = parent._ = scope.__isAlias;
     if (!scope) return;
   }
   return scope[mainVar.value];
@@ -173,7 +173,7 @@ function createLookup(key, model, aliasKey, main, scope, value) {
   if (value === undefined) return;
   if (!model[key]) model[key] = {};
   model[key][aliasKey] = !main.path || scope[aliasKey] !== value ? value :
-    { __isAlias: true, key: main.value, value: value, scope: scope };
+    { __isAlias: scope, value: value }; // key: main.value, , scope: scope
 }
 
 function collectData(scope, value, main, _parent) {
@@ -182,7 +182,8 @@ function collectData(scope, value, main, _parent) {
   var key = stright ? main.value : scope.helpers['@key'] || main.value;
   var isSame = parent[key] === value;
 
-  return { key: isSame ? key : main.value, parent: isSame ? parent : _parent };
+  return !main.path ? { value: value } :
+    { key: isSame ? key : main.value, parent: isSame ? parent : _parent };
 }
 
 function getData(_this, model, tagData) {
@@ -247,7 +248,7 @@ function getOptions(_this, model, tagData, data, newData, bodyFns) {
   }};
 
   for (var n = data.length; n--; ) {
-    if (data[n].name) options.hash[data[n].name] = data[n].level;
+    if (data[n].name) options.hash[data[n].name] = data[n].value;
     else newData.unshift(data[n].value);
   }
   if (bodyFns) {
@@ -284,8 +285,8 @@ function renderHelper(_this, data, model, tagData, bodyFns, track) {
 
   if (helperFn) return helperFn(_this, data, model, tagData, bodyFns, track);
   if (!helper && data.length === 1 && data[0].type === 'function') return data[0].value();
-  if (model.alias) { model.scopes[0].level.unshift(model.alias); }
-  if (model.values) { model.scopes[0].values = model.values; }
+  if (model.alias) model.scopes[0].level.unshift(model.alias);
+  if (model.values) model.scopes[0].values = model.values;
 
   newData.push(getOptions(_this, model, tagData, data, newData, bodyFns));
   out = helper ? helper.apply(scope, newData) : '';
