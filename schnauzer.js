@@ -275,7 +275,6 @@ function getHelperFn(_this, model, tagData) {
 // ---- render blocks/inlines helpers (std. HBS helpers)
 
 function renderHelper(_this, data, model, tagData, bodyFns, track) {
-  var scope = model.scopes[(data[0] || {}).depth || 0].scope;
   var helper = getHelperFn(_this, model, tagData);
   var helperFn = !tagData.helper && bodyFns &&
     (data[0] ? renderConditions : undefined) || tagData.helperFn;
@@ -289,7 +288,7 @@ function renderHelper(_this, data, model, tagData, bodyFns, track) {
   if (model.values) model.scopes[0].values = model.values;
 
   newData.push(getOptions(_this, model, tagData, data, newData, bodyFns));
-  out = helper ? helper.apply(scope, newData) : '';
+  out = helper ? helper.apply(model.scopes[0].scope, newData) : '';
   model.scopes[0].level.shift();
   model.scopes[0].values = restore;
   return out === undefined ? '' : out;
