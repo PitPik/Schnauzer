@@ -1,4 +1,4 @@
-/**! @license schnauzer v1.6.7; Copyright (C) 2017-2021 by Peter Dematté */
+/**! @license schnauzer v1.6.8; Copyright (C) 2017-2021 by Peter Dematté */
 (function(global, factory) {
   if (typeof exports === 'object') module.exports = factory(global);
   else if (typeof define === 'function' && define.amd)
@@ -23,7 +23,7 @@ var concatArrays = function(array, host) {
 };
 
 var Schnauzer = function(template, options) {
-  this.version = '1.6.7';
+  this.version = '1.6.8';
   this.partials = {};
   this.helpers = {};
   this.regexps = {};
@@ -131,7 +131,7 @@ function createHelper(idx, key, len, value, parent) {
   };
 }
 
-function shiftScope(model, data) {
+function addScope(model, data) {
   var scopes = model.scopes;
   var newLevel = model.alias ? [model.alias] : [];
   var level = concatArrays(scopes[0].level, newLevel);
@@ -193,7 +193,7 @@ function getData(_this, model, tagData) {
   var data = {};
 
   if (!tagData || !vars) return [];
-  if (!tagData.helper && _this.helpers[vars[0].orig]) tagData.helper = vars.shift();
+  if (!tagData.helper && vars[0] && _this.helpers[vars[0].orig]) tagData.helper = vars.shift();
 
   for (var n = 0, l = vars.length, main = {}, scope = {}, value; n < l; n++) {
     main = vars[n];
@@ -296,9 +296,11 @@ function renderHelper(_this, data, model, tagData, bodyFns, track) {
 
 function renderPartial(_this, data, model, tagData) {
   var partial = _this.partials[tagData.partial.orig];
-  var scope = !data[0].name ? data[0].value : model.scopes[0].scope;
-  var tmp = model.scopes = shiftScope(model, scope);
+  var scope = data[0] && !data[0].name ? data[0].value : model.scopes[0].scope;
+  var tmp = model.scopes = addScope(model, scope);
+  var values = model.scopes[0].values;
 
+  for (var n = data.length; n--; ) if (data[n].name) values[data[n].name] = data[n].value;
   if (_this.options.limitPartialScope) model.scopes = [model.scopes[0]];
   return [ partial ? partial(model) : '', model.scopes = tmp, model.scopes.shift() ][0];
 }
@@ -331,7 +333,7 @@ function renderConditions(_this, data, model, tagData, bodyFns, track) {
   if (isVarOnly && !helper) helper = 'with';
   if (helper === 'with' || helper === 'each' && value) {
     shift = true;
-    model.scopes = shiftScope(model, value);
+    model.scopes = addScope(model, value);
     if (helper === 'each') return renderEach(_this, value, main, model,
       bodyFn.bodyFn, objKeys._, _this.options.loopHelper);
     model.scopes[0].helpers = createHelper('', '', 0,
