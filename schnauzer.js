@@ -191,6 +191,7 @@ function getData(_this, model, tagData) {
   var parent = { _: null };
   var out = [];
   var data = {};
+  var helper = null;
 
   if (!tagData || !vars) return [];
   if (!tagData.helper && vars[0] && _this.helpers[vars[0].orig]) tagData.helper = vars.shift();
@@ -204,19 +205,23 @@ function getData(_this, model, tagData) {
     if (value === undefined && scope.values) value = getDeepData(scope.values, main, parent);
     if (value === undefined && !main.isStrict) value = getAliasValue(scope.level, main, parent);
     if (value === undefined) value = main.helper ?
-      renderHelper(_this, getData(_this, model, main), model, main) :
+      renderHelper(_this, data = getData(_this, model, main), model, main) :
       main.path || main.name || main.vars ? getDeepData(scope.scope, main, parent) :
         tagData.isInline ? scope.scope[main.value] : main.value;
     if (value === undefined) value = getDeepData(model.extra, main, parent);
 
     if (main.alias) createLookup('alias', model, main.alias[0], main, scope.scope, value);
     if (main.name) createLookup('values', model, main.name, main, scope.scope, value);
-    if (_this.options.renderHook) data = collectData(scope, value, main, parent._);
+    if (_this.options.renderHook) if (main.helper && !main.name) {
+        helper = function(newData) { return renderHelper(_this, newData, model, main) }
+        data.__vars = main.vars;
+      } else data = collectData(scope, value, main, parent._);
     out.push({
       value: value && value.__isAlias ? value.value : value,
       alias: main.alias,
       type: value && value.constructor === Array ? 'array' : typeof value,
-      name: main.name, parent: data.parent, key: data.key,
+      name: main.name,
+      parent: data.parent, key: data.key, data: helper ? data : null, helper: helper
     });
   }
   return out;
@@ -363,6 +368,9 @@ function renderEach(_this, data, main, model, bodyFn, objKeys, loopHelper) {
 
 function render(_this, model, data, tagData, out, renderFn, bodyFns, track) {
   model.values = null; model.alias = null;
+  if (_this.options.renderHook && bodyFns) model = { // heavy...
+    extra: model.extra, scopes: model.scopes, // concatArrays(model.scopes, []),
+  };
   return !_this.options.renderHook ? out : _this.options.renderHook(
     _this, out, data, tagData, track || {fnIdx: 0}, function(data) {
       return renderFn(_this, tagData, data, model, bodyFns, track || {fnIdx: 0});
@@ -429,7 +437,7 @@ function parsePath(text, data, skip) {
   var depth = parts.length - 1;
   var value = skip ? name : parts[depth];
 
-  if (skip || value === '.' || value === 'this') return { value: value };
+  if (skip || value === '.' || value === 'this' || +value == value) return { value: value };
   parts = cleanText(value, data).split(/[./]/);
   return { value: start + parts.pop(), path: parts, depth: depth, name: name };
 }
