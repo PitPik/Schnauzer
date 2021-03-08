@@ -138,9 +138,10 @@ function addScope(model, data) {
   var values = model.values || {};
 
   model.alias = null; model.values = null; // TODO
-  return concatArrays(scopes, [{
+  model.scopes = concatArrays(scopes, [{
     scope: data, helpers: {}, level: level, values: values,
   }]);
+  return function() { model.scopes = scopes };
 }
 
 function tweakScope(scope, data, options) {
@@ -192,6 +193,7 @@ function getData(_this, model, tagData) {
   var out = [];
   var data = {};
   var helper = null;
+  var origModel = {};
 
   if (!tagData || !vars) return [];
   if (!tagData.helper && vars[0] && _this.helpers[vars[0].orig]) tagData.helper = vars.shift();
@@ -213,7 +215,8 @@ function getData(_this, model, tagData) {
     if (main.alias) createLookup('alias', model, main.alias[0], main, scope.scope, value);
     if (main.name) createLookup('values', model, main.name, main, scope.scope, value);
     if (_this.options.renderHook) if (main.helper && !main.name) {
-        helper = function(newData) { return renderHelper(_this, newData, model, main) }
+        origModel = { extra: model.extra, scopes: model.scopes }
+        helper = function(newData) { return renderHelper(_this, newData, origModel, main) };
         data.__vars = main.vars;
       } else data = collectData(scope, value, main, parent._);
     out.push({
@@ -279,7 +282,7 @@ function getHelperFn(_this, model, tagData) {
 
 // ---- render blocks/inlines helpers (std. HBS helpers)
 
-function renderHelper(_this, data, model, tagData, bodyFns, track) { // TODO: renderHook -> model
+function renderHelper(_this, data, model, tagData, bodyFns, track) {
   var helper = getHelperFn(_this, model, tagData);
   var helperFn = !tagData.helper && bodyFns &&
     (data[0] ? renderConditions : undefined) || tagData.helperFn;
@@ -302,12 +305,10 @@ function renderHelper(_this, data, model, tagData, bodyFns, track) { // TODO: re
 function renderPartial(_this, data, model, tagData) {
   var partial = _this.partials[tagData.partial.orig];
   var scope = data[0] && !data[0].name ? data[0].value : model.scopes[0].scope;
-  var tmp = model.scopes = addScope(model, scope);
-  var values = model.scopes[0].values;
+  var reset = addScope(model, scope);
 
-  for (var n = data.length; n--; ) if (data[n].name) values[data[n].name] = data[n].value;
   if (_this.options.limitPartialScope) model.scopes = [model.scopes[0]];
-  return [ partial ? partial(model) : '', model.scopes = tmp, model.scopes.shift() ][0];
+  return [ partial ? partial(model) : '', reset() ][0];
 }
 
 function renderConditions(_this, data, model, tagData, bodyFns, track) {
@@ -320,7 +321,7 @@ function renderConditions(_this, data, model, tagData, bodyFns, track) {
   var main = data[0] || {};
   var value = checkObjectLength(main, helper, objKeys);
   var canGo = ((cond || isVarOnly) && value) || (helper === 'unless' && !value);
-  var shift = false;
+  var reset = null;
 
   while (bodyFns[idx + 1] && !canGo) {
     bodyFn = bodyFns[++idx];
@@ -337,17 +338,16 @@ function renderConditions(_this, data, model, tagData, bodyFns, track) {
   if (isVarOnly && main.type === 'array') helper = 'each';
   if (isVarOnly && !helper) helper = 'with';
   if (helper === 'with' || helper === 'each' && value) {
-    shift = true;
-    model.scopes = addScope(model, value);
+    reset = addScope(model, value);
     if (helper === 'each') return renderEach(_this, value, main, model,
-      bodyFn.bodyFn, objKeys._, _this.options.loopHelper);
+      bodyFn.bodyFn, objKeys._, _this.options.loopHelper, reset);
     model.scopes[0].helpers = createHelper('', '', 0,
       isVarOnly ? value : model.scopes[0].scope, model.scopes[1]);
   }
-  return [canGo ? bodyFn.bodyFn(model) : '', shift && model.scopes.shift()][0];
+  return [canGo ? bodyFn.bodyFn(model) : '', reset && reset()][0];
 }
 
-function renderEach(_this, data, main, model, bodyFn, objKeys, loopHelper) {
+function renderEach(_this, data, main, model, bodyFn, objKeys, loopHelper, reset) {
   var scope = model.scopes[0];
   var alias = main.alias;
   var level = scope.level[0];
@@ -361,7 +361,7 @@ function renderEach(_this, data, main, model, bodyFn, objKeys, loopHelper) {
     if (alias) { level[alias[0]] = data[key]; if (alias[1]) level[alias[1]] = key; }
     out += loopHelper ? loopHelper(bodyFn(model), n, isArr) : bodyFn(model);
   }
-  return [ out, model.scopes.shift() ][0];
+  return [ out, reset() ][0];
 }
 
 // ---- render blocks and inlines; delegations only
