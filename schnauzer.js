@@ -45,7 +45,7 @@ var Schnauzer = function(template, options) {
     nameCharacters: '',
     escapeHTML: true,
     limitPartialScope: true, // HBS style; new in v1.6.5
-    loopHelper: function(txt) { return txt },
+    loopHelper: null,
     renderHook: null,
   };
   initSchnauzer(this, options || {}, template);
@@ -279,7 +279,7 @@ function getHelperFn(_this, model, tagData) {
 
 // ---- render blocks/inlines helpers (std. HBS helpers)
 
-function renderHelper(_this, data, model, tagData, bodyFns, track) {
+function renderHelper(_this, data, model, tagData, bodyFns, track) { // TODO: renderHook -> model
   var helper = getHelperFn(_this, model, tagData);
   var helperFn = !tagData.helper && bodyFns &&
     (data[0] ? renderConditions : undefined) || tagData.helperFn;
@@ -359,7 +359,7 @@ function renderEach(_this, data, main, model, bodyFn, objKeys, loopHelper) {
     scope.helpers = createHelper(n, key, l, data[key], data);
     scope.scope = data[key];
     if (alias) { level[alias[0]] = data[key]; if (alias[1]) level[alias[1]] = key; }
-    out += loopHelper(bodyFn(model), n, isArr);
+    out += loopHelper ? loopHelper(bodyFn(model), n, isArr) : bodyFn(model);
   }
   return [ out, model.scopes.shift() ][0];
 }

@@ -61,6 +61,7 @@ new Schnauzer(template: string, options: { [key: string]: any }) {
     self: 'self', // name of initial partial
     nameCharacters: '', // whitelist of chars for variables inside helpers, partials, functions...
     renderHook: Function // every time an inline or block element renders, this function will be called
+    loopHelper: Function // Every loop cycle of an Array inside #each calls this function
 })
 .render(data { [key: string]: any }, extraData { [key: string]: any }): string
 .parse(text: string): Function
