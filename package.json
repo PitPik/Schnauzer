@@ -1,6 +1,6 @@
 {
   "name": "schnauzer",
-  "version": "1.6.8",
+  "version": "1.6.9",
   "license": "MIT",
   "author": "Peter Dematté",
   "description": "Fast and tiny template rendering engine using templates similar to Mustage or Handlebars",

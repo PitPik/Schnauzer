@@ -1,4 +1,4 @@
-/**! @license schnauzer v1.6.8; Copyright (C) 2017-2021 by Peter Dematté */
+/**! @license schnauzer v1.6.9; Copyright (C) 2017-2021 by Peter Dematté */
 (function(global, factory) {
   if (typeof exports === 'object') module.exports = factory(global);
   else if (typeof define === 'function' && define.amd)
@@ -23,7 +23,7 @@ var concatArrays = function(array, host) {
 };
 
 var Schnauzer = function(template, options) {
-  this.version = '1.6.8';
+  this.version = '1.6.9';
   this.partials = {};
   this.helpers = {};
   this.regexps = {};
@@ -181,9 +181,10 @@ function collectData(scope, value, main, _parent) {
   var stright = _parent === scope.scope;
   var parent = stright ? _parent : scope.helpers['@parent'] || _parent || scope.scope;
   var key = stright ? main.value : scope.helpers['@key'] || main.value;
+  var isThis = main.value === 'this' || main.value === '.';
   var isSame = parent[key] === value;
 
-  return !main.path ? { value: value } :
+  return !main.path && !isThis ? { value: value } : // TODO: check again...
     { key: isSame ? key : main.value, parent: isSame ? parent : _parent };
 }
 
@@ -359,7 +360,7 @@ function renderEach(_this, data, main, model, bodyFn, objKeys, loopHelper, reset
     scope.helpers = createHelper(n, key, l, data[key], data);
     scope.scope = data[key];
     if (alias) { level[alias[0]] = data[key]; if (alias[1]) level[alias[1]] = key; }
-    out += loopHelper ? loopHelper(bodyFn(model), n, isArr) : bodyFn(model);
+    out += loopHelper && isArr ? loopHelper(bodyFn(model), key, main) : bodyFn(model);
   }
   return [ out, reset() ][0];
 }
