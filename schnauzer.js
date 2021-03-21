@@ -341,14 +341,14 @@ function renderConditions(_this, data, model, tagData, bodyFns, track) {
   if (helper === 'with' || helper === 'each' && value) {
     reset = addScope(model, value);
     if (helper === 'each') return renderEach(_this, value, main, model,
-      bodyFn.bodyFn, objKeys._, _this.options.loopHelper, reset);
+      bodyFn.bodyFn, objKeys._, _this.options.loopHelper, tagData.vars[0].active, reset);
     model.scopes[0].helpers = createHelper('', '', 0,
       isVarOnly ? value : model.scopes[0].scope, model.scopes[1]);
   }
   return [canGo ? bodyFn.bodyFn(model) : '', reset && reset()][0];
 }
 
-function renderEach(_this, data, main, model, bodyFn, objKeys, loopHelper, reset) {
+function renderEach(_this, data, main, model, bodyFn, objKeys, loopHelper, active, reset) {
   var scope = model.scopes[0];
   var alias = main.alias;
   var level = scope.level[0];
@@ -360,7 +360,7 @@ function renderEach(_this, data, main, model, bodyFn, objKeys, loopHelper, reset
     scope.helpers = createHelper(n, key, l, data[key], data);
     scope.scope = data[key];
     if (alias) { level[alias[0]] = data[key]; if (alias[1]) level[alias[1]] = key; }
-    out += loopHelper && isArr ? loopHelper(bodyFn(model), key, main) : bodyFn(model);
+    out += loopHelper && isArr && active ? loopHelper(bodyFn(model), key, main) : bodyFn(model);
   }
   return [ out, reset() ][0];
 }
