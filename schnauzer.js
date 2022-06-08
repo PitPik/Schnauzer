@@ -1,4 +1,4 @@
-/**! @license schnauzer v1.6.9; Copyright (C) 2017-2021 by Peter Dematté */
+/**! @license schnauzer v1.7.0; Copyright (C) 2017-2022 by Peter Dematté */
 (function(global, factory) {
   if (typeof exports === 'object') module.exports = factory(global);
   else if (typeof define === 'function' && define.amd)
@@ -6,15 +6,15 @@
   else global.Schnauzer = factory(global);
 }(this && this.window || global, function(global, undefined) { 'use strict';
 
+var getObjectKeysFn = function(obj, key, keys) { obj.hasOwnProperty(key) && keys.push(key) };
 var getObjectKeys = Object.keys || function(obj) {
-  var fn = function(obj, key, keys) {obj.hasOwnProperty(key) && keys.push(key)};
   var keys = [];
-  for (var key in obj) fn(obj, key, keys);
+  for (var key in obj) getObjectKeysFn(obj, key, keys);
   return keys;
 };
+var cloneObjectFn = function(obj, newObj, key) { newObj[key] = obj[key] };
 var cloneObject = function(newObj, obj) {
-  var fn = function(obj, newObj, key) { newObj[key] = obj[key] };
-  for (var key in obj) fn(obj, newObj, key);
+  for (var key in obj) cloneObjectFn(obj, newObj, key);
   return newObj;
 };
 var concatArrays = function(array, host) {
@@ -22,8 +22,8 @@ var concatArrays = function(array, host) {
   return host;
 };
 
-var Schnauzer = function(template, options) {
-  this.version = '1.6.9';
+var Schnauzer = function(templateOrOptions, options) {
+  this.version = '1.7.0';
   this.partials = {};
   this.helpers = {};
   this.regexps = {};
@@ -48,25 +48,22 @@ var Schnauzer = function(template, options) {
     loopHelper: null,
     renderHook: null,
   };
-  initSchnauzer(this, options || {}, template);
+  initSchnauzer(this, options || {}, templateOrOptions);
 };
 
 var initSchnauzer = function(_this, options, template) {
   if (typeof template !== 'string') { options = template; template = '' }
   options = cloneObject(_this.options, options);
   switchTags(_this, options.tags);
-  _this.regexps.entity =
-    new RegExp('[' + getObjectKeys(options.entityMap).join('') + ']', 'g');
   _this.helpers = options.helpers;
-  for (var name in options.partials)
-    _this.registerPartial(name, options.partials[name]);
+  for (var name in options.partials) _this.registerPartial(name, options.partials[name]);
   _this.escapeExpression = function(txt) { return escapeHtml(_this, txt, true) }
   if (template) _this.parse(template);
 };
 
 Schnauzer.prototype = {
   render: function(data, extra) {
-    var helpers = createHelper('', '', 0, undefined, null);
+    var helpers = createHelper('', '', 0, undefined, null, [{ scope: data }]);
     return this.partials[this.options.self]({
       extra: extra || {},
       scopes: [{ scope: data, helpers: helpers, level: [], values: null }],
@@ -97,38 +94,38 @@ return Schnauzer;
 function switchTags(_this, tags) {
   var tgs = tags[0] === '{{' ? ['({{2,3}~*)', '(~*}{2,3})'] : tags;
   var chars = _this.options.nameCharacters + '!-;=?@[-`|';
-  var blockEnd = (tgs[0] + '\\/\\3' + tgs[1]).replace(/[()]/g, '');
 
-  _this.regexps.inline = new RegExp(tgs[0] + '([>!&=])*\\s*([\\w\\' +
-    chars + '<>|\\.\\s]*)' + tgs[1], 'g');
-  _this.regexps.block = new RegExp(tgs[0] + '([#^][*%]*)\\s*([\\w' +
-    chars + '<>~]*)(?:\\s+([\\w$\\s|.\\/' + chars + ']*))*' + tgs[1] +
-    '(?:\\n*)((?:(?!' + tgs[0] + '[#^])[\\S\\s])*?)(' + blockEnd + ')', 'g');
-  _this.regexps.else = new RegExp(tgs[0] + '(?:else|\\^)\\s*(.*?)' + tgs[1]);
+  _this.regexps = {
+    inline: new RegExp(tgs[0] + '([>!&=])*\\s*([\\w\\' + chars + '<>|\\.\\s]*)' + tgs[1], 'g'),
+    block: new RegExp(tgs[0] + '([#^][*%]*)\\s*([\\w' + chars + '<>~]*)(?:\\s+([\\w$\\s|.\\/' +
+      chars + ']*))*' + tgs[1] + '(?:\\n*)((?:(?!' + tgs[0] + '[#^])[\\S\\s])*?)(' +
+      (tgs[0] + '\\/\\3' + tgs[1]).replace(/[()]/g, '') + ')', 'g'),
+    else: new RegExp(tgs[0] + '(?:else|\\^)\\s*(.*?)' + tgs[1]),
+    entity: new RegExp('[' + getObjectKeys(_this.options.entityMap).join('') + ']', 'g'),
+  };
 }
 
 // ---- render data helpers
 
 function escapeHtml(_this, string, doEscape) {
-  return string === undefined || string === null ? '' :
-    string.constructor === Schnauzer.SafeString ? string.string :
-    doEscape && _this.options.escapeHTML ?
-    String(string).replace(_this.regexps.entity, function(char) {
-      return _this.options.entityMap[char];
-    }) : string;
+  return string == null ? '' : string.constructor === Schnauzer.SafeString ? string.string :
+    doEscape && _this.options.escapeHTML ? String(string).replace(
+      _this.regexps.entity, function(char) { return _this.options.entityMap[char] }
+    ) : string;
 }
 
-function createHelper(idx, key, len, value, parent) {
-  return {
+function createHelper(idx, key, len, value, parent, scopes) {
+  return len ? {
     '@index': idx,
+    '@key': key,
     '@last': idx === len - 1,
     '@first': idx === 0,
     '@length': len,
     '@parent': parent,
-    '@key': key,
+    '@root': scopes[scopes.length - 1].scope,
     'this': value,
     '.': value,
-  };
+  } : { '@parent': parent, '@root': scopes[scopes.length - 1].scope, 'this': value, '.': value };
 }
 
 function addScope(model, data) {
@@ -180,7 +177,7 @@ function createLookup(key, model, aliasKey, main, scope, value) {
 function collectData(scope, value, main, _parent) {
   var stright = _parent === scope.scope;
   var parent = stright ? _parent : scope.helpers['@parent'] || _parent || scope.scope;
-  var key = stright ? main.value : scope.helpers['@key'] || main.value;
+  var key = stright ? main.value : '' + (scope.helpers['@key'] || '') || main.value;
   var isThis = main.value === 'this' || main.value === '.';
   var isSame = parent[key] === value;
 
@@ -246,16 +243,22 @@ function getOptions(_this, model, tagData, data, newData, bodyFns) {
   var save = null;
   var noop = function noop() { return '' };
   var name = tagData.helper ? tagData.helper.orig : '';
-  var options = { name: name, hash: {}, blockParams: [], data: {
-    root: model.scopes[model.scopes.length - 1].scope,
-  }, utils: {
+  var helpers = model.scopes[0].helpers;
+  var options = {
+    name: name,
+    hash: {},
+    data: { root: helpers['@root'], scope: helpers['this'], parent: helpers['@parent'] },
     escapeExpression: _this.escapeExpression,
     SafeString: Schnauzer.SafeString,
     keys: getObjectKeys,
     extend: cloneObject,
     concat: concatArrays,
-  }};
+  };
 
+  if (helpers['@length']) cloneObject(options.data, {
+    first: helpers['@first'], last: helpers['@last'],
+    index: helpers['@index'], key: helpers['@key'], length: helpers['@length'],
+  });
   for (var n = data.length; n--; ) {
     if (data[n].name) options.hash[data[n].name] = data[n].value;
     else newData.unshift(data[n].value);
@@ -293,12 +296,10 @@ function renderHelper(_this, data, model, tagData, bodyFns, track) {
 
   if (helperFn) return helperFn(_this, data, model, tagData, bodyFns, track);
   if (!helper && data.length === 1 && data[0].type === 'function') return data[0].value();
-  if (model.alias) model.scopes[0].level.unshift(model.alias);
   if (model.values) model.scopes[0].values = model.values;
 
   newData.push(getOptions(_this, model, tagData, data, newData, bodyFns));
   out = helper ? helper.apply(model.scopes[0].scope, newData) : '';
-  model.scopes[0].level.shift();
   model.scopes[0].values = restore;
   return out === undefined ? '' : out;
 }
@@ -333,7 +334,7 @@ function renderConditions(_this, data, model, tagData, bodyFns, track) {
     main = data[0] || {};
     value = checkObjectLength(main, helper, objKeys);
     canGo = ((cond || isVarOnly) && value) || (helper === 'unless' && !value) ||
-      (!helper && !data.length && bodyFn.bodyFn); // isElese
+      (!helper && !data.length && bodyFn.bodyFn); // isElse
   }
   track.fnIdx = idx;
   if (isVarOnly && main.type === 'array') helper = 'each';
@@ -343,7 +344,7 @@ function renderConditions(_this, data, model, tagData, bodyFns, track) {
     if (helper === 'each') return renderEach(_this, value, main, model,
       bodyFn.bodyFn, objKeys._, tagData.vars[0].active, _this.options.loopHelper, reset);
     model.scopes[0].helpers = createHelper('', '', 0,
-      isVarOnly ? value : model.scopes[0].scope, model.scopes[1]);
+      isVarOnly ? value : model.scopes[0].scope, model.scopes[1].scope, model.scopes);
   }
   return [canGo ? bodyFn.bodyFn(model) : '', reset && reset()][0];
 }
@@ -356,8 +357,8 @@ function renderEach(_this, data, main, model, bodyFn, objKeys, active, loopHelpe
   var value = !isArr && main.type !== 'object' ? [] : isArr ? data : objKeys;
 
   for (var n = 0, l = value.length, key = '', out = ''; n < l; n++) {
-    key = '' + (isArr ? n : value[n]);
-    scope.helpers = createHelper(n, key, l, data[key], data);
+    key = (isArr ? n : value[n]);
+    scope.helpers = createHelper(n, key, l, data[key], data, model.scopes);
     scope.scope = data[key];
     if (alias) { level[alias[0]] = data[key]; if (alias[1]) level[alias[1]] = key; }
     out += loopHelper && isArr ? loopHelper(bodyFn(model), key, main, active) : bodyFn(model);
@@ -374,6 +375,7 @@ function render(_this, model, data, tagData, out, renderFn, bodyFns, track) {
   };
   return !_this.options.renderHook ? out : _this.options.renderHook(
     _this, out, data, tagData, track || {fnIdx: 0}, function(data) {
+      model.scopes[0].scope = data[0].parent;
       return renderFn(_this, tagData, data, model, bodyFns, track || {fnIdx: 0});
     });
 }
@@ -431,8 +433,9 @@ function cleanText(text, out) {
 }
 
 function parsePath(text, data, skip) {
-  // TODO: ../[data.foo] ../["data.foo"] ../"data.foo" "data.foo".foo ... /
-  var name = text.replace(/[[\]]/g, ''); // HB
+  var name = text.replace(/\[.*?]/g, function($) { // HB
+    return $.substring(1, $.length - 1).replace(/\./g, '^');
+  });
   var parts = skip ? [] : name.split('../');
   var start = parts[1] ? parts[0] : '';
   var depth = parts.length - 1;
@@ -440,7 +443,8 @@ function parsePath(text, data, skip) {
 
   if (skip || value === '.' || value === 'this' || +value == value) return { value: value };
   parts = cleanText(value, data).split(/[./]/);
-  return { value: start + parts.pop(), path: parts, depth: depth, name: name };
+  for (var n = parts.length; n--; ) parts[n] = parts[n].replace(/\^/g, '.');
+  return { value: start + parts.pop(), path: parts, depth: depth, name: name.replace(/\^/g, '.') };
 }
 
 function parseAlias(value, out, spread) {
@@ -456,18 +460,18 @@ function getVars(text, collection, out, type) {
   var txtParts = type === 'string' ? [text] : text.split(/[,;]*\s+[,;]*/);
   var isAliasOrString = type === 'alias' || type === 'string';
 
-  for (var n = 0, l = txtParts.length,
+  for (var n = 0, l = txtParts.length, match = /--(\d+)--/, replace = /%+/,
       parts = [], value = '', data = {}, paths = {}; n < l; n++) {
     parts = txtParts[n].split('=');
     value = parts[1] !== undefined ? parts[1] : parts[0];
     if (value === '' || value === 'as') continue;
 
-    data = collection[(value.match(/--(\d+)--/) || [])[1]] || { value: value };
+    data = collection[(value.match(match) || [])[1]] || { value: value };
     if (typeof data.value === 'object' && data.value[0].single) return data.value;
     if (parts[1] !== undefined) data.name = parts[0];
     if (data.type === 'string') data.value = data.value[0].value;
     else if (data.value && typeof data.value === 'string') {
-      data.value = data.value.replace(/%+/, function($) {
+      data.value = data.value.replace(replace, function($) {
         data.active = $.length; return '';
       });
       paths = parsePath(data.value, data, isAliasOrString);
@@ -484,18 +488,23 @@ function getVars(text, collection, out, type) {
 }
 
 function sizzleVars(text, out) {
+  var replace = /\([^()]*\)/g;
+  var replaceCb = function($) {
+    var value = { vars: getVars($.substring(1, $.length - 1), out, [], 'fn') };
+    if (value.vars.length > 1) value.helper = value.vars.shift();
+    return '--' + (out.push(value) - 1) + '--';
+  };
+
   text = text.replace(/(['"|])(?:[^\\'"]|\\+['"]|['"])*?\1/g, function($, $1) {
     var value = { type: $1 !== '|' ? 'string' : 'alias', value: '' };
+
+    if (text.indexOf('[' + $1) !== -1) return $;
     value.value = $ === text ?
       [{ value: $.substring(1, $.length - 1), path: [], depth: 0, single: true }] :
       getVars($.substring(1, $.length - 1), out, [], value.type);
     return '--' + (out.push(value) - 1) + '--';
   });
-  while (text !== (text = text.replace(/\([^()]*\)/g, function($) {
-    var value = { vars: getVars($.substring(1, $.length - 1), out, [], 'fn') };
-    if (value.vars.length > 1) value.helper = value.vars.shift();
-    return '--' + (out.push(value) - 1) + '--';
-  })));
+  while (text !== (text = text.replace(replace, replaceCb)));
   return getVars(text, out, [], '');
 }
 
@@ -505,9 +514,9 @@ function getTagData(_this, vars, type, start, bodyFn, isInline) {
     .test((arr[0] || {}).value) ? arr.shift().value : '';
 
   return {
-    partial: type === '>' ? arr.shift() : '',
+    partial: type === '>' ? arr.shift() : undefined,
     helper: helper ? helper : type !== '>' && arr.length > 1 ? arr.shift() : '',
-    helperFn: helper ? renderConditions : '',
+    helperFn: helper ? renderConditions : undefined,
     isEscaped: start.lastIndexOf(_this.options.tags[0]) < 1,
     bodyFn: bodyFn || null,
     vars: arr,
@@ -518,19 +527,18 @@ function getTagData(_this, vars, type, start, bodyFn, isInline) {
 // ---- sizzle inlines
 
 function sizzleInlines(_this, text, blocks, tags, glues) {
-  var parts = text.split(_this.regexps.inline);
-
-  for (var n = 0, l = parts.length, vars = '', trims = []; n < l; n += 5) {
-    if (parts[2 + n] && /^(?:!|=)/.test(parts[2 + n])) continue;
+  for (var n = 0, parts = text.split(_this.regexps.inline), l = parts.length,
+      vars = '', trims = [], skipTest = /^(?:!|=)/; n < l; n += 5) {
+    if (parts[2 + n] && skipTest.test(parts[2 + n])) continue;
     vars = parts[3 + n] || '';
     trims = getTrims(!n ? '' : parts[4 + n - 5], !vars ? '' : parts[1 + n]);
     glues.push(trim(parts[n], trims[0], trims[1]));
     vars && tags.push(vars.indexOf('--block--') !== -1 ?
-      { blockIndex: +vars.substr(10) } :
+      { blockIndex: +vars.substring(10) } :
       getTagData(_this, vars, parts[2 + n] || '', parts[1 + n], null, true));
   }
-  return function executeInlines(data) {
-    return renderInlines(_this, tags, glues, blocks, data);
+  return function executeInlines(model) {
+    return renderInlines(_this, tags, glues, blocks, model);
   }
 }
 
@@ -549,8 +557,7 @@ function processBodyParts(_this, parts, blocks, mainStart, blkTrims, bodyFns) {
 
 function doBlock(_this, blocks, start, end, close, body, type, root, vars) {
   var closeParts = close.split(root);
-  var rootAndVars = root + (vars ? ' ' + vars : '');
-  var tagData = getTagData(_this, rootAndVars, type || '', start, null);
+  var tagData = getTagData(_this, root + (vars ? ' ' + vars : ''), type || '', start, null);
   var bodyFns = processBodyParts(_this, body.split(_this.regexps.else),
     blocks, start, getTrims(end, closeParts[0]), []);
 
