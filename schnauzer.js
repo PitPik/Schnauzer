@@ -1,4 +1,4 @@
-/**! @license schnauzer v1.7.0; Copyright (C) 2017-2022 by Peter Dematté */
+/**! @license schnauzer v1.7.1; Copyright (C) 2017-2022 by Peter Dematté */
 (function(global, factory) {
   if (typeof exports === 'object') module.exports = factory(global);
   else if (typeof define === 'function' && define.amd)
@@ -23,7 +23,7 @@ var concatArrays = function(array, host) {
 };
 
 var Schnauzer = function(templateOrOptions, options) {
-  this.version = '1.7.0';
+  this.version = '1.7.1';
   this.partials = {};
   this.helpers = {};
   this.regexps = {};
@@ -207,7 +207,7 @@ function getData(_this, model, tagData) {
     if (value === undefined) value = main.helper ?
       renderHelper(_this, data = getData(_this, model, main), model, main) :
       main.path || main.name || main.vars ? getDeepData(scope.scope, main, parent) :
-        tagData.isInline ? scope.scope[main.value] : main.value;
+        tagData.isInline ? getDeepData(scope.scope, main, parent) : main.value;
     if (value === undefined) value = getDeepData(model.extra, main, parent);
 
     if (main.alias) createLookup('alias', model, main.alias[0], main, scope.scope, value);
