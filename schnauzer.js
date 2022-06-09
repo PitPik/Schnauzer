@@ -206,8 +206,8 @@ function getData(_this, model, tagData) {
     if (value === undefined && !main.isStrict) value = getAliasValue(scope.level, main, parent);
     if (value === undefined) value = main.helper ?
       renderHelper(_this, data = getData(_this, model, main), model, main) :
-      main.path || main.name || main.vars ? getDeepData(scope.scope, main, parent) :
-        tagData.isInline ? getDeepData(scope.scope, main, parent) : main.value;
+      main.path || main.name || main.vars || tagData.isInline ? getDeepData(scope.scope, main, parent) :
+        getDeepData(scope.scope, main, parent) || main.value;
     if (value === undefined) value = getDeepData(model.extra, main, parent);
 
     if (main.alias) createLookup('alias', model, main.alias[0], main, scope.scope, value);
