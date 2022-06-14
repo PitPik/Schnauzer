@@ -1,4 +1,4 @@
-/**! @license schnauzer v1.7.1; Copyright (C) 2017-2022 by Peter Dematté */
+/**! @license schnauzer v1.8.0; Copyright (C) 2017-2022 by Peter Dematté */
 (function(global, factory) {
   if (typeof exports === 'object') module.exports = factory(global);
   else if (typeof define === 'function' && define.amd)
@@ -23,7 +23,7 @@ var concatArrays = function(array, host) {
 };
 
 var Schnauzer = function(templateOrOptions, options) {
-  this.version = '1.7.1';
+  this.version = '1.8.0';
   this.partials = {};
   this.helpers = {};
   this.regexps = {};
@@ -51,6 +51,9 @@ var Schnauzer = function(templateOrOptions, options) {
   initSchnauzer(this, options || {}, templateOrOptions);
 };
 
+var HBSS = Schnauzer.SafeString = function(text) { this.string = text }; // WTF
+HBSS.prototype.toString = HBSS.prototype.toHTML = function() { return '' + this.string };
+
 var initSchnauzer = function(_this, options, template) {
   if (typeof template !== 'string') { options = template; template = '' }
   options = cloneObject(_this.options, options);
@@ -65,8 +68,7 @@ Schnauzer.prototype = {
   render: function(data, extra) {
     var helpers = createHelper('', '', 0, undefined, null, [{ scope: data }]);
     return this.partials[this.options.self]({
-      extra: extra || {},
-      scopes: [{ scope: data, helpers: helpers, level: [], values: null }],
+      extra: extra, scopes: [{ scope: data, helpers: helpers, level: [], values: null, alias: {} }],
     });
   },
   parse: function(txt) { return this.registerPartial(this.options.self, txt) },
@@ -84,10 +86,6 @@ Schnauzer.prototype = {
   unregisterPartial: function(name) { delete this.partials[name] },
   setTags: function(tags) { switchTags(this, tags) },
 };
-
-Schnauzer.SafeString = function(text) { this.string = text }; // WTF
-Schnauzer.SafeString.prototype.toString =
-Schnauzer.SafeString.prototype.toHTML = function() { return '' + this.string };
 
 return Schnauzer;
 
@@ -128,115 +126,103 @@ function createHelper(idx, key, len, value, parent, scopes) {
   } : { '@parent': parent, '@root': scopes[scopes.length - 1].scope, 'this': value, '.': value };
 }
 
-function addScope(model, data) {
+function addScope(model, data, alias) {
   var scopes = model.scopes;
   var newLevel = model.alias ? [model.alias] : [];
   var level = concatArrays(scopes[0].level, newLevel);
   var values = model.values || {};
+  var prevAlias = scopes[1] ? cloneObject({}, scopes[1].alias) : {};
 
   model.alias = null; model.values = null; // TODO
+  alias = alias ? cloneObject(prevAlias, alias) : prevAlias;
   model.scopes = concatArrays(scopes, [{
-    scope: data, helpers: {}, level: level, values: values,
+    scope: data, helpers: {}, level: level, values: values, alias: alias,
   }]);
   return function() { model.scopes = scopes };
 }
 
-function tweakScope(scope, data, options) {
+function tweakScope(scope, data) {
   var savedScope = scope.scope;
   scope.scope = data || {};
   return function() { scope.scope = savedScope; };
 }
 
-function getDeepData(scope, mainVar, parent) {
-  if (mainVar.value === '.' || mainVar.value === 'this') return scope;
-  if (!mainVar.path) return mainVar.value;
-  parent._ = scope;
-  for (var n = 0, l = mainVar.path.length; n < l; n++) {
-    if (mainVar.path[n] === '@root') continue;
-    scope = parent._ = scope[mainVar.path[n]];
-    if (scope && scope.__isAlias) scope = parent._ = scope.__isAlias;
-    if (!scope) return;
-  }
-  return scope[mainVar.value];
+function getDeepData(data, main, alias) {
+  if (main.value === '.' || main.value === 'this') return { value: data, variable: main };
+  if (main.type !== 'key') return { value: main.value, variable: main };
+  for (var n = main.path[0] === '@root' ? 1 : 0, l = main.path.length; n < l; n++)
+    if (!(data = data[main.path[n]])) return { variable: main };
+  return { value: data[main.value], parent: data, variable: main, alias: alias || false };
 }
 
-function getAliasValue(level, main, parent) {
-  for (var n = 0, l = level.length, value = ''; n < l; n++) {
-    value = getDeepData(level[n], main, parent);
-    if (value !== undefined) return value;
+function getAlias(level, main, scope, data) {
+  for (var n = 0, l = level.length, helpers = scope.helpers; n < l; n++) {
+    data = getDeepData(level[n], main, true);
+    if (data.value !== undefined) {
+      if (scope = scope.alias[data.variable.value]) {
+        data.parent = scope.parent;
+        data.key = scope.key;
+        if (helpers['@length']) data.helpers = helpers;
+      }
+      return data;
+    }
   }
+  return { variable: main };
 }
 
-function createLookup(key, model, aliasKey, main, scope, value) {
-  if (value === undefined) return;
+function createAliasMap(key, scope, model, aliasKey, data) {
+  if (data.value === undefined || aliasKey === undefined) return;
   if (!model[key]) model[key] = {};
-  model[key][aliasKey] = !main.path || scope[aliasKey] !== value ? value :
-    { __isAlias: scope, value: value }; // key: main.value, , scope: scope
+  model[key][aliasKey] = data.value;
+  if (scope) scope.alias[aliasKey] = { parent: data.parent, key: data.variable.value };
 }
 
-function collectData(scope, value, main, _parent) {
-  var stright = _parent === scope.scope;
-  var parent = stright ? _parent : scope.helpers['@parent'] || _parent || scope.scope;
-  var key = stright ? main.value : '' + (scope.helpers['@key'] || '') || main.value;
-  var isThis = main.value === 'this' || main.value === '.';
-  var isSame = parent[key] === value;
-
-  return !main.path && !isThis ? { value: value } : // TODO: check again...
-    { key: isSame ? key : main.value, parent: isSame ? parent : _parent };
-}
-
-function getData(_this, model, tagData) {
+function getData(_this, model, tagData, out) {
   var vars = tagData.vars;
-  var parent = { _: null };
-  var out = [];
-  var data = {};
-  var helper = null;
-  var origModel = {};
+  var trackData = _this.options.renderHook ? true : false;
 
-  if (!tagData || !vars) return [];
+  if (!vars) return [];
   if (!tagData.helper && vars[0] && _this.helpers[vars[0].orig]) tagData.helper = vars.shift();
 
-  for (var n = 0, l = vars.length, main = {}, scope = {}, value; n < l; n++) {
+  for (var n = 0, l = vars.length, main = {}, scope = {}, data = {}, value = ''; n < l; n++) {
     main = vars[n];
-    scope = main.path && main.path[0] === '@root' ? model.scopes[model.scopes.length - 1] :
-      model.scopes[main.depth || 0] || { scope: {}, helpers: {}, level: [] };
+    scope = !main.path || main.path[0] !== '@root' ? model.scopes[main.depth || 0] :
+      model.scopes[model.scopes.length - 1];
+    if (!scope) { out.push({}); continue; }
     value = main.value === '@root' ? scope : scope.helpers[main.value];
-  
-    if (value === undefined && scope.values) value = getDeepData(scope.values, main, parent);
-    if (value === undefined && !main.isStrict) value = getAliasValue(scope.level, main, parent);
-    if (value === undefined) value = main.helper ?
-      renderHelper(_this, data = getData(_this, model, main), model, main) :
-      main.path || main.name || main.vars || tagData.isInline ? getDeepData(scope.scope, main, parent) :
-        getDeepData(scope.scope, main, parent) || main.value;
-    if (value === undefined) value = getDeepData(model.extra, main, parent);
+    data = { value: value, variable: main, parent: scope.helpers['@parent'],
+      key: scope.helpers['@key'], helpers: scope.helpers };
 
-    if (main.alias) createLookup('alias', model, main.alias[0], main, scope.scope, value);
-    if (main.name) createLookup('values', model, main.name, main, scope.scope, value);
-    if (_this.options.renderHook) if (main.helper && !main.name) {
-        origModel = { extra: model.extra, scopes: model.scopes }
-        helper = function(newData) { return renderHelper(_this, newData, origModel, main) };
-        data.__vars = main.vars;
-      } else data = collectData(scope, value, main, parent._);
-    out.push({
-      value: value && value.__isAlias ? value.value : value,
-      alias: main.alias,
-      type: value && value.constructor === Array ? 'array' : typeof value,
-      name: main.name,
-      parent: data.parent, key: data.key, data: helper ? data : null, helper: helper
-    });
+    if (data.value === undefined && scope.values) data = getAlias([scope.values], main, scope, data);
+    if (data.value === undefined && !main.isStrict) data = getAlias(scope.level, main, scope, data);
+    if (data.value === undefined) data = !main.helper ? getDeepData(scope.scope, main) :
+      { value: renderHelper(_this, value = getData(_this, model, main, []), model, main) };
+    if (data.value === undefined && model.extra) data = getDeepData(model.extra, main);
+
+    if (main.alias) createAliasMap('alias', trackData && scope, model, main.alias[0], data);
+    if (main.name) createAliasMap('values', trackData && scope, model, main.name, data);
+
+    data.type = data.value && data.value.constructor === Array ? 'array' : typeof data.value;
+    if (trackData) {
+      data.reRenderHelper = main.helper && !main.name ? function(newData) {
+        return renderHelper(_this, newData, { extra: model.extra, scopes: model.scopes }, main);
+      } : undefined;
+      data.renderHelperData = main.helper ? value : undefined;
+    }
+    out.push(data);
   }
   return out;
 }
 
-function checkObjectLength(main, helper, keys) {
+function checkObjectLength(main, helper, objKeys) {
   var value = main.value;
   var isObject = main.type === 'object';
   var go = helper === 'each' || (main.type === 'array' &&
     (helper === 'if' || helper === 'unless'));
 
   if (!go || value === undefined) return value;
-  if (isObject) keys._ = getObjectKeys(value);
-  return isObject ? keys._.length && value : value.length && value;
+  if (isObject) objKeys.keys = getObjectKeys(value);
+  return isObject ? objKeys.keys.length && value : value.length && value;
 }
 
 function getOptions(_this, model, tagData, data, newData, bodyFns) {
@@ -260,7 +246,7 @@ function getOptions(_this, model, tagData, data, newData, bodyFns) {
     index: helpers['@index'], key: helpers['@key'], length: helpers['@length'],
   });
   for (var n = data.length; n--; ) {
-    if (data[n].name) options.hash[data[n].name] = data[n].value;
+    if (data[n].variable.name) options.hash[data[n].variable.name] = data[n].value;
     else newData.unshift(data[n].value);
   }
   if (bodyFns) {
@@ -281,7 +267,7 @@ function getHelperFn(_this, model, tagData) {
   var helperFn = _this.helpers[tagData.helper.orig];
 
   return tagData.helperFn || (tagData.helper.isStrict || !helperFn ?
-    getDeepData(scope, tagData.helper, {}) : helperFn);
+    getDeepData(scope, tagData.helper).value : helperFn);
 }
 
 // ---- render blocks/inlines helpers (std. HBS helpers)
@@ -306,7 +292,7 @@ function renderHelper(_this, data, model, tagData, bodyFns, track) {
 
 function renderPartial(_this, data, model, tagData) {
   var partial = _this.partials[tagData.partial.orig];
-  var scope = data[0] && !data[0].name ? data[0].value : model.scopes[0].scope;
+  var scope = data[0] && !data[0].variable.name ? data[0].value : model.scopes[0].scope;
   var reset = addScope(model, scope);
 
   if (_this.options.limitPartialScope) model.scopes = [model.scopes[0]];
@@ -315,7 +301,7 @@ function renderPartial(_this, data, model, tagData) {
 
 function renderConditions(_this, data, model, tagData, bodyFns, track) {
   var idx = 0;
-  var objKeys = { _: [] };
+  var objKeys = { keys: [] };
   var bodyFn = bodyFns[idx];
   var helper = tagData.helper;
   var cond = /^(?:if|each|with)$/.test(helper);
@@ -329,7 +315,7 @@ function renderConditions(_this, data, model, tagData, bodyFns, track) {
     bodyFn = bodyFns[++idx];
     helper = bodyFn.helper;
     cond = /^(?:if|each|with)$/.test(helper);
-    data = bodyFn.vars.length ? getData(_this, model, bodyFn) : [];
+    data = bodyFn.vars.length ? getData(_this, model, bodyFn, []) : [];
     isVarOnly = !helper && data.length === 1;
     main = data[0] || {};
     value = checkObjectLength(main, helper, objKeys);
@@ -340,28 +326,37 @@ function renderConditions(_this, data, model, tagData, bodyFns, track) {
   if (isVarOnly && main.type === 'array') helper = 'each';
   if (isVarOnly && !helper) helper = 'with';
   if (helper === 'with' || helper === 'each' && value) {
-    reset = addScope(model, value);
+    reset = addScope(model, value, helper === 'with' && model.scopes[0].alias);
     if (helper === 'each') return renderEach(_this, value, main, model,
-      bodyFn.bodyFn, objKeys._, tagData.vars[0].active, _this.options.loopHelper, reset);
+      bodyFn.bodyFn, objKeys.keys, _this.options.loopHelper, reset);
     model.scopes[0].helpers = createHelper('', '', 0,
       isVarOnly ? value : model.scopes[0].scope, model.scopes[1].scope, model.scopes);
   }
   return [canGo ? bodyFn.bodyFn(model) : '', reset && reset()][0];
 }
 
-function renderEach(_this, data, main, model, bodyFn, objKeys, active, loopHelper, reset) {
+function renderEach(_this, data, main, model, bodyFn, objKeys, loopHelper, reset) {
   var scope = model.scopes[0];
-  var alias = main.alias;
+  var alias = main.variable.alias;
   var level = scope.level[0];
   var isArr = main.type === 'array';
   var value = !isArr && main.type !== 'object' ? [] : isArr ? data : objKeys;
+  var loopFn = loopHelper && isArr && function(newModel) {
+    model.scopes[0].scope = newData[0].parent; // TODO: check
+    return bodyFn(newModel);
+  };
 
+  if (alias && loopHelper) scope.alias[alias[0]] = { parent: data };
   for (var n = 0, l = value.length, key = '', out = ''; n < l; n++) {
     key = (isArr ? n : value[n]);
-    scope.helpers = createHelper(n, key, l, data[key], data, model.scopes);
+    scope.helpers = main.helpers = createHelper(n, key, l, data[key], data, model.scopes);
     scope.scope = data[key];
-    if (alias) { level[alias[0]] = data[key]; if (alias[1]) level[alias[1]] = key; }
-    out += loopHelper && isArr ? loopHelper(bodyFn(model), key, main, active) : bodyFn(model);
+    if (alias) {
+      if (alias[1]) level[alias[1]] = key;
+      level[alias[0]] = data[key];
+      if (loopHelper) scope.alias[alias[0]].key = key;
+    }
+    out += loopFn ? loopHelper(_this, bodyFn(model), main, loopFn) : bodyFn(model);
   }
   return [ out, reset() ][0];
 }
@@ -374,10 +369,10 @@ function render(_this, model, data, tagData, out, renderFn, bodyFns, track) {
     extra: model.extra, scopes: model.scopes, // concatArrays(model.scopes, []),
   };
   return !_this.options.renderHook ? out : _this.options.renderHook(
-    _this, out, data, tagData, track || {fnIdx: 0}, function(data) {
-      model.scopes[0].scope = data[0].parent;
-      return renderFn(_this, tagData, data, model, bodyFns, track || {fnIdx: 0});
-    });
+    _this, out, data, function(newData) {
+      model.scopes[0].scope = newData[0].parent;
+      return renderFn(_this, tagData, newData, model, bodyFns, track || { fnIdx: 0 });
+    }, tagData, track || { fnIdx: 0 });
 }
 
 function renderInline(_this, tagData, data, model) {
@@ -394,15 +389,15 @@ function renderInlines(_this, tags, glues, blocks, model) {
   for (var n = 0, l = glues.length, out = ''; n < l; n++) {
     out += glues[n] + (!tags[n] ? '' : tags[n].blockIndex > -1 ?
       blocks[tags[n].blockIndex](model) :
-      renderInline(_this, tags[n], getData(_this, model, tags[n]), model));
+      renderInline(_this, tags[n], getData(_this, model, tags[n], []), model));
   }
   return out;
 }
 
 function renderBlock(_this, tagData, data, model, bodyFns, recursive) {
-  var track = recursive || { fnIdx: 0 }; // TODO: renderPartial on blocks? 
+  var track = recursive || { fnIdx: 0 }; // TODO: renderPartial on blocks?
   var out = renderHelper(_this, data, model, tagData, bodyFns, track);
-  
+
   return recursive ? out :
     render(_this, model, data, tagData, out, renderBlock, bodyFns, track);
 }
@@ -433,18 +428,24 @@ function cleanText(text, out) {
 }
 
 function parsePath(text, data, skip) {
-  var name = text.replace(/\[.*?]/g, function($) { // HB
-    return $.substring(1, $.length - 1).replace(/\./g, '^');
+  var hasDot = false;
+  var name = text.replace('@parent/', '../').replace(/\[.*?]/g, function($) { // HB
+    return $.substring(1, $.length - 1).replace(/\./g, function() { hasDot = true; return '^'; });
   });
   var parts = skip ? [] : name.split('../');
   var start = parts[1] ? parts[0] : '';
   var depth = parts.length - 1;
   var value = skip ? name : parts[depth];
 
-  if (skip || value === '.' || value === 'this' || +value == value) return { value: value };
+  if (skip || value === '.' || value === 'this' || +value == value) return {
+    value: value, path: [], depth: 0, type: 'key'
+  };
   parts = cleanText(value, data).split(/[./]/);
-  for (var n = parts.length; n--; ) parts[n] = parts[n].replace(/\^/g, '.');
-  return { value: start + parts.pop(), path: parts, depth: depth, name: name.replace(/\^/g, '.') };
+  if (hasDot) {
+    for (var n = parts.length; n--; ) parts[n] = parts[n].replace(/\^/g, '.');
+    name = name.replace(/\^/g, '.');
+  }
+  return { value: start + parts.pop(), path: parts, depth: depth, orig: name };
 }
 
 function parseAlias(value, out, spread) {
@@ -460,27 +461,25 @@ function getVars(text, collection, out, type) {
   var txtParts = type === 'string' ? [text] : text.split(/[,;]*\s+[,;]*/);
   var isAliasOrString = type === 'alias' || type === 'string';
 
-  for (var n = 0, l = txtParts.length, match = /--(\d+)--/, replace = /%+/,
-      parts = [], value = '', data = {}, paths = {}; n < l; n++) {
+  for (var n = 0, l = txtParts.length, match = /--(\d+)--/, replace = /%+/, dataType = '',
+      parts = [], value = '', data = {}, paths = {}, skipConvert = false; n < l; n++) {
     parts = txtParts[n].split('=');
     value = parts[1] !== undefined ? parts[1] : parts[0];
     if (value === '' || value === 'as') continue;
 
-    data = collection[(value.match(match) || [])[1]] || { value: value };
-    if (typeof data.value === 'object' && data.value[0].single) return data.value;
+    data = collection[(value.match(match) || [])[1]] || { value: value, type: 'key' };
+    dataType = typeof data.value;
+    if (dataType === 'object' && data.value[0].single) return data.value;
     if (parts[1] !== undefined) data.name = parts[0];
     if (data.type === 'string') data.value = data.value[0].value;
-    else if (data.value && typeof data.value === 'string') {
-      data.value = data.value.replace(replace, function($) {
-        data.active = $.length; return '';
-      });
+    else if (data.value && dataType === 'string') {
+      data.value = data.value.replace(replace, function($) { data.active = $.length; return '' });
       paths = parsePath(data.value, data, isAliasOrString);
-      data.value = convertValue(paths.value, isAliasOrString || paths.name !== paths.value);
-      if (paths.name) data.orig = paths.name;
-      if (typeof data.value === 'string' && paths.path && !isAliasOrString) {
-        data.path = paths.path;
-        data.depth = paths.depth;
-      }
+      skipConvert = isAliasOrString || (paths.orig && paths.orig !== paths.value);
+      data.value = convertValue(paths.value, skipConvert);
+      dataType = typeof data.value;
+      if (dataType !== 'string') data.type = dataType;
+      else if (paths.path && !isAliasOrString) cloneObject(data, paths);
     }
     data.type === 'alias' ? parseAlias(data.value, out, n > 3) : out.push(data);
   }
@@ -498,9 +497,9 @@ function sizzleVars(text, out) {
   text = text.replace(/(['"|])(?:[^\\'"]|\\+['"]|['"])*?\1/g, function($, $1) {
     var value = { type: $1 !== '|' ? 'string' : 'alias', value: '' };
 
-    if (text.indexOf('[' + $1) !== -1) return $;
+    if (text.indexOf('[' + $1) !== -1 || text.indexOf($1 + '=') !== -1) return $;
     value.value = $ === text ?
-      [{ value: $.substring(1, $.length - 1), path: [], depth: 0, single: true }] :
+      [{ value: $.substring(1, $.length - 1), path: [], depth: 0, single: true, type: 'key' }] :
       getVars($.substring(1, $.length - 1), out, [], value.type);
     return '--' + (out.push(value) - 1) + '--';
   });
@@ -510,8 +509,8 @@ function sizzleVars(text, out) {
 
 function getTagData(_this, vars, type, start, bodyFn, isInline) {
   var arr = vars ? sizzleVars(vars, []) : [];
-  var helper = type === '^' ? 'unless' : /^(?:if|each|with|unless)$/
-    .test((arr[0] || {}).value) ? arr.shift().value : '';
+  var helper = type === '^' ? 'unless' :
+    /^(?:if|each|with|unless)$/.test((arr[0] || {}).value) ? arr.shift().value : '';
 
   return {
     partial: type === '>' ? arr.shift() : undefined,
@@ -520,7 +519,7 @@ function getTagData(_this, vars, type, start, bodyFn, isInline) {
     isEscaped: start.lastIndexOf(_this.options.tags[0]) < 1,
     bodyFn: bodyFn || null,
     vars: arr,
-    isInline: isInline, // new in v1.6.4
+    isInline: isInline, // new in v1.6.4 ...
   };
 }
 
@@ -562,7 +561,7 @@ function doBlock(_this, blocks, start, end, close, body, type, root, vars) {
     blocks, start, getTrims(end, closeParts[0]), []);
 
   blocks.push(function executeBlock(model) {
-    return renderBlock(_this, tagData, getData(_this, model, tagData), model, bodyFns);
+    return renderBlock(_this, tagData, getData(_this, model, tagData, []), model, bodyFns);
   });
   return (start + '--block-- ' + (blocks.length - 1) + closeParts[1]);
 }
