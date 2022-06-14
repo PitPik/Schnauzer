@@ -208,7 +208,7 @@ function getData(_this, model, tagData, out) {
       data.helperFn = main.helper && !main.name ? function(newData) {
         return renderHelper(_this, newData, { extra: model.extra, scopes: model.scopes }, main);
       } : undefined;
-      data.renderHelperData = main.helper ? value : undefined;
+      data.helperFnArgs = main.helper ? value : undefined;
     }
     out.push(data);
   }
