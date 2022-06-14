@@ -51,9 +51,6 @@ var Schnauzer = function(templateOrOptions, options) {
   initSchnauzer(this, options || {}, templateOrOptions);
 };
 
-var HBSS = Schnauzer.SafeString = function(text) { this.string = text }; // WTF
-HBSS.prototype.toString = HBSS.prototype.toHTML = function() { return '' + this.string };
-
 var initSchnauzer = function(_this, options, template) {
   if (typeof template !== 'string') { options = template; template = '' }
   options = cloneObject(_this.options, options);
@@ -63,6 +60,9 @@ var initSchnauzer = function(_this, options, template) {
   _this.escapeExpression = function(txt) { return escapeHtml(_this, txt, true) }
   if (template) _this.parse(template);
 };
+
+var HBSS = Schnauzer.SafeString = function(text) { this.string = text }; // WTF
+HBSS.prototype.toString = HBSS.prototype.toHTML = function() { return '' + this.string };
 
 Schnauzer.prototype = {
   render: function(data, extra) {
@@ -204,7 +204,7 @@ function getData(_this, model, tagData, out) {
 
     data.type = data.value && data.value.constructor === Array ? 'array' : typeof data.value;
     if (trackData) {
-      data.reRenderHelper = main.helper && !main.name ? function(newData) {
+      data.helperFn = main.helper && !main.name ? function(newData) {
         return renderHelper(_this, newData, { extra: model.extra, scopes: model.scopes }, main);
       } : undefined;
       data.renderHelperData = main.helper ? value : undefined;
