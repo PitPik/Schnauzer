@@ -203,6 +203,7 @@ function getData(_this, model, tagData, out) {
     if (main.name) createAliasMap('values', trackData && scope, model, main.name, data);
 
     data.type = data.value && data.value.constructor === Array ? 'array' : typeof data.value;
+    if (!data.variable) data.variable = main; // nested helper functions don't
     if (trackData) {
       data.helperFn = main.helper && !main.name ? function(newData) {
         return renderHelper(_this, newData, { extra: model.extra, scopes: model.scopes }, main);
