@@ -343,7 +343,7 @@ function renderEach(_this, data, main, model, bodyFn, objKeys, loopHelper, reset
   var isArr = main.type === 'array';
   var value = !isArr && main.type !== 'object' ? [] : isArr ? data : objKeys;
   var loopFn = loopHelper && isArr && function(newModel) {
-    model.scopes[0].scope = newData[0].parent; // TODO: check
+    model.scopes[0].scope = newModel[0].parent; // TODO: check
     return bodyFn(newModel);
   };
 
@@ -370,9 +370,9 @@ function render(_this, model, data, tagData, out, renderFn, bodyFns, track) {
     extra: model.extra, scopes: model.scopes, // concatArrays(model.scopes, []),
   };
   return !_this.options.renderHook ? out : _this.options.renderHook(
-    _this, out, data, function(newData) {
-      model.scopes[0].scope = newData[0].parent;
-      return renderFn(_this, tagData, newData, model, bodyFns, track || { fnIdx: 0 });
+    _this, out, data, function(newModel) {
+      model.scopes[0].scope = newModel[0].parent;
+      return renderFn(_this, tagData, newModel, model, bodyFns, track || { fnIdx: 0 });
     }, tagData, track || { fnIdx: 0 });
 }
 
