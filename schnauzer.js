@@ -1,4 +1,4 @@
-/**! @license schnauzer v1.8.0; Copyright (C) 2017-2022 by Peter Dematté */
+/**! @license schnauzer v1.8.1; Copyright (C) 2017-2022 by Peter Dematté */
 (function(global, factory) {
   if (typeof exports === 'object') module.exports = factory(global);
   else if (typeof define === 'function' && define.amd)
@@ -23,7 +23,7 @@ var concatArrays = function(array, host) {
 };
 
 var Schnauzer = function(templateOrOptions, options) {
-  this.version = '1.8.0';
+  this.version = '1.8.1';
   this.partials = {};
   this.helpers = {};
   this.regexps = {};
@@ -57,7 +57,7 @@ var initSchnauzer = function(_this, options, template) {
   switchTags(_this, options.tags);
   _this.helpers = options.helpers;
   for (var name in options.partials) _this.registerPartial(name, options.partials[name]);
-  _this.escapeExpression = function(txt) { return escapeHtml(_this, txt, true) }
+  _this.escapeExpression = function(txt) { return escapeHtml(_this, txt, true) };
   if (template) _this.parse(template);
 };
 
@@ -179,7 +179,7 @@ function createAliasMap(key, scope, model, aliasKey, data) {
 
 function getData(_this, model, tagData, out) {
   var vars = tagData.vars;
-  var trackData = _this.options.renderHook ? true : false;
+  var trackData = !!_this.options.renderHook;
 
   if (!vars) return [];
   if (!tagData.helper && vars[0] && _this.helpers[vars[0].orig]) tagData.helper = vars.shift();
@@ -188,7 +188,7 @@ function getData(_this, model, tagData, out) {
     main = vars[n];
     scope = !main.path || main.path[0] !== '@root' ? model.scopes[main.depth || 0] :
       model.scopes[model.scopes.length - 1];
-    if (!scope) { out.push({}); continue; }
+    if (!scope) { out.push(data); continue; }
     value = main.value === '@root' ? scope : scope.helpers[main.value];
     data = { value: value, variable: main, parent: scope.helpers['@parent'],
       key: scope.helpers['@key'], helpers: scope.helpers };
@@ -548,7 +548,7 @@ function sizzleInlines(_this, text, blocks, tags, glues) {
   }
   return function executeInlines(model) {
     return renderInlines(_this, tags, glues, blocks, model);
-  }
+  };
 }
 
 // ---- sizzle blocks
