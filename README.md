@@ -18,7 +18,7 @@ Schnauzer does not throw errors when markup is not valid.
 
 ### Dynamic rendering
 
-Other than handlebars, schnauzer has 2 optional functions that get triggered with every single tag that gets rendered.
+Other than handlebars, schnauzer has 2 optional functions that get triggered with every single tag that gets rendered so the template can be kept alive even after the first rendering.
 `renderHook()` and `loopHelper()`. With those functions it's possible to keep track of all the rendered variables and rendering functions including a special character `%` set infron of every variable. This way it's possible to overwrite parts of the rendered template after it was first rendered without having to re-render the whole template.
 This is perfect for developing MVC like libraries/frameworks that need to partialy update HTML on the fly.
 
