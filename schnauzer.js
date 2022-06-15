@@ -292,7 +292,9 @@ function renderHelper(_this, data, model, tagData, bodyFns, track) {
 }
 
 function renderPartial(_this, data, model, tagData) {
-  var name = tagData.partial.orig;
+  var newData = tagData.partial.vars && getData(_this, model, tagData.partial, []);
+  var helper = tagData.partial.helper && renderHelper(_this, newData, model, tagData.partial);
+  var name = tagData.partial.orig || newData && (helper || newData[0].value) || '';
   var isTemplate = name === '@partial-block';
   var isBlock = !isTemplate && name.substring(0, 1) === '@';
   var partial = _this.partials[isBlock ? name.substring(1) : name];
