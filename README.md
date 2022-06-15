@@ -2,8 +2,8 @@
 
 [Schanuzer](http://github.com/PitPik/schnauzer) Schanuzer is largely compatible with Mustache and Handlebars templates. In most cases it is possible to swap out Mustache or Handlebars with Schanuzer and continue using your current templates.
 
-Schanuzer is also very small and fast. It has the power of Handlebars but is almost the size of Mustage (7.70KB minified, ~3.4KB gZip) and therefore also perfectly suitable for mobile applications.
-Renderin with Schnauzer is about 2x faster than with Handlebars, when using inline partials, up to 10x faster. Parsing blasting fast, almost as fast as rendering.
+Schanuzer is also very small and fast. It has the power of Handlebars but is almost the size of Mustage (11.4KB minified, ~4.75KB gZip) and therefore also perfectly suitable for mobile applications.
+Renderin with Schnauzer is about 25% faster than with Handlebars, when using inline partials, up to 10x faster. Parsing blasting fast, almost as fast as rendering.
 
 ## Where to use schnauzer.js?
 
@@ -15,6 +15,12 @@ schnauzer.js ships with support for both the [CommonJS](http://www.commonjs.org/
 
 Schnauzer and Handlebars do almost the same thing, but there is a difference in size (10x) and performance. Schnauzer has almost the same power as Handlebars but the size of Mustache and a higher performance.
 Schnauzer does not throw errors when markup is not valid.
+
+### Dynamic rendering
+
+Other than handlebars, schnauzer has 2 optional functions that get triggered with every single tag that gets rendered.
+`renderHook()` and `loopHelper()`. With those functions it's possible to keep track of all the rendered variables and rendering functions including a special character `%` set infron of every variable. This way it's possible to overwrite parts of the rendered template after it was first rendered without having to re-render the whole template.
+This is perfect for developing MVC like libraries/frameworks that need to partialy update HTML on the fly.
 
 
 * * *
@@ -60,6 +66,7 @@ new Schnauzer(template: string, options: { [key: string]: any }) {
     partials: {}, // name:String pair defining partials
     self: 'self', // name of initial partial
     nameCharacters: '', // whitelist of chars for variables inside helpers, partials, functions...
+    limitPartialScope: true, // sets limiting of scope inside partials like in HBS or whole scope
     renderHook: Function // every time an inline or block element renders, this function will be called
     loopHelper: Function // Every loop cycle of an Array inside #each calls this function
 })
@@ -128,19 +135,16 @@ $1 etc. represent the String passed with the block (here "foo").
 Options inside helper functions work almost like with Handlebars:
 ```js
   options: {
-    blockParams: [], // not yet clear what this should be used for
-    data: {root: {…}},
+    data: {root: {…}, scope, parent, first, last index, key, length },
     hash: {}, // keeps all the parameters as a hash
     name: "", // name of the helper
     fn: ƒ (context, options), // only on block helpers; same as with Handlebars
     inverse: ƒ noop(), // only on block helpers; same as with Handlebars
-    utils: { // some extra in Schnauzer implementation
-      escapeExpression: ƒ(), // like Handlebars.escapeExpression
-      SafeString: ƒ(), // like Handlebars.SafeString
-      keys: ƒ(), // like window.Object.keys()
-      extend: ƒ(newObject, hostObject), // like Handlebars.Utils.extend
-      concat: ƒ(newArray, hostArray), // Concats 2 arrays
-    }
+    escapeExpression: ƒ(), // like Handlebars.escapeExpression
+    SafeString: ƒ(), // like Handlebars.SafeString
+    keys: ƒ(), // like window.Object.keys()
+    extend: ƒ(newObject, hostObject), // like Handlebars.Utils.extend
+    concat: ƒ(newArray, hostArray), // Concats 2 arrays
   }
 ```
 
