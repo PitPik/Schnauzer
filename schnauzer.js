@@ -95,7 +95,7 @@ function switchTags(_this, tags) {
 
   _this.regexps = {
     inline: new RegExp(tgs[0] + '([>!&=])*\\s*([\\w\\' + chars + '<>|\\.\\s]*)' + tgs[1], 'g'),
-    block: new RegExp(tgs[0] + '([#^][*%]*)\\s*([\\w' + chars + '<>~]*)(?:\\s+([\\w$\\s|.\\/' +
+    block: new RegExp(tgs[0] + '([#^][>*%]*)\\s*([\\w' + chars + '<>~]*)(?:\\s+([\\w$\\s|.\\/' +
       chars + ']*))*' + tgs[1] + '(?:\\n*)((?:(?!' + tgs[0] + '[#^])[\\S\\s])*?)(' +
       (tgs[0] + '\\/\\3' + tgs[1]).replace(/[()]/g, '') + ')', 'g'),
     else: new RegExp(tgs[0] + '(?:else|\\^)\\s*(.*?)' + tgs[1]),
@@ -292,12 +292,19 @@ function renderHelper(_this, data, model, tagData, bodyFns, track) {
 }
 
 function renderPartial(_this, data, model, tagData) {
-  var partial = _this.partials[tagData.partial.orig];
+  var name = tagData.partial.orig;
+  var isTemplate = name === '@partial-block';
+  var isBlock = !isTemplate && name.substring(0, 1) === '@';
+  var partial = _this.partials[isBlock ? name.substring(1) : name];
   var scope = data[0] && !data[0].variable.name ? data[0].value : model.scopes[0].scope;
   var reset = addScope(model, scope);
 
-  if (_this.options.limitPartialScope) model.scopes = [model.scopes[0]];
-  return [ partial ? partial(model) : '', reset() ][0];
+  if (!partial && isBlock) partial = _this.partials[name];
+  if (isBlock) model.partialBlock = _this.partials[name]; // TODO: no nested scenario possible
+    else if (isTemplate) partial = model.partialBlock;
+  if (_this.options.limitPartialScope) model.scopes = [model.scopes[0]]; // TODO: check isTemplate
+
+  return [ partial ? partial(model) : '', reset(), delete model.partialBlock ][0];
 }
 
 function renderConditions(_this, data, model, tagData, bodyFns, track) {
@@ -366,9 +373,7 @@ function renderEach(_this, data, main, model, bodyFn, objKeys, loopHelper, reset
 
 function render(_this, model, data, tagData, out, renderFn, bodyFns, track) {
   model.values = null; model.alias = null;
-  if (_this.options.renderHook && bodyFns) model = { // heavy...
-    extra: model.extra, scopes: model.scopes, // concatArrays(model.scopes, []),
-  };
+  if (_this.options.renderHook && bodyFns) model = { extra: model.extra, scopes: model.scopes, };
   return !_this.options.renderHook ? out : _this.options.renderHook(
     _this, out, data, function(newModel) {
       model.scopes[0].scope = newModel[0].parent;
@@ -396,7 +401,7 @@ function renderInlines(_this, tags, glues, blocks, model) {
 }
 
 function renderBlock(_this, tagData, data, model, bodyFns, recursive) {
-  var track = recursive || { fnIdx: 0 }; // TODO: renderPartial on blocks?
+  var track = recursive || { fnIdx: 0 };
   var out = renderHelper(_this, data, model, tagData, bodyFns, track);
 
   return recursive ? out :
@@ -569,8 +574,9 @@ function doBlock(_this, blocks, start, end, close, body, type, root, vars) {
 
 function sizzleBlocks(_this, text, blocks) {
   var replaceCb = function($, start, type, root, vars, end, body, $$, close) {
-    return type === '#*' ? _this.registerPartial(vars.replace(/['"]/g, ''),
-        sizzleBlocks(_this, body, blocks)) && '' :
+    $ = type === '#>' ? '@' + root : vars && vars.replace(/['"]/g, '');
+    return type === '#*' || type === '#>' ? _this.registerPartial($,
+        sizzleBlocks(_this, body, blocks)) && type === '#>' ? '{{>' + $ + ' ' + vars + '}}' : '' :
       doBlock(_this, blocks, start, end, close, body, type, root, vars);
   };
 
