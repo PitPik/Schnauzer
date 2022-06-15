@@ -3,7 +3,7 @@
 [Schanuzer](http://github.com/PitPik/schnauzer) Schanuzer is largely compatible with Mustache and Handlebars templates. In most cases it is possible to swap out Mustache or Handlebars with Schanuzer and continue using your current templates.
 
 Schanuzer is also very small and fast. It has the power of Handlebars but is almost the size of Mustage (11.4KB minified, ~4.75KB gZip) and therefore also perfectly suitable for mobile applications.
-Renderin with Schnauzer is about 25% faster than with Handlebars, when using inline partials, up to 10x faster. Parsing blasting fast, almost as fast as rendering.
+Renderin with Schnauzer is about ~30% faster than with Handlebars, when using inline partials, up to 10x faster. Parsing blasting fast, almost as fast as rendering.
 
 ## Where to use schnauzer.js?
 
