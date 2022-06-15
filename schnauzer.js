@@ -536,7 +536,9 @@ function getTagData(_this, vars, type, start, bodyFn, isInline) {
 function sizzleInlines(_this, text, blocks, tags, glues) {
   for (var n = 0, parts = text.split(_this.regexps.inline), l = parts.length,
       vars = '', trims = [], skipTest = /^(?:!|=)/; n < l; n += 5) {
-    if (parts[2 + n] && skipTest.test(parts[2 + n])) continue;
+    if (parts[2 + n] && skipTest.test(parts[2 + n])) {
+      parts[5 + n] = parts[n] + parts[5 + n]; continue;
+    }
     vars = parts[3 + n] || '';
     trims = getTrims(!n ? '' : parts[4 + n - 5], !vars ? '' : parts[1 + n]);
     glues.push(trim(parts[n], trims[0], trims[1]));
