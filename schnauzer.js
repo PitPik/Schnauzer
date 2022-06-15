@@ -4,7 +4,7 @@
   else if (typeof define === 'function' && define.amd)
     define('schnauzer', [], function() { return factory(global); });
   else global.Schnauzer = factory(global);
-}(this && this.window || global, function(global, undefined) { 'use strict';
+}(this && this.window || global, function() { 'use strict';
 
 var getObjectKeysFn = function(obj, key, keys) { obj.hasOwnProperty(key) && keys.push(key) };
 var getObjectKeys = Object.keys || function(obj) {
