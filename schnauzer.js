@@ -251,12 +251,12 @@ function getOptions(_this, model, tagData, data, newData, bodyFns) {
     else newData.unshift(data[n].value);
   }
   if (bodyFns) {
-    options.fn = function(context, options) {
-      save = tweakScope(model.scopes[0], context, options);
+    options.fn = function(context) {
+      save = tweakScope(model.scopes[0], context);
       return [ bodyFns[0].bodyFn(model), save() ][0];
     };
-    options.inverse = bodyFns[1] && function(context, options) {
-      save = tweakScope(model.scopes[0], context, options);
+    options.inverse = bodyFns[1] && function(context) {
+      save = tweakScope(model.scopes[0], context);
       return [ bodyFns[1].bodyFn(model), save() ][0];
     } || noop;
   }
