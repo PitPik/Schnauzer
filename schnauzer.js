@@ -477,9 +477,9 @@ function getVars(text, collection, out, type) {
 
     data = collection[(value.match(match) || [])[1]] || { value: value, type: 'key' };
     dataType = typeof data.value;
-    if (dataType === 'object' && data.value[0].single) return data.value;
+    if (dataType === 'object' && data.value[0] && data.value[0].single) return data.value;
     if (parts[1] !== undefined) data.name = parts[0];
-    if (data.type === 'string') data.value = data.value[0].value;
+    if (data.type === 'string') data.value = data.value[0] && data.value[0].value;
     else if (data.value && dataType === 'string') {
       data.value = data.value.replace(replace, function($) { data.active = $.length; return '' });
       paths = parsePath(data.value, data, isAliasOrString);
