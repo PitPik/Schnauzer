@@ -183,19 +183,18 @@ function getData(_this, model, tagData, out) {
 
   if (!vars) return [];
 
-  for (var n = 0, l = vars.length, main = {}, scope = {}, data = {}, value = ''; n < l; n++) {
+  for (var n = 0, l = vars.length, main = {}, scope = {}, data = {}, args = []; n < l; n++) {
     main = vars[n];
     scope = !main.path || main.path[0] !== '@root' ? model.scopes[main.depth || 0] :
       model.scopes[model.scopes.length - 1];
     if (!scope) { out.push(data); continue; }
-    value = main.value === '@root' ? scope : scope.helpers[main.value];
-    data = { value: value, variable: main, parent: scope.helpers['@parent'],
-      key: scope.helpers['@key'], helpers: scope.helpers };
+    data = { value: main.value === '@root' ? scope : scope.helpers[main.value], variable: main, 
+      parent: scope.helpers['@parent'], key: scope.helpers['@key'], helpers: scope.helpers };
 
     if (data.value === undefined && scope.values) data = getAlias([scope.values], main, scope, data);
     if (data.value === undefined && !main.isStrict) data = getAlias(scope.level, main, scope, data);
     if (data.value === undefined) data = !main.helper ? getDeepData(scope.scope, main) :
-      { value: renderHelper(_this, value = getData(_this, model, main, []), model, main) };
+      { value: renderHelper(_this, args = getData(_this, model, main, []), model, main) };
     if (data.value === undefined && model.extra) data = getDeepData(model.extra, main);
 
     if (main.alias) createAliasMap('alias', trackData && scope, model, main.alias[0], data);
@@ -207,7 +206,7 @@ function getData(_this, model, tagData, out) {
       data.helperFn = main.helper && !main.name ? function(newData) {
         return renderHelper(_this, newData, { extra: model.extra, scopes: model.scopes }, main);
       } : undefined;
-      data.helperFnArgs = main.helper ? value : undefined;
+      data.helperFnArgs = main.helper ? args : undefined;
     }
     out.push(data);
   }
