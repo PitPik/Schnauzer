@@ -96,7 +96,7 @@ function switchTags(_this, tags) {
   _this.regexps = {
     inline: new RegExp(tgs[0] + '([>!&=])*\\s*([\\w\\' + chars + '<>|\\.\\s]*)' + tgs[1], 'g'),
     block: new RegExp(tgs[0] + '([#^][>*%]*)\\s*([\\w' + chars + '<>~]*)(?:\\s+([\\w$\\s|.\\/' +
-      chars + ']*))*' + tgs[1] + '(?:\\n*)((?:(?!' + tgs[0] + '[#^])[\\S\\s])*?)(' +
+      chars + ']*))*' + tgs[1] + '\\n*((?:(?!' + tgs[0] + '[#^])[\\S\\s])*?)(' +
       (tgs[0] + '\\/\\3' + tgs[1]).replace(/[()]/g, '') + ')', 'g'),
     else: new RegExp(tgs[0] + '(?:else|\\^)\\s*(.*?)' + tgs[1]),
     entity: new RegExp('[' + getObjectKeys(_this.options.entityMap).join('') + ']', 'g'),
@@ -182,7 +182,6 @@ function getData(_this, model, tagData, out) {
   var trackData = !!_this.options.renderHook;
 
   if (!vars) return [];
-  if (!tagData.helper && vars[0] && _this.helpers[vars[0].orig]) tagData.helper = vars.shift();
 
   for (var n = 0, l = vars.length, main = {}, scope = {}, data = {}, value = ''; n < l; n++) {
     main = vars[n];
@@ -293,8 +292,8 @@ function renderHelper(_this, data, model, tagData, bodyFns, track) {
 
 function renderPartial(_this, data, model, tagData) {
   var newData = tagData.partial.vars && getData(_this, model, tagData.partial, []);
-  var helper = tagData.partial.helper && renderHelper(_this, newData, model, tagData.partial);
-  var name = tagData.partial.orig || newData && (helper || newData[0].value) || '';
+  var helperValue = tagData.partial.helper && renderHelper(_this, newData, model, tagData.partial);
+  var name = tagData.partial.orig || newData && (helperValue || newData[0].value) || '';
   var isTemplate = name === '@partial-block';
   var isBlock = !isTemplate && name.substring(0, 1) === '@';
   var partial = _this.partials[isBlock ? name.substring(1) : name];
@@ -527,7 +526,7 @@ function getTagData(_this, vars, type, start, bodyFn, isInline) {
     isEscaped: start.lastIndexOf(_this.options.tags[0]) < 1,
     bodyFn: bodyFn || null,
     vars: arr,
-    isInline: isInline, // new in v1.6.4 ...
+    isInline: isInline || false, // new in v1.6.4 ...
   };
 }
 
@@ -535,7 +534,7 @@ function getTagData(_this, vars, type, start, bodyFn, isInline) {
 
 function sizzleInlines(_this, text, blocks, tags, glues) {
   for (var n = 0, parts = text.split(_this.regexps.inline), l = parts.length,
-      vars = '', trims = [], skipTest = /^(?:!|=)/; n < l; n += 5) {
+      vars = '', trims = [], skipTest = /^[!=]/; n < l; n += 5) {
     if (parts[2 + n] && skipTest.test(parts[2 + n])) {
       parts[5 + n] = parts[n] + parts[5 + n]; continue;
     }
@@ -573,14 +572,14 @@ function doBlock(_this, blocks, start, end, close, body, type, root, vars) {
   blocks.push(function executeBlock(model) {
     return renderBlock(_this, tagData, getData(_this, model, tagData, []), model, bodyFns);
   });
-  return (start + '--block-- ' + (blocks.length - 1) + closeParts[1]);
+  return start + '--block-- ' + (blocks.length - 1) + closeParts[1];
 }
 
 function sizzleBlocks(_this, text, blocks) {
   var replaceCb = function($, start, type, root, vars, end, body, $$, close) {
-    $ = type === '#>' ? '@' + root : vars && vars.replace(/['"]/g, '');
-    return type === '#*' || type === '#>' ? _this.registerPartial($,
-        sizzleBlocks(_this, body, blocks)) && type === '#>' ? '{{>' + $ + ' ' + vars + '}}' : '' :
+    $ = type === '#>' ? '@' + root : vars && vars.replace(/['"]/g, '') || '';
+    return type === '#*' || type === '#>' ? (_this.registerPartial($,
+        sizzleBlocks(_this, body, blocks)), type === '#>' ? '{{>' + $ + ' ' + vars + '}}' : '') :
       doBlock(_this, blocks, start, end, close, body, type, root, vars);
   };
 
