@@ -577,9 +577,10 @@ function doBlock(_this, blocks, start, end, close, body, type, root, vars) {
 function sizzleBlocks(_this, text, blocks) {
   var replaceCb = function($, start, type, root, vars, end, body, $$, close) {
     $ = type === '#>' ? '@' + root : vars && vars.replace(/['"]/g, '') || '';
-    return type === '#*' || type === '#>' ? (_this.registerPartial($,
-        sizzleBlocks(_this, body, blocks)), type === '#>' ? '{{>' + $ + ' ' + vars + '}}' : '') :
-      doBlock(_this, blocks, start, end, close, body, type, root, vars);
+    $$ = type === '#>' ? start + '>' + $ + ' ' + vars + end : '';
+    return type === '#*' || type === '#>' ? (
+      _this.registerPartial($, sizzleBlocks(_this, body, blocks)), $$
+    ) : doBlock(_this, blocks, start, end, close, body, type, root, vars);
   };
 
   while (text !== (text = text.replace(_this.regexps.block, replaceCb)));
