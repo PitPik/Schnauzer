@@ -224,12 +224,12 @@ function checkObjectLength(main, helper, objKeys) {
   return isObject ? objKeys.keys.length && value : value.length && value;
 }
 
-function getOptions(_this, model, tagData, data, newData, bodyFns) {
+function getHelperArgs(_this, model, tagData, data, newData, bodyFns) {
   var save = null;
   var noop = function noop() { return '' };
   var name = tagData.helper ? tagData.helper.orig : '';
   var helpers = model.scopes[0].helpers;
-  var options = {
+  var args = {
     name: name,
     hash: {},
     data: { root: helpers['@root'], scope: helpers['this'], parent: helpers['@parent'] },
@@ -240,25 +240,25 @@ function getOptions(_this, model, tagData, data, newData, bodyFns) {
     concat: concatArrays,
   };
 
-  if (helpers['@length']) cloneObject(options.data, {
+  if (helpers['@length']) cloneObject(args.data, {
     first: helpers['@first'], last: helpers['@last'],
     index: helpers['@index'], key: helpers['@key'], length: helpers['@length'],
   });
   for (var n = data.length; n--; ) {
-    if (data[n].variable.name) options.hash[data[n].variable.name] = data[n].value;
+    if (data[n].variable.name) args.hash[data[n].variable.name] = data[n].value;
     else newData.unshift(data[n].value);
   }
   if (bodyFns) {
-    options.fn = function(context) {
+    args.fn = function(context) {
       save = tweakScope(model.scopes[0], context);
       return [ bodyFns[0].bodyFn(model), save() ][0];
     };
-    options.inverse = bodyFns[1] && function(context) {
+    args.inverse = bodyFns[1] && function(context) {
       save = tweakScope(model.scopes[0], context);
       return [ bodyFns[1].bodyFn(model), save() ][0];
     } || noop;
   }
-  return options;
+  return args;
 }
 
 function getHelperFn(_this, model, tagData) {
@@ -283,7 +283,7 @@ function renderHelper(_this, data, model, tagData, bodyFns, track) {
   if (!helper && data.length === 1 && data[0].type === 'function') return data[0].value();
   if (model.values) model.scopes[0].values = model.values;
 
-  newData.push(getOptions(_this, model, tagData, data, newData, bodyFns));
+  newData.push(getHelperArgs(_this, model, tagData, data, newData, bodyFns));
   out = helper ? helper.apply(model.scopes[0].scope, newData) : '';
   model.scopes[0].values = restore;
   return out === undefined ? '' : out;
@@ -373,7 +373,7 @@ function renderEach(_this, data, main, model, bodyFn, objKeys, loopHelper, reset
 
 function render(_this, model, data, tagData, out, renderFn, bodyFns, track) {
   model.values = null; model.alias = null;
-  if (_this.options.renderHook && bodyFns) model = { extra: model.extra, scopes: model.scopes, };
+  if (_this.options.renderHook && bodyFns) model = { extra: model.extra, scopes: model.scopes };
   return !_this.options.renderHook ? out : _this.options.renderHook(
     _this, out, data, function(newModel) {
       model.scopes[0].scope = newModel[0].parent;
