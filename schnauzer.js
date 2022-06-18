@@ -96,7 +96,7 @@ function switchTags(_this, tags) {
   _this.regexps = {
     inline: new RegExp(tgs[0] + '([>!&=])*\\s*([\\w\\' + chars + '<>|\\.\\s]*)' + tgs[1], 'g'),
     block: new RegExp(tgs[0] + '([#^][>*%]*)\\s*([\\w' + chars + '<>~]*)(?:\\s+([\\w$\\s|.\\/' +
-      chars + ']*))*' + tgs[1] + '\\n*((?:(?!' + tgs[0] + '[#^])[\\S\\s])*?)(' +
+      chars + ']*))*' + tgs[1] + '\\n*((?:(?!' + tgs[0] + '#)[\\S\\s])*?)(' +
       (tgs[0] + '\\/\\3' + tgs[1]).replace(/[()]/g, '') + ')', 'g'),
     else: new RegExp(tgs[0] + '(?:else|\\^)\\s*(.*?)' + tgs[1]),
     entity: new RegExp('[' + getObjectKeys(_this.options.entityMap).join('') + ']', 'g'),
@@ -188,8 +188,9 @@ function getData(_this, model, tagData, out) {
     scope = !main.path || main.path[0] !== '@root' ? model.scopes[main.depth || 0] :
       model.scopes[model.scopes.length - 1];
     if (!scope) { out.push(data); continue; }
-    data = { value: main.value === '@root' ? scope : scope.helpers[main.value], variable: main, 
-      parent: scope.helpers['@parent'], key: scope.helpers['@key'], helpers: scope.helpers };
+    data = { value: main.value === '@root' ? scope.helpers['@root'] : scope.helpers[main.value],
+      variable: main, parent: scope.helpers['@parent'],
+      key: scope.helpers['@key'], helpers: scope.helpers };
 
     if (data.value === undefined && scope.values) data = getAlias([scope.values], main, scope, data);
     if (data.value === undefined && !main.isStrict) data = getAlias(scope.level, main, scope, data);
@@ -444,7 +445,7 @@ function parsePath(text, data, skip) {
   var value = skip ? name : parts[depth];
 
   if (skip || value === '.' || value === 'this' || +value == value) return {
-    value: value, path: [], depth: 0, type: 'key'
+    value: value, path: [], depth: depth, type: 'key'
   };
   parts = cleanText(value, data).split(/[./]/);
   if (hasDot) {
