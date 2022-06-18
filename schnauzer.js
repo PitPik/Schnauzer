@@ -188,8 +188,7 @@ function getData(_this, model, tagData, out) {
     scope = !main.path || main.path[0] !== '@root' ? model.scopes[main.depth || 0] :
       model.scopes[model.scopes.length - 1];
     if (!scope) { out.push(data); continue; }
-    data = { value: main.value === '@root' ? scope.helpers['@root'] : scope.helpers[main.value],
-      variable: main, parent: scope.helpers['@parent'],
+    data = { value: scope.helpers[main.value], variable: main, parent: scope.helpers['@parent'],
       key: scope.helpers['@key'], helpers: scope.helpers };
 
     if (data.value === undefined && scope.values) data = getAlias([scope.values], main, scope, data);
