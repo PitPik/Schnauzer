@@ -280,10 +280,10 @@ function renderHelper(_this, data, model, tagData, bodyFns, track) {
   var restore = model.scopes[0].values;
 
   if (helperFn) return helperFn(_this, data, model, tagData, bodyFns, track);
-  if (!helper && data.length === 1 && data[0].type === 'function') return data[0].value();
+  if (!helper && data.length === 1 && data[0].type === 'function') helper = data.shift().value;
   if (model.values) model.scopes[0].values = model.values;
 
-  newData.push(getHelperArgs(_this, model, tagData, data, newData, bodyFns));
+  if (data.length) newData.push(getHelperArgs(_this, model, tagData, data, newData, bodyFns));
   out = helper ? helper.apply(model.scopes[0].scope, newData) : '';
   model.scopes[0].values = restore;
   return out === undefined ? '' : out;
