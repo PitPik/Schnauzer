@@ -96,7 +96,7 @@ function switchTags(_this, tags) {
   _this.regexps = {
     inline: new RegExp(tgs[0] + '([>!&=])*\\s*([\\w\\' + chars + '<>|\\.\\s]*)' + tgs[1], 'g'),
     block: new RegExp(tgs[0] + '([#^][>*%]*)\\s*([\\w' + chars + '<>~]*)(?:\\s+([\\w$\\s|.\\/' +
-      chars + ']*))*' + tgs[1] + '\\n*((?:(?!' + tgs[0] + '#)[\\S\\s])*?)(' +
+      chars + ']*))*' + tgs[1] + '\\n*((?:(?!' + tgs[0] + '[#^])[\\S\\s])*?)(' +
       (tgs[0] + '\\/\\3' + tgs[1]).replace(/[()]/g, '') + ')', 'g'),
     else: new RegExp(tgs[0] + '(?:else|\\^)\\s*(.*?)' + tgs[1]),
     entity: new RegExp('[' + getObjectKeys(_this.options.entityMap).join('') + ']', 'g'),
