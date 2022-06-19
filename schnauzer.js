@@ -1,4 +1,4 @@
-/**! @license schnauzer v1.8.1; Copyright (C) 2017-2022 by Peter Dematté */
+/**! @license schnauzer v1.8.2; Copyright (C) 2017-2022 by Peter Dematté */
 (function(global, factory) {
   if (typeof exports === 'object') module.exports = factory(global);
   else if (typeof define === 'function' && define.amd)
@@ -23,7 +23,7 @@ var concatArrays = function(array, host) {
 };
 
 var Schnauzer = function(templateOrOptions, options) {
-  this.version = '1.8.1';
+  this.version = '1.8.2';
   this.partials = {};
   this.helpers = {};
   this.regexps = {};
@@ -312,7 +312,7 @@ function renderConditions(_this, data, model, tagData, bodyFns, track) {
   var objKeys = { keys: [] };
   var bodyFn = bodyFns[idx];
   var helper = tagData.helper;
-  var cond = /^(?:if|each|with)$/.test(helper);
+  var cond = helper === 'if' || helper === 'each' || helper === 'with';
   var isVarOnly = !helper && data.length === 1;
   var main = data[0] || {};
   var value = checkObjectLength(main, helper, objKeys);
@@ -322,7 +322,7 @@ function renderConditions(_this, data, model, tagData, bodyFns, track) {
   while (bodyFns[idx + 1] && !canGo) {
     bodyFn = bodyFns[++idx];
     helper = bodyFn.helper;
-    cond = /^(?:if|each|with)$/.test(helper);
+    cond = helper === 'if' || helper === 'each' || helper === 'with';
     data = bodyFn.vars.length ? getData(_this, model, bodyFn, []) : [];
     isVarOnly = !helper && data.length === 1;
     main = data[0] || {};
