@@ -90,14 +90,16 @@ Schnauzer.prototype = {
 return Schnauzer;
 
 function switchTags(_this, tags) {
-  var tgs = tags[0] === '{{' ? ['({{2,3}~*)', '(~*}{2,3})'] : tags;
+  var tgs = (function(tags) { for (var n = tags.length; n--; ) {
+    tags[n] = '(' + (n ? '~*' : '') + '\\' + tags[n] + (!n ? '~*' : '') + ')';
+  } return tags; })(tags[0] === '{{' ? ['{{2,3}', '}{2,3}'] : tags);
   var chars = _this.options.nameCharacters + '!-;=?@[-`|';
 
   _this.regexps = {
     inline: new RegExp(tgs[0] + '([>!&=])*\\s*([\\w\\' + chars + '<>|\\.\\s]*)' + tgs[1], 'g'),
     block: new RegExp(tgs[0] + '([#^][>*%]*)\\s*([\\w' + chars + '<>~]*)(?:\\s+([\\w$\\s|.\\/' +
-      chars + ']*))*' + tgs[1] + '\\n*((?:(?!' + tgs[0] + '[#^])[\\S\\s])*?)(' +
-      (tgs[0] + '\\/\\3' + tgs[1]).replace(/[()]/g, '') + ')', 'g'),
+      chars + ']*))*' + tgs[1] + '\\n*((?:(?!' + tgs[0].replace(/[()]/g, '') +
+      '[#^])[\\S\\s])*?)(' + (tgs[0] + '\\/\\3' + tgs[1]).replace(/[()]/g, '') + ')', 'g'),
     else: new RegExp(tgs[0] + '(?:else|\\^)\\s*(.*?)' + tgs[1]),
     entity: new RegExp('[' + getObjectKeys(_this.options.entityMap).join('') + ']', 'g'),
   };
@@ -575,7 +577,7 @@ function doBlock(_this, blocks, start, end, close, body, type, root, vars) {
 }
 
 function sizzleBlocks(_this, text, blocks) {
-  var replaceCb = function($, start, type, root, vars, end, body, $$, close) {
+  var replaceCb = function($, start, type, root, vars, end, body, close, $$) {
     $ = type === '#>' ? '@' + root : vars && vars.replace(/['"]/g, '') || '';
     $$ = type === '#>' ? start + '>' + $ + ' ' + vars + end : '';
     return type === '#*' || type === '#>' ? (
