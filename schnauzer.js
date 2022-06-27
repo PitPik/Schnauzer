@@ -1,4 +1,4 @@
-/**! @license schnauzer v2.0.0; Copyright (C) 2017-2022 by Peter Dematté */
+/**! @license schnauzer v2.0.1; Copyright (C) 2017-2022 by Peter Dematté */
 (function(global, factory) {
   if (typeof exports === 'object') module.exports = factory(global);
   else if (typeof define === 'function' && define.amd)
@@ -23,7 +23,7 @@ var concatArrays = function(array, host) {
 };
 
 var Schnauzer = function(templateOrOptions, options) {
-  this.version = '2.0.0';
+  this.version = '2.0.1';
   this.partials = {};
   this.helpers = {};
   this.regexps = {};
@@ -588,7 +588,7 @@ function parseTags(_this, text, tree) {
     vars  = split[2 + n];
     body  = trim(split[4 + n], split[3 + n], split[5 + n] || '');
 
-    if (split[n].substring(0, 1) === '\\') {} // TODO: skip (before body) }
+    if (split[n].substring(0, 1) === '\\' || /^[!-]+/.test(type)) continue;
 
     space = vars.indexOf(' ');
     root = type !== '/' && vars.substring(0, space) || vars; // TODO
