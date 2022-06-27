@@ -1,6 +1,6 @@
 # {{schnauzer.js}} - (almost) Logic-less templates with JavaScript
 
-[Schanuzer](http://github.com/PitPik/schnauzer) Schanuzer is largely compatible with Mustache and Handlebars templates. In most cases it is possible to swap out Mustache or Handlebars with Schanuzer and continue using your current templates.
+[Schanuzer](http://github.com/PitPik/schnauzer) is largely compatible with Mustache and Handlebars templates. In most cases it is possible to swap out Mustache or Handlebars with Schanuzer and continue using your current templates.
 
 Schanuzer is also very small and fast. It has the power of Handlebars but is almost the size of Mustage (11.4KB minified, ~4.75KB gZip) and therefore also perfectly suitable for mobile applications.
 Renderin with Schnauzer is about ~30% faster than with Handlebars, when using inline partials, up to 10x faster. Parsing blasting fast, almost as fast as rendering.
@@ -172,3 +172,4 @@ All basic features of Schnauzer are explained at the [Handlebars decumentation](
 
 By default, when schnauzer.js first parses a template it builds arrays of currying functions that keep all data cached. The currying functions not only already hold the parsed HTML snippets but also the right key to the JSON being passed so it can concatenate strings on the fly. The rendering functions are highly optimised therefore Schnauzer currently renders 1/3 faster than Handlebars. Parsing is about 10x faster.
 
+The new version 2.x.x has a new parser that is faster, uses a lot less memory and allowes a more flexible way to use variables within tags.
