@@ -269,17 +269,17 @@ function getHelperFn(_this, model, tagData) {
 function renderHelper(_this, data, model, tagData, track) {
   var helperFn = !tagData.helper && tagData.children &&
     (data[0] ? renderConditions : undefined) || tagData.helperFn;
-  var helper = !helperFn && getHelperFn(_this, model, tagData);
   var newData = [];
   var out = '';
   var restore = model.scopes[0].values;
 
   if (helperFn) return helperFn(_this, data, model, tagData, track);
-  if (!helper && data.length === 1 && data[0].type === 'function') helper = data.shift().value;
+  helperFn = getHelperFn(_this, model, tagData);
+  if (!helperFn && data.length === 1 && data[0].type === 'function') helperFn = data.shift().value;
   if (model.values) model.scopes[0].values = model.values;
 
   if (data.length) newData.push(getHelperArgs(_this, model, tagData, data, newData));
-  out = helper ? helper.apply(model.scopes[0].scope, newData) : '';
+  out = helperFn ? helperFn.apply(model.scopes[0].scope, newData) : '';
   model.scopes[0].values = restore;
   return out === undefined ? '' : out;
 }
