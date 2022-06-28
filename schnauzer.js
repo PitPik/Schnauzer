@@ -584,6 +584,7 @@ function parseTags(_this, text, tree) {
   var split = text.split(_this.regexps.tags);
   var types = {'#':'B','^':'B','/':'C','E':'E'};
 
+  if (split[0]) tree.unshift({ text: split[0] });
   for (var n = 1, type = '', vars = '', body = '', space = 0, root = '', tmp = '',
       cType = '', tag = '', tagData = {}, l = split.length; n < l; n += 5) {
     type  = split[1 + n];
@@ -613,7 +614,7 @@ function parseTags(_this, text, tree) {
     }
   }
   if (tree.parent) throw('Schnauzer Error: Missing closing tag(s)');
-  tree.unshift({ text: split[0] }); split = text = tagData = null;
+  split = text = tagData = null;
 
   return createExecutor(_this, { children: tree });
 }
