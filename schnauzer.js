@@ -360,7 +360,8 @@ function renderEach(_this, data, main, model, tagData, objKeys, loopHelper, rese
       level[alias[0]] = data[key];
       if (loopHelper) scope.alias[alias[0]].key = key;
     }
-    out += tagData.text + (loopFn ? loopHelper(_this, bodyFn(model), main, loopFn) : bodyFn(model));
+    out += loopFn ? loopHelper(_this, tagData.text + bodyFn(model), main, loopFn) :
+      tagData.text + bodyFn(model);
   }
   return [ out, reset() ][0];
 }
