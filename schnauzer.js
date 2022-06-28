@@ -267,9 +267,9 @@ function getHelperFn(_this, model, tagData) {
 // ---- render blocks/inlines helpers (std. HBS helpers)
 
 function renderHelper(_this, data, model, tagData, track) {
-  var helper = getHelperFn(_this, model, tagData);
   var helperFn = !tagData.helper && tagData.children &&
     (data[0] ? renderConditions : undefined) || tagData.helperFn;
+  var helper = !helperFn && getHelperFn(_this, model, tagData);
   var newData = [];
   var out = '';
   var restore = model.scopes[0].values;
@@ -545,18 +545,17 @@ function buildTree(_this, tree, tagData, open) {
     tagData.children = [];
     tagData.children.parent = tree;
     tree = tagData.children;
-    if (isFirstChild) packFirstChild(tagData);
+    if (isFirstChild) {
+      tree.push(getTagData(_this, '', '', open, '', tagData.text)); // TODO
+      getChildren(tree[tree.length - 1]);
+      tree.isElse = true;
+    }
   };
   var getParent = function() {
     delete tree.parent; delete tree.isElse;
     tree = parent;
     parent = tree.parent;
     createExecutor(_this, tree[tree.length - 1]);
-  };
-  var packFirstChild = function(tag) {
-    tree.push(tag = getTagData(_this, '', '', open, '', tag.text)); // TODO
-    getChildren(tag);
-    tree.isElse = true;
   };
 
   if (tagData.tag === 'C') {
