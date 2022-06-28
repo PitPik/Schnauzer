@@ -345,7 +345,7 @@ function renderEach(_this, data, main, model, tagData, objKeys, loopHelper, rese
   var level = scope.level[0];
   var isArr = main.type === 'array';
   var value = !isArr && main.type !== 'object' ? [] : isArr ? data : objKeys;
-  var loopFn = loopHelper && isArr && function(newModel) {
+  var loopFn = loopHelper && function(newModel) {
     model.scopes[0].scope = newModel[0].parent; // TODO: check
     return bodyFn(newModel);
   };
