@@ -197,10 +197,10 @@ function getData(_this, model, tagData, out) {
     data.type = data.value && data.value.constructor === Array ? 'array' : typeof data.value;
     if (!data.variable) data.variable = main; // nested helper functions don't
     if (trackData) {
-      data.helperFn = main.helper && !main.name ? function(newData) {
+      if (main.helper && !main.name) data.helperFn = function(newData) {
         return renderHelper(_this, newData, { extra: model.extra, scopes: model.scopes }, main);
-      } : undefined;
-      data.helperFnArgs = main.helper ? args : undefined;
+      };
+      if (main.helper) data.helperFnArgs = args;
     }
     out.push(data);
   }
@@ -232,10 +232,11 @@ function getHelperArgs(_this, model, tagData, data, newData) {
     keys: getObjectKeys,
     extend: cloneObject,
     concat: concatArrays,
+    getDataDetails: function() { return data },
   };
 
   if (helpers['@length']) cloneObject(args.data, {
-    first: helpers['@first'], last: helpers['@last'], last: helpers['@number'],
+    first: helpers['@first'], last: helpers['@last'], number: helpers['@number'],
     index: helpers['@index'], key: helpers['@key'], length: helpers['@length'],
   });
   for (var n = data.length; n--; ) {
@@ -522,6 +523,7 @@ function getTagData(_this, vars, type, start, tag, text) {
     isInline: tag !== 'B', // new in v1.6.4 ...
     tag: tag,
     text: text,
+    children: null,
   };
 }
 
