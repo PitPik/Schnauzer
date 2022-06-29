@@ -530,7 +530,7 @@ function getTagData(_this, vars, type, start, tag, text) {
 
 // ---- parse inline and block tags
 
-function createExecutor(_this, tagData) {
+function createExecutor(_this, tagData) { // TODO: check if all is needed (dyn)...
   return tagData.bodyFn = tagData.tag === 'B' ? function executeBlock(model) {
     return renderBlock(_this, tagData, getData(_this, model, tagData, []), model);
   } : function executeInlines(model) {
@@ -585,6 +585,7 @@ function parseTags(_this, text, tree) {
   var types = {'#':'B','^':'B','/':'C','E':'E'};
 
   if (split[0]) tree.unshift({ text: split[0] });
+
   for (var n = 1, type = '', vars = '', body = '', space = 0, root = '', tmp = '',
       cType = '', tag = '', tagData = {}, l = split.length; n < l; n += 5) {
     type  = split[1 + n];
@@ -603,7 +604,9 @@ function parseTags(_this, text, tree) {
     tagData = type === '/' ? { tag: 'C', text: body, vars: vars } :
       getTagData(_this, vars, type, split[n], tag, body);
     if (type === '^' && tag === 'B') tagData.alt = tagData.vars[0].orig;
+
     tree = buildTree(_this, tree, tagData, split[n]);
+
     if (tag === 'C' && (vars === 'inline' || tmp)) { // Don't like this: partial-template
       tmp = tmp ? '@' + tmp : ''; // TODO: introduce counter
       tagData = tree.splice(-1, 1, tmp ?
