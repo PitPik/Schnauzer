@@ -63,6 +63,8 @@ var initSchnauzer = function(_this, options, template) {
 
 var HBSS = Schnauzer.SafeString = function(text) { this.string = text }; // WTF
 HBSS.prototype.toString = HBSS.prototype.toHTML = function() { return '' + this.string };
+Schnauzer.getObjectKeys = getObjectKeys; Schnauzer.cloneObject = cloneObject;
+Schnauzer.concatArrays = concatArrays;
 
 Schnauzer.prototype = {
   render: function(data, extra) {
@@ -372,11 +374,11 @@ function render(_this, model, data, tagData, out, renderFn, track) {
   model.values = null; model.alias = null;
   if (_this.options.renderHook && tagData.tag === 'B')
     model = { extra: model.extra, scopes: model.scopes };
-  return !_this.options.renderHook ? out : _this.options.renderHook(
+  return !_this.options.renderHook || !data.length ? out : _this.options.renderHook(
     _this, out, data, function(newModel) {
       model.scopes[0].scope = newModel[0].parent;
       return renderFn(_this, tagData, newModel, model, track || { fnIdx: 0 });
-    }, tagData, track || { fnIdx: 0 });
+    }, tagData, tagData.tag === 'B' ? track || { fnIdx: 0 } : undefined);
 }
 
 function renderInline(_this, tagData, data, model) {

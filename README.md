@@ -135,16 +135,17 @@ $1 etc. represent the String passed with the block (here "foo").
 Options inside helper functions work almost like with Handlebars:
 ```js
   options: {
-    data: {root: {…}, scope, parent, first, last index, key, length },
+    data: { root: {…}, scope, parent, first, last index, key, number, length },
     hash: {}, // keeps all the parameters as a hash
     name: "", // name of the helper
-    fn: ƒ (context, options), // only on block helpers; same as with Handlebars
-    inverse: ƒ noop(), // only on block helpers; same as with Handlebars
+    fn?: ƒ (context, options), // only on block helpers; same as with Handlebars
+    inverse?: ƒ noop(), // only on block helpers; same as with Handlebars
     escapeExpression: ƒ(), // like Handlebars.escapeExpression
     SafeString: ƒ(), // like Handlebars.SafeString
     keys: ƒ(), // like window.Object.keys()
     extend: ƒ(newObject, hostObject), // like Handlebars.Utils.extend
     concat: ƒ(newArray, hostArray), // Concats 2 arrays
+    getDataDetails: ƒ(), // returns details of the data (arguments)
   }
 ```
 
