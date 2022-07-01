@@ -45,6 +45,7 @@ var Schnauzer = function(templateOrOptions, options) {
     nameCharacters: '',
     escapeHTML: true,
     limitPartialScope: true, // HBS style; new in v1.6.5
+    collectPath: false,
     loopHelper: null,
     renderHook: null,
   };
@@ -173,6 +174,16 @@ function createAliasMap(key, scope, model, aliasKey, data) {
   if (scope) scope.alias[aliasKey] = { parent: data.parent, key: data.variable.value };
 }
 
+function collectPath(scopes, scope, varData, tag) {
+  var prevPath = (scopes[1] || {}).path || [];
+  var isLoop = scopes[0].helpers['@length'] !== undefined;
+  var depth = isLoop && varData.depth ? varData.depth + 1 : varData.depth;
+
+  scope.path = prevPath.slice(0, prevPath.length - depth);
+  if (!/^(?:\.|this)$/.test(varData.value)) scope.path[scope.path.length] = varData.value;
+  return tag === 'I' ? scope.path : scope.path.slice(0);
+}
+
 function getData(_this, model, tagData, out) {
   var vars = tagData.vars;
   var trackData = !!_this.options.renderHook;
@@ -203,6 +214,7 @@ function getData(_this, model, tagData, out) {
         return renderHelper(_this, newData, { extra: model.extra, scopes: model.scopes }, main);
       };
       if (main.helper) data.helperFnArgs = args;
+      if (_this.options.collectPath) data.path = collectPath(model.scopes, scope, main, tagData.tag);
     }
     out.push(data);
   }
@@ -362,6 +374,8 @@ function renderEach(_this, data, main, model, tagData, objKeys, loopHelper, rese
       level[alias[0]] = data[key];
       if (loopHelper) scope.alias[alias[0]].key = key;
     }
+    if (_this.options.collectPath && _this.options.renderHook)
+      model.scopes[1].path[model.scopes[1].path.length - (n ? 1 : 0)] = '' + key;
     out += loopFn ? loopHelper(_this, tagData.text + bodyFn(model), main, loopFn, tagData) :
       tagData.text + bodyFn(model);
   }
