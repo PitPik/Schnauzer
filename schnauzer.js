@@ -620,10 +620,11 @@ function parseTags(_this, text, tree) {
     tagData = type === '/' ? { tag: 'C', text: body, vars: vars } :
       getTagData(_this, vars, type, split[n], tag, body);
     if (type === '^' && tag === 'B') tagData.alt = tagData.vars[0].orig;
+    if (type === '#*') tagData.isPartial = true;
 
     tree = buildTree(_this, tree, tagData, split[n]);
 
-    if (tag === 'C' && (vars === 'inline' || tmp)) { // Don't like this: partial-template
+    if (tag === 'C' && (tree[tree.length - 1].isPartial || tmp)) { // Don't like this
       tmp = tmp ? '@' + tmp : ''; // TODO: introduce counter
       tagData = tree.splice(-1, 1, tmp ?
         getTagData(_this, tmp, '>', split[n], 'I', tagData.text) : { text: tagData.text })[0];
