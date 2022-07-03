@@ -50,7 +50,7 @@ In this example `Schnauzer()` is initialized with the template as first argument
 
 ```js
 new Schnauzer(template: String, options: { [key: String]: any }) {
-    tags: ['{{', '}}'], // used tags: default is {{}}
+    tags: ['{{', '}}'], // used tags: default is {{ }}
     entityMap: { // characters to be escaped
       '&': '&amp;',
       '<': '&lt;',
@@ -61,19 +61,19 @@ new Schnauzer(template: String, options: { [key: String]: any }) {
       '`': '&#x60;',
       '=': '&#x3D;'
     },
-    escapeHTML: true, // if set to false it reacts like {{{}}}
+    escapeHTML: true, // set to false, Schnauzer render like all tags set to {{{ }}}
     helpers: { [name: String]: Function }, // short-cut for registerHelper
     partials: { [name: String]: String | Function }, // short-cut for registerPartial
     self: 'self', // name of initial partial
-    limitPartialScope: true, // sets limiting of scope inside partials like in HBS or whole scope
-    renderHook: Function // every time an inline or block element renders, this function will be called
-    loopHelper: Function // Every loop cycle of an Array inside #each calls this function
+    limitPartialScope: true, // sets limiting of scope inside partials like in HBS
+    renderHook: Function // called every time an inline | block element renders
+    loopHelper: Function // Loop cycle callback for Array | Object inside #each
 })
 .render(data: { [key: String]: any }, extraData: { [key: String]: any }): string
 .parse(text: String): Function
 .registerHelper(name: String, func: Function): void
 .unregisterHelper(name: String): void
-.registerPartial(name: String, html: String | Function): Function // type Function if already pre-parsed
+.registerPartial(name: String, html: String | Function): Function // Function: pre-parsed
 .unregisterPartial(name: String): void
 .setTags(tags: [String, String]): void
 ```
