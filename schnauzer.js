@@ -42,7 +42,6 @@ var Schnauzer = function(templateOrOptions, options) {
     helpers: {},
     partials: {},
     self: 'self',
-    nameCharacters: '',
     escapeHTML: true,
     limitPartialScope: true, // HBS style; new in v1.6.5
     loopHelper: null,
