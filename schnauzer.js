@@ -597,12 +597,12 @@ function parseTags(_this, text, tree) {
     if (split[n].substring(0, 1) === '\\' || /^[!-]+/.test(type)) continue;
 
     space = vars.indexOf(' ');
-    root = type !== '/' && vars.substring(0, space) || vars; // TODO
+    root = type !== '/' && vars.substring(0, space) || vars;
     cType = type === '^' && (space !== -1 || vars === '') || root === 'else' ? 'E' : type;
-    tag = types[cType.substring(0, 1)] || 'I'; // TODO: ^ if === else if
+    tag = types[cType.substring(0, 1)] || 'I';
 
     if (type === '#>') tmp = root;
-    if (cType === 'E') vars = vars.replace(/^else\s*/, ''); // TODO; split in old
+    if (cType === 'E') vars = vars.replace(/^else\s*/, '');
     tagData = type === '/' ? { tag: 'C', text: body, vars: vars } :
       getTagData(_this, vars, type, split[n], tag, body);
     if (type === '^' && tag === 'B') tagData.alt = tagData.vars[0].orig;
