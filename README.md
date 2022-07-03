@@ -61,11 +61,11 @@ new Schnauzer(template: String, options: { [key: String]: any }) {
       '`': '&#x60;',
       '=': '&#x3D;'
     },
-    escapeHTML: true, // set to false, Schnauzer render like all tags set to {{{ }}}
+    escapeHTML: true, // if false, Schnauzer renders like all tags are set to {{{ }}}
     helpers: { [name: String]: Function }, // short-cut for registerHelper
     partials: { [name: String]: String | Function }, // short-cut for registerPartial
     self: 'self', // name of initial partial
-    limitPartialScope: true, // sets limiting of scope inside partials like in HBS
+    limitPartialScope: true, // sets limiting of scope inside partials (like in HBS)
     renderHook: Function // called every time an inline | block element renders
     loopHelper: Function // Loop cycle callback for Array | Object inside #each
 })
