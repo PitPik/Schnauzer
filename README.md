@@ -67,7 +67,6 @@ new Schnauzer(template: string, options: { [key: string]: any }) {
     self: 'self', // name of initial partial
     nameCharacters: '', // whitelist of chars for variables inside helpers, partials, functions...
     limitPartialScope: true, // sets limiting of scope inside partials like in HBS or whole scope
-    collectPath: false, // adds full path to data if set to true, readable in renderHook data
     renderHook: Function // every time an inline or block element renders, this function will be called
     loopHelper: Function // Every loop cycle of an Array inside #each calls this function
 })

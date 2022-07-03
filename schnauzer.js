@@ -177,7 +177,7 @@ function getData(_this, model, tagData, out) {
   var vars = tagData.vars;
   var trackData = !!_this.options.renderHook;
 
-  if (!vars) return [];
+  if (!vars) return out;
 
   for (var n = 0, l = vars.length, main = {}, scope = {}, data = {}, args = []; n < l; n++) {
     main = vars[n];
