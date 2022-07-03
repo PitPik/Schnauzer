@@ -70,7 +70,7 @@ new Schnauzer(template: String, options: { [key: String]: any }) {
     loopHelper: Function // Loop cycle callback for Array | Object inside #each
 })
 .render(data: { [key: String]: any }, extraData: { [key: String]: any }): string
-.parse(text: String): Function
+.parse(text: String): Function // returns a partial for re-cycling, re-usage in other instance
 .registerHelper(name: String, func: Function): void
 .unregisterHelper(name: String): void
 .registerPartial(name: String, html: String | Function): Function // Function: pre-parsed
