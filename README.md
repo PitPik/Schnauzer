@@ -49,7 +49,7 @@ In this example `Schnauzer()` is initialized with the template as first argument
 ## API
 
 ```js
-new Schnauzer(template: string, options: { [key: string]: any }) {
+new Schnauzer(template: String, options: { [key: String]: any }) {
     tags: ['{{', '}}'], // used tags: default is {{}}
     entityMap: { // characters to be escaped
       '&': '&amp;',
@@ -62,20 +62,20 @@ new Schnauzer(template: string, options: { [key: string]: any }) {
       '=': '&#x3D;'
     },
     escapeHTML: true, // if set to false it reacts like {{{}}}
-    helpers: {}, // name:function pair defining helpers
-    partials: {}, // name:String pair defining partials
+    helpers: { [name: String]: Function }, // short-cut for registerHelper
+    partials: { [name: String]: String | Function }, // short-cut for registerPartial
     self: 'self', // name of initial partial
     limitPartialScope: true, // sets limiting of scope inside partials like in HBS or whole scope
     renderHook: Function // every time an inline or block element renders, this function will be called
     loopHelper: Function // Every loop cycle of an Array inside #each calls this function
 })
-.render(data { [key: string]: any }, extraData { [key: string]: any }): string
-.parse(text: string): Function
-.registerHelper(name: string, func: Function): void
-.unregisterHelper(name: string): void
-.registerPartial(name: string, html: string): Function
-.unregisterPartial(name: string): void
-.setTags(tags: [string, string]): void
+.render(data: { [key: String]: any }, extraData: { [key: String]: any }): string
+.parse(text: String): Function
+.registerHelper(name: String, func: Function): void
+.unregisterHelper(name: String): void
+.registerPartial(name: String, html: String | Function): Function // type Function if already pre-parsed
+.unregisterPartial(name: String): void
+.setTags(tags: [String, String]): void
 ```
 `parse()` is only needed if the template was not passed to `Schnauzer()` in the first place. This might be handy if you're not sure if this template will ever be used...
 
