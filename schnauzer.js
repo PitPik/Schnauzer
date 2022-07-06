@@ -197,14 +197,11 @@ function getData(_this, model, tagData, out) {
 
     data.type = data.value && data.value.constructor === Array ? 'array' : typeof data.value;
     if (!data.variable) data.variable = main; // nested helper functions don't
-    if (trackData) {
-      if (main.helper && !main.name) data.helperFn = function(newData) {
-        return renderHelper(_this, newData, { extra: model.extra, scopes: model.scopes }, main);
-      };
-      if (main.helper) data.helperFnArgs = args;
-    }
+    if (trackData && main.helper) data.renderArgs = args;
     out.push(data);
   }
+  if (trackData && tagData.helper && !tagData.tag) tagData.renderFn =
+    function(newData) { return renderHelper(_this, newData, model, tagData) };
   return out;
 }
 
@@ -369,42 +366,42 @@ function renderEach(_this, data, main, model, tagData, objKeys, loopHelper, rese
 
 // ---- render blocks and inlines; delegations only
 
-function render(_this, model, data, tagData, out, renderFn, track) {
+function render(_this, model, data, tagData, out, renderFn, track, active) {
   model.values = null; model.alias = null;
   if (_this.options.renderHook && tagData.tag === 'B')
     model = { extra: model.extra, scopes: model.scopes };
-  return !_this.options.renderHook || !data.length ? out : _this.options.renderHook(
-    _this, out, data, function(newModel) {
+  return !_this.options.renderHook || !data.length || active ? out : _this.options.renderHook(
+    _this, out, data, function(newModel, isActive) {
+      var skipRender = isActive !== undefined ? isActive : true;
       model.scopes[0].scope = newModel[0].parent;
-      return renderFn(_this, tagData, newModel, model, track || { fnIdx: 0 });
+      return renderFn(_this, tagData, newModel, model, skipRender, track || { fnIdx: 0 });
     }, tagData, tagData.tag === 'B' ? track || { fnIdx: 0 } : undefined);
 }
 
-function renderInline(_this, tagData, data, model) {
+function renderInline(_this, tagData, data, model, active) {
   var type = data[0] && data[0].type;
   var out = tagData.partial ? renderPartial(_this, data, model, tagData) :
     escapeHtml(_this, tagData.helper || type === 'function' ? // helper
       renderHelper(_this, data, model, tagData) : data[0] && data[0].value,
       type !== 'boolean' && type !== 'number' && tagData.isEscaped);
 
-  return render(_this, model, data, tagData, out, renderInline);
+  return render(_this, model, data, tagData, out, renderInline, null, active);
 }
 
 function renderInlines(_this, tags, model) {
-  for (var n = 0, l = tags.length, out = '', data = {}; n < l; n++) {
-    data = getData(_this, model, tags[n], []);
-    out += tags[n].tag === 'B' ? renderBlock(_this, tags[n], data, model) :
-      renderInline(_this, tags[n], data, model) + tags[n].text;
+  for (var n = 0, l = tags.length, out = '', fn = renderInline; n < l; n++) {
+    fn = tags[n].tag === 'B' ? renderBlock : renderInline;
+    out += fn(_this, tags[n], getData(_this, model, tags[n], []), model) + tags[n].text;
   }
   return out;
 }
 
-function renderBlock(_this, tagData, data, model, recursive) {
+function renderBlock(_this, tagData, data, model, active, recursive) {
   var track = recursive || { fnIdx: 0 };
   var out = renderHelper(_this, data, model, tagData, track);
 
   return (recursive ? out :
-    render(_this, model, data, tagData, out, renderBlock, track)) + tagData.text;
+    render(_this, model, data, tagData, out, renderBlock, track, active));
 }
 
 // ---- parse (pre-render) helpers
