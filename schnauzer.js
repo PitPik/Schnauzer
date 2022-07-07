@@ -325,6 +325,7 @@ function renderConditions(_this, data, model, tagData, track) {
       (!helper && !data.length && tag.bodyFn); // isElse
   }
   track.fnIdx = idx;
+  track.checkFn && track.checkFn(idx);
   if (isVarOnly && main.type === 'array') helper = 'each';
   if (isVarOnly && !helper) helper = 'with';
   if (helper === 'with' || helper === 'each' && value) {
@@ -373,7 +374,7 @@ function render(_this, model, data, tagData, out, renderFn, track) {
     model = { extra: model.extra, scopes: model.scopes };
   return !_this.options.renderHook || !data.length || _this.active ? out : _this.options.renderHook(
     _this, out, data, function(newModel) {
-      model.scopes[0].scope = newModel[0].parent || {}; // TODO: model.scopes[0].scope? #if (...)
+      model.scopes[0].scope = newModel[0].parent || model.scopes[0].scope;
       return renderFn(_this, tagData, newModel, model, track || { fnIdx: 0 });
     }, tagData, tagData.tag === 'B' ? track || { fnIdx: 0 } : undefined);
 }
