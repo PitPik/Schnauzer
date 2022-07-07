@@ -367,26 +367,25 @@ function renderEach(_this, data, main, model, tagData, objKeys, loopHelper, rese
 
 // ---- render blocks and inlines; delegations only
 
-function render(_this, model, data, tagData, out, renderFn, track, activate) {
+function render(_this, model, data, tagData, out, renderFn, track) {
   model.values = null; model.alias = null;
-  activate = activate === true || !_this.active;
   if (_this.options.renderHook && tagData.tag === 'B')
     model = { extra: model.extra, scopes: model.scopes };
-  return !_this.options.renderHook || !data.length || !activate ? out : _this.options.renderHook(
-    _this, out, data, function(newModel, doActivate) {
+  return !_this.options.renderHook || !data.length || _this.active ? out : _this.options.renderHook(
+    _this, out, data, function(newModel) {
       model.scopes[0].scope = newModel[0].parent;
-      return renderFn(_this, tagData, newModel, model, doActivate, track || { fnIdx: 0 });
+      return renderFn(_this, tagData, newModel, model, track || { fnIdx: 0 });
     }, tagData, tagData.tag === 'B' ? track || { fnIdx: 0 } : undefined);
 }
 
-function renderInline(_this, tagData, data, model, activate) {
+function renderInline(_this, tagData, data, model) {
   var type = data[0] && data[0].type;
   var out = tagData.partial ? renderPartial(_this, data, model, tagData) :
     escapeHtml(_this, tagData.helper || type === 'function' ? // helper
       renderHelper(_this, data, model, tagData) : data[0] && data[0].value,
       type !== 'boolean' && type !== 'number' && tagData.isEscaped);
 
-  return render(_this, model, data, tagData, out, renderInline, null, activate);
+  return render(_this, model, data, tagData, out, renderInline, null);
 }
 
 function renderInlines(_this, tags, model) {
@@ -397,12 +396,12 @@ function renderInlines(_this, tags, model) {
   return out;
 }
 
-function renderBlock(_this, tagData, data, model, activate, recursive) {
+function renderBlock(_this, tagData, data, model, recursive) {
   var track = recursive || { fnIdx: 0 };
   var out = renderHelper(_this, data, model, tagData, track);
 
   return (recursive ? out :
-    render(_this, model, data, tagData, out, renderBlock, track, activate));
+    render(_this, model, data, tagData, out, renderBlock, track));
 }
 
 // ---- parse (pre-render) helpers
