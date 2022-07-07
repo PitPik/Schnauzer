@@ -217,7 +217,7 @@ function checkObjectLength(main, helper, objKeys) {
   return isObject ? objKeys.keys.length && value : value.length && value;
 }
 
-function getHelperArgs(_this, model, tagData, data, newData) {
+function getHelperArgs(_this, model, tagData, data, newData, track) {
   var save = null;
   var noop = function noop() { return '' };
   var name = tagData.helper ? tagData.helper.orig : '';
@@ -244,10 +244,12 @@ function getHelperArgs(_this, model, tagData, data, newData) {
   }
   if (tagData.children) {
     args.fn = function(context) {
+      track.fnIdx = 0; if (track.checkFn) track.checkFn(0);
       save = tweakScope(model.scopes[0], context);
       return [ tagData.children[0].text + tagData.children[0].bodyFn(model), save() ][0];
     };
     args.inverse = tagData.children[1] && function(context) {
+      track.fnIdx = 1; if (track.checkFn) track.checkFn(1);
       save = tweakScope(model.scopes[0], context);
       return [ tagData.children[1].text + tagData.children[1].bodyFn(model), save() ][0];
     } || noop;
@@ -277,7 +279,7 @@ function renderHelper(_this, data, model, tagData, track) {
   if (!helperFn && data.length === 1 && data[0].type === 'function') helperFn = data.shift().value;
   if (model.values) model.scopes[0].values = model.values;
 
-  if (data.length) newData.push(getHelperArgs(_this, model, tagData, data, newData));
+  if (data.length) newData.push(getHelperArgs(_this, model, tagData, data, newData, track));
   out = helperFn ? helperFn.apply(model.scopes[0].scope, newData) : '';
   model.scopes[0].values = restore;
   return out === undefined ? '' : out;
