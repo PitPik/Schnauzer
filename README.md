@@ -2,8 +2,8 @@
 
 [Schanuzer](http://github.com/PitPik/schnauzer) is largely compatible with Mustache and Handlebars templates. In most cases it is possible to swap out Mustache or Handlebars with Schanuzer and continue using your current templates.
 
-Schanuzer is also very small and fast. It has the power of Handlebars but is almost the size of Mustage (11.4KB minified, ~4.75KB gZip) and therefore also perfectly suitable for mobile applications.
-Renderin with Schnauzer is about ~30% faster than with Handlebars, when using inline partials, up to 10x faster. Parsing blasting fast, almost as fast as rendering.
+Schanuzer is also very small and fast. It has the power of Handlebars but is almost the size of Mustage (12.1KB minified, ~4.89KB gZip) and therefore also perfectly suitable for mobile applications.
+Renderin with Schnauzer is about ~33% faster than with Handlebars, when using inline partials, up to 10x faster. Parsing blasting fast, almost as fast as rendering.
 
 ## Where to use schnauzer.js?
 
@@ -11,23 +11,17 @@ You can use schnauzer.js to render templates anywhere you can use JavaScript. Th
 
 schnauzer.js ships with support for both the [CommonJS](http://www.commonjs.org/) module API and the [Asynchronous Module Definition](https://github.com/amdjs/amdjs-api/wiki/AMD) API, or AMD.
 
-## Main differences to Handlebars
-
-Schnauzer and Handlebars do almost the same thing, but there is a difference in size (10x) and performance. Schnauzer has almost the same power as Handlebars but the size of Mustache and a higher performance.
-Schnauzer does not throw errors when markup is not valid.
-
 ### Dynamic rendering
 
 Other than handlebars, schnauzer has 2 optional functions that get triggered with every single tag that gets rendered so the template can be kept alive even after the first rendering.
-`renderHook()` and `loopHelper()`. With those functions it's possible to keep track of all the rendered variables and rendering functions including a special character `%` set infront of every variable. This way it's possible to overwrite parts of the rendered template after it was first rendered without having to re-render the whole template.
+`renderHook()` and `loopHelper()`. With those functions it's possible to keep track of all the rendered variables and rendering functions including a special character `%` set infront of every variable. This way, when used in the DOM, it's possible to overwrite parts of the rendered template after it was first rendered without having to re-render the whole template.
 This is perfect for developing MVC like libraries/frameworks that need to partialy update HTML on the fly.
-
 
 * * *
 
 ## handlebars.js [not present any more.]
 
-Will be back soon. (Handlebars facade for Schnauzer)
+(Handlebars facade for Schnauzer) ... maybe back one day.
 
 ## Usage
 
@@ -49,7 +43,7 @@ In this example `Schnauzer()` is initialized with the template as first argument
 ## API
 
 ```js
-new Schnauzer(template: String, options: { [key: String]: any }) {
+new Schnauzer(templateOrOptions: String | { [key: String]: any }, options?: { [key: String]: any }) {
     tags: ['{{', '}}'], // used tags: default is {{ }}
     entityMap: { // characters to be escaped
       '&': '&amp;',
@@ -138,7 +132,7 @@ Options inside helper functions work almost like with Handlebars:
     hash: {}, // keeps all the parameters as a hash
     name: "", // name of the helper
     fn?: ƒ (context, options), // only on block helpers; same as with Handlebars
-    inverse?: ƒ noop(), // only on block helpers; same as with Handlebars
+    inverse?: ƒ (context, options), // only on block helpers; same as with Handlebars
     escapeExpression: ƒ(), // like Handlebars.escapeExpression
     SafeString: ƒ(), // like Handlebars.SafeString
     keys: ƒ(), // like window.Object.keys()
@@ -147,9 +141,6 @@ Options inside helper functions work almost like with Handlebars:
     getDataDetails: ƒ(), // returns details of the data (arguments)
   }
 ```
-
-`options.fn()`, other than with Handlebars, doesn't need and argument unless you want to create a new scope.
-So, if you're fine with the scope of `this`, you don't need to pass a parameter.
 
 Inline helpers can be used for something like the following:
 
@@ -165,11 +156,14 @@ today: function() {
 
 ## How Schnauzer templates works
 
-All basic features of Schnauzer are explained at the [Handlebars decumentation](https://handlebarsjs.com/guide/).
+All basic features of Schnauzer are explained in the [Handlebars decumentation](https://handlebarsjs.com/guide/).
 
 
 ## Pre-parsing and Caching Templates
 
-By default, when schnauzer.js first parses a template it builds arrays of currying functions that keep all data cached. The currying functions not only already hold the parsed HTML snippets but also the right key to the JSON being passed so it can concatenate strings on the fly. The rendering functions are highly optimised therefore Schnauzer currently renders 1/3 faster than Handlebars. Parsing is about 10x faster.
+By default, when schnauzer.js first parses a template it builds a tree of currying functions that keep all data cached. The currying functions not only already hold the parsed HTML snippets but also the right key to the JSON being passed so it can concatenate strings on the fly. The rendering functions are highly optimised therefore Schnauzer currently renders 1/3 faster than Handlebars. Parsing is about 10x faster.
 
-The new version 2.x.x has a new parser that is faster, uses a lot less memory and allowes a more flexible way to use variables within tags.
+### New in 2.x.x
+
+The new version 2.x.x has a new parser that is faster, it renders faster than the previous major version (from 65ms down to 52ms on a standard comparison test with 500 runs: 16K template + 1k partial and quite a bit of data), uses a lot less memory and allowes a more flexible way of using variables within tags (no limits on characters). It has better support (API) for "active rendering" after 1st rendering. All Schnauzer functionalities are now supported to be altered through the new API (renderHook, loopHelper). The "activate" API doesn't compromise speed any more if not used so you can have 99.99% of the high speed parsing/rendering if used only as a one-time template-rendering engine.
+Unfortunately the new parser is a bit bigger (1.02KB source) than the old one, but we profit now from more speed, less memory usage and more flexibility.
