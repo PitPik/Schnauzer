@@ -326,7 +326,7 @@ function renderConditions(_this, data, model, tagData, track) {
     canGo = ((cond || isVarOnly) && value) || (helper === 'unless' && !value) ||
       (!helper && !data.length && tag.bodyFn); // isElse
   }
-  track.fnIdx = idx;
+  track.fnIdx = canGo ? idx : idx + 1; // speeds up API calls
   track.checkFn && track.checkFn(idx);
   if (isVarOnly && main.type === 'array') helper = 'each';
   if (isVarOnly && !helper) helper = 'with';
