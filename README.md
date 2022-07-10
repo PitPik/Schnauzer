@@ -70,7 +70,7 @@ new Schnauzer(templateOrOptions: String | { [key: String]: any }, options?: { [k
 .registerPartial(name: String, html: String | Function): Function // Function: pre-parsed
 .unregisterPartial(name: String): void
 .setTags(tags: [String, String]): void
-.escapeHtml(string, doEscape): String // returns escaped text according to entityMap
+.escapeExpression(string): String // returns escaped text according to entityMap
 ```
 `parse()` is only needed if the template was not passed to `Schnauzer()` in the first place. This might be handy if you're not sure if this template will ever be used...
 

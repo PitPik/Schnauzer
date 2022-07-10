@@ -86,7 +86,6 @@ Schnauzer.prototype = {
   },
   unregisterPartial: function(name) { delete this.partials[name] },
   setTags: function(tags) { switchTags(this, tags) },
-  escapeHtml: function(string, doEscape) { return escapeHtml(this, string, doEscape) }
 };
 
 return Schnauzer;
@@ -96,7 +95,10 @@ function switchTags(_this, tags) {
     tags[n] = '(' + (n ? '~*' : '') + (!n ? '\\\\*' : '') + tags[n] + (!n ? '~*' : '') + ')';
   } return tags; })(tags[0] === '{{' ? ['{{2,3}', '}{2,3}'] : tags);
 
-  _this.regexps = { tags: new RegExp(tgs[0] + '([#^/!>*-]*)\\s*(.*?)\\s*' + tgs[1]) };
+  _this.regexps = {
+    tags: new RegExp(tgs[0] + '([#^/!>*-]*)\\s*(.*?)\\s*' + tgs[1]),
+    entity: new RegExp('[' + getObjectKeys(_this.options.entityMap).join('') + ']', 'g')
+  };
 }
 
 // ---- render data helpers
