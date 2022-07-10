@@ -86,6 +86,7 @@ Schnauzer.prototype = {
   },
   unregisterPartial: function(name) { delete this.partials[name] },
   setTags: function(tags) { switchTags(this, tags) },
+  escapeHtml: function(string, doEscape) { return escapeHtml(this, string, doEscape) }
 };
 
 return Schnauzer;
