@@ -350,9 +350,13 @@ function renderEach(_this, data, main, model, tagData, objKeys, loopHelper, rese
   var level = scope.level[0];
   var isArr = main.type === 'array';
   var value = !isArr && main.type !== 'object' ? [] : isArr ? data : objKeys;
-  var loopFn = loopHelper && main.variable.active && function(newModel) { // Hmmm: limits
-    if (newModel[0].parent) model.scopes[0].scope = newModel[0].parent; // TODO: check
-    return bodyFn(newModel);
+  var currentScopes = loopHelper ? concatArrays([], model.scopes) : null;
+  var loopFn = loopHelper && main.variable.active && function(newData, key) { // Hmmm: limits
+    model.scopes = currentScopes;
+    model.scopes[0].scope = newData;
+    model.scopes[0].helpers = main.helpers =
+      createHelper(key, key, main.value.length, newData, data, model.scopes);
+    return loopHelper(_this, tagData.text + bodyFn(model), main, loopFn, true);
   };
 
   if (alias && loopHelper) scope.alias[alias[0]] = { parent: data };
@@ -365,7 +369,7 @@ function renderEach(_this, data, main, model, tagData, objKeys, loopHelper, rese
       level[alias[0]] = data[key];
       if (loopHelper) scope.alias[alias[0]].key = key;
     }
-    out += loopFn ? loopHelper(_this, tagData.text + bodyFn(model), main, loopFn, tagData) :
+    out += loopFn ? loopHelper(_this, tagData.text + bodyFn(model), main, loopFn) :
       tagData.text + bodyFn(model);
   }
   return [ out, reset() ][0];
