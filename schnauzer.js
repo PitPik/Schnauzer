@@ -120,9 +120,11 @@ function createHelper(idx, key, len, value, parent, scopes) {
     '@length': len,
     '@parent': parent,
     '@root': scopes[scopes.length - 1].scope,
+    '@depth': (scopes.length - scopes.length % 2) / 2 - 1, // TODO: see what's practical
     'this': value,
     '.': value,
-  } : { '@parent': parent, '@root': scopes[scopes.length - 1].scope, 'this': value, '.': value };
+  } : { '@parent': parent, '@root': scopes[scopes.length - 1].scope,
+        '@depth': (scopes.length - scopes.length % 2) / 2 - 1, 'this': value, '.': value };
 }
 
 function addScope(model, data, alias) {
@@ -228,7 +230,8 @@ function getHelperArgs(_this, model, tagData, data, newData, track) {
   var args = {
     name: name,
     hash: {},
-    data: { root: helpers['@root'], scope: helpers['this'], parent: helpers['@parent'] },
+    data: { root: helpers['@root'], scope: helpers['this'],
+      parent: helpers['@parent'], depth: helpers['@depth'] },
     escapeExpression: _this.escapeExpression,
     SafeString: Schnauzer.SafeString,
     keys: getObjectKeys,
@@ -369,8 +372,8 @@ function renderEach(_this, data, main, model, tagData, objKeys, loopHelper, rese
       level[alias[0]] = data[key];
       if (loopHelper) scope.alias[alias[0]].key = key;
     }
-    out += loopFn ? loopHelper(_this, tagData.text + bodyFn(model), main, loopFn) :
-      tagData.text + bodyFn(model);
+    out += loopFn ? loopHelper(_this, (loopHelper(_this, key, main),
+      tagData.text + bodyFn(model)), main, loopFn) : tagData.text + bodyFn(model);
   }
   return [ out, reset() ][0];
 }
