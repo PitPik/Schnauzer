@@ -299,14 +299,13 @@ function renderPartial(_this, data, model, tagData) {
   var isBlock = !isTemplate && name.substring(0, 1) === '@';
   var partial = _this.partials[isBlock ? name.substring(1) : name];
   var scope = data[0] && !data[0].variable.name ? data[0].value : model.scopes[0].scope;
-  var reset = addScope(model, scope);
+  var reset = addScope(model, scope, model.scopes[0].alias);
 
   if (!partial && isBlock) partial = _this.partials[name];
-  if (isBlock) model.partialBlock = _this.partials[name]; // TODO: no nested scenario possible
-    else if (isTemplate) partial = model.partialBlock;
+  if (isBlock) scope.partialBlock = _this.partials[name];
+    else if (isTemplate) partial = scope.partialBlock;
   if (_this.options.limitPartialScope) model.scopes = [model.scopes[0]]; // TODO: check isTemplate
-
-  return [ partial ? partial(model) : '', reset(), delete model.partialBlock ][0];
+  return [ partial ? partial(model) : '', reset() ][0];
 }
 
 function renderConditions(_this, data, model, tagData, track) {
@@ -336,7 +335,7 @@ function renderConditions(_this, data, model, tagData, track) {
   track.checkFn && track.checkFn(idx);
   if (isVarOnly && main.type === 'array') helper = 'each';
   if (isVarOnly && !helper) helper = 'with';
-  if (helper === 'with' || helper === 'each' && value) {
+  if (helper === 'with' || helper === 'each') { //  && value // TODO: maybe not needed if arr = arr
     reset = addScope(model, value, helper === 'with' && model.scopes[0].alias);
     if (helper === 'each') return renderEach(_this, value, main, model,
       tag, objKeys.keys, _this.options.loopHelper, reset);
@@ -358,7 +357,7 @@ function renderEach(_this, data, main, model, tagData, objKeys, loopHelper, rese
     model.scopes = currentScopes;
     model.scopes[0].scope = newData;
     model.scopes[0].helpers = main.helpers =
-      createHelper(key, key, main.value.length, newData, data, model.scopes);
+      createHelper(key, key, main.value.length, data[key], newData, model.scopes);
     return loopHelper(_this, tagData.text + bodyFn(model), main, loopFn, true);
   };
 
