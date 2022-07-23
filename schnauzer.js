@@ -1,10 +1,10 @@
-/**! @license schnauzer v2.0.1; Copyright (C) 2017-2022 by Peter Dematté */
+/**! @license schnauzer v2.0.2; Copyright (C) 2017-2022 by Peter Dematté */
 (function(global, factory) {
-  if (typeof exports === 'object') module.exports = factory(global);
+  if (typeof exports === 'object') module.exports = factory();
   else if (typeof define === 'function' && define.amd)
-    define('schnauzer', [], function() { return factory(global); });
-  else global.Schnauzer = factory(global);
-}(this && this.window || global, function() { 'use strict';
+    define('schnauzer', [], function() { return factory(); });
+  else global.Schnauzer = factory();
+}(this && this.window || global, function factory() { 'use strict';
 
 var getObjectKeysFn = function(obj, key, keys) { obj.hasOwnProperty(key) && keys.push(key) };
 var getObjectKeys = Object.keys || function(obj) {
@@ -23,7 +23,7 @@ var concatArrays = function(array, host) {
 };
 
 var Schnauzer = function(templateOrOptions, options) {
-  this.version = '2.0.1';
+  this.version = '2.0.2';
   this.partials = {};
   this.helpers = {};
   this.regexps = {};
@@ -401,10 +401,8 @@ function renderInline(_this, tagData, data, model) {
 }
 
 function renderInlines(_this, tags, model) {
-  for (var n = 0, l = tags.length, out = '', fn = renderInline; n < l; n++) {
-    fn = tags[n].tag === 'B' ? renderBlock : renderInline;
-    out += fn(_this, tags[n], getData(_this, model, tags[n], []), model) + tags[n].text;
-  }
+  for (var n = 0, l = tags.length, out = ''; n < l; n++) out += (tags[n].tag === 'B' ? renderBlock :
+    renderInline)(_this, tags[n], getData(_this, model, tags[n], []), model) + tags[n].text;
   return out;
 }
 
@@ -412,8 +410,7 @@ function renderBlock(_this, tagData, data, model, recursive) {
   var track = recursive || { fnIdx: 0 };
   var out = renderHelper(_this, data, model, tagData, track);
 
-  return (recursive ? out :
-    render(_this, model, data, tagData, out, renderBlock, track));
+  return recursive ? out : render(_this, model, data, tagData, out, renderBlock, track);
 }
 
 // ---- parse (pre-render) helpers
@@ -596,7 +593,7 @@ function parseTags(_this, text, tree) {
   tree.push({ text: split[0] });
 
   for (var n = 1, type = '', vars = '', body = '', space = 0, root = '', tmpRoot = '', tmpVars = '',
-      testRegex = /^[!-]+/, elseRegex =/^else\s*/, types = {'#':'B','^':'B','/':'C','E':'E'},
+      testRegex = /^[!-]+/, elseRegex =/^else\s*/, types = { '#':'B','^':'B','/':'C','E':'E' },
       cType = '', tag = '', tagData = {}, l = split.length; n < l; n += 5) {
     type  = split[1 + n];
     vars  = split[2 + n];
