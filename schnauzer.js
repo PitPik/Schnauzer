@@ -189,8 +189,8 @@ function getData(_this, model, tagData, out) {
     scope = !main.path || main.path[0] !== '@root' ? model.scopes[main.depth || 0] :
       model.scopes[model.scopes.length - 1];
     if (!scope) { out.push(data); continue; }
-    data = { value: scope.helpers[main.value], variable: main, parent: scope.helpers['@parent'],
-      key: scope.helpers['@key'], helpers: scope.helpers };
+    data = { value: scope.helpers[main.value], variable: main,
+      parent: scope.helpers['@parent'], helpers: scope.helpers };
 
     if (data.value === undefined && scope.values) data = getAlias([scope.values], main, scope, data);
     if (data.value === undefined && !main.isStrict) data = getAlias(scope.level, main, scope, data);
