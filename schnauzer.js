@@ -592,17 +592,17 @@ function buildTree(_this, tree, tagData, open) {
 
 function parseTags(_this, text, tree) {
   var split = text.split(_this.regexps.tags);
-  var types = {'#':'B','^':'B','/':'C','E':'E'};
 
   tree.push({ text: split[0] });
 
   for (var n = 1, type = '', vars = '', body = '', space = 0, root = '', tmpRoot = '', tmpVars = '',
+      testRegex = /^[!-]+/, elseRegex =/^else\s*/, types = {'#':'B','^':'B','/':'C','E':'E'},
       cType = '', tag = '', tagData = {}, l = split.length; n < l; n += 5) {
     type  = split[1 + n];
     vars  = split[2 + n];
     body  = trim(split[4 + n], split[3 + n], split[5 + n] || '');
 
-    if (split[n].substring(0, 1) === '\\' || /^[!-]+/.test(type)) continue;
+    if (split[n].substring(0, 1) === '\\' || testRegex.test(type)) continue;
 
     space = vars.indexOf(' ');
     root = type !== '/' && vars.substring(0, space) || vars;
@@ -610,7 +610,7 @@ function parseTags(_this, text, tree) {
     tag = types[cType.substring(0, 1)] || 'I';
 
     if (type === '#>') { tmpRoot = root; tmpVars = vars; }
-    if (cType === 'E') vars = vars.replace(/^else\s*/, '');
+    if (cType === 'E') vars = vars.replace(elseRegex, '');
     tagData = type === '/' ? { tag: 'C', text: body, vars: vars } :
       getTagData(_this, vars, type, split[n], tag, body);
     if (type === '^' && tag === 'B') tagData.alt = tagData.vars[0].orig;
