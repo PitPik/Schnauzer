@@ -596,7 +596,7 @@ function parseTags(_this, text, tree) {
 
   tree.push({ text: split[0] });
 
-  for (var n = 1, type = '', vars = '', body = '', space = 0, root = '', tmp = '', tmpData = '',
+  for (var n = 1, type = '', vars = '', body = '', space = 0, root = '', tmpRoot = '', tmpVars = '',
       cType = '', tag = '', tagData = {}, l = split.length; n < l; n += 5) {
     type  = split[1 + n];
     vars  = split[2 + n];
@@ -609,7 +609,7 @@ function parseTags(_this, text, tree) {
     cType = type === '^' && (space !== -1 || vars === '') || root === 'else' ? 'E' : type;
     tag = types[cType.substring(0, 1)] || 'I';
 
-    if (type === '#>') { tmp = root; tmpData = vars.replace(new RegExp('^' + root), ''); }
+    if (type === '#>') { tmpRoot = root; tmpVars = vars; }
     if (cType === 'E') vars = vars.replace(/^else\s*/, '');
     tagData = type === '/' ? { tag: 'C', text: body, vars: vars } :
       getTagData(_this, vars, type, split[n], tag, body);
@@ -618,14 +618,13 @@ function parseTags(_this, text, tree) {
 
     tree = buildTree(_this, tree, tagData, split[n]);
 
-    if (tag === 'C' && (tree[tree.length - 1].isPartial || tmp)) { // Don't like this
-      tmp = tmp ? '@' + tmp : ''; // TODO: introduce counter
-      tmpData = tmp + tmpData;
-      tagData = tree.splice(-1, 1, tmp ?
-        getTagData(_this, tmpData, '>', split[n], 'I', tagData.text) : { text: tagData.text })[0];
+    if (tag === 'C' && (tree[tree.length - 1].isPartial || tmpRoot)) { // Don't like this
+      if (tmpRoot) { tmpRoot = '@' + tmpRoot; tmpVars = '@' + tmpVars; }
+      tagData = tree.splice(-1, 1, tmpRoot ?
+        getTagData(_this, tmpVars, '>', split[n], 'I', tagData.text) : { text: tagData.text })[0];
       tagData.children[0].children.unshift({ text: tagData.children[0].text });
-      _this.registerPartial(tmp || tagData.vars[0].value, tagData.children[0].bodyFn);
-      tmp = tmpData = '';
+      _this.registerPartial(tmpRoot || tagData.vars[0].value, tagData.children[0].bodyFn);
+      tmpRoot = tmpVars = '';
     }
   }
   if (tree.parent) throw('Schnauzer Error: Missing closing tag(s)');
