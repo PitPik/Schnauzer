@@ -609,7 +609,7 @@ function parseTags(_this, text, tree) {
     cType = type === '^' && (space !== -1 || vars === '') || root === 'else' ? 'E' : type;
     tag = types[cType.substring(0, 1)] || 'I';
 
-    if (type === '#>') { tmpRoot = root; tmpVars = vars; }
+    if (type === '#>') { tmpRoot = '@' + root; tmpVars = '@' + vars; }
     if (cType === 'E') vars = vars.replace(elseRegex, '');
     tagData = type === '/' ? { tag: 'C', text: body, vars: vars } :
       getTagData(_this, vars, type, split[n], tag, body);
@@ -619,7 +619,6 @@ function parseTags(_this, text, tree) {
     tree = buildTree(_this, tree, tagData, split[n]);
 
     if (tag === 'C' && (tree[tree.length - 1].isPartial || tmpRoot)) { // Don't like this
-      if (tmpRoot) { tmpRoot = '@' + tmpRoot; tmpVars = '@' + tmpVars; }
       tagData = tree.splice(-1, 1, tmpRoot ?
         getTagData(_this, tmpVars, '>', split[n], 'I', tagData.text) : { text: tagData.text })[0];
       tagData.children[0].children.unshift({ text: tagData.children[0].text });
