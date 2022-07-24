@@ -227,6 +227,7 @@ function getHelperArgs(_this, model, tagData, data, newData, track) {
   var noop = function noop() { return '' };
   var name = tagData.helper ? tagData.helper.orig : '';
   var helpers = model.scopes[0].helpers;
+  var children = tagData.children;
   var args = {
     name: name,
     hash: {},
@@ -248,16 +249,16 @@ function getHelperArgs(_this, model, tagData, data, newData, track) {
     if (data[n].variable.name) args.hash[data[n].variable.name] = data[n].value;
     else newData.unshift(data[n].value);
   }
-  if (tagData.children) {
+  if (children) {
     args.fn = function(context) {
       track.fnIdx = 0; if (track.checkFn) track.checkFn(0);
       save = tweakScope(model.scopes[0], context);
-      return [ tagData.children[0].text + tagData.children[0].bodyFn(model), save() ][0];
+      return [ children[0].text + children[0].bodyFn(model), save() ][0];
     };
-    args.inverse = tagData.children[1] && function(context) {
+    args.inverse = children[1] && function(context) {
       track.fnIdx = 1; if (track.checkFn) track.checkFn(1);
       save = tweakScope(model.scopes[0], context);
-      return [ tagData.children[1].text + tagData.children[1].bodyFn(model), save() ][0];
+      return [ children[1].text + children[1].bodyFn(model), save() ][0];
     } || noop;
   }
   return args;
@@ -311,7 +312,8 @@ function renderPartial(_this, data, model, tagData) {
 function renderConditions(_this, data, model, tagData, track) {
   var idx = 0;
   var objKeys = { keys: [] };
-  var tag = tagData.children[idx];
+  var children = tagData.children;
+  var tag = children[idx];
   var helper = tagData.helper;
   var cond = helper === 'if' || helper === 'each' || helper === 'with';
   var isVarOnly = !helper && data.length === 1;
@@ -320,8 +322,8 @@ function renderConditions(_this, data, model, tagData, track) {
   var canGo = ((cond || isVarOnly) && value) || (helper === 'unless' && !value);
   var reset = null;
 
-  while (tagData.children[idx + 1] && !canGo) {
-    tag = tagData.children[++idx];
+  while (children[idx + 1] && !canGo) {
+    tag = children[++idx];
     helper = tag.helper;
     cond = helper === 'if' || helper === 'each' || helper === 'with';
     data = tag.vars.length ? getData(_this, model, tag, []) : [];
@@ -548,10 +550,11 @@ function createExecutor(_this, tagData) { // TODO: check if all is needed (dyn).
 function buildTree(_this, tree, tagData, open) {
   var errorMessage = 'Schnauzer Error: Wrong closing tag: "/' + tagData.vars + '"';
   var parent = tree.parent;
+  var children = [];
   var getChildren = function(tagData, isFirstChild) {
-    tagData.children = [];
-    tagData.children.parent = tree;
-    tree = tagData.children;
+    tagData.children = children = [];
+    children.parent = tree;
+    tree = children;
     if (isFirstChild) {
       tree.push(getTagData(_this, '', '', open, '', tagData.text)); // TODO
       getChildren(tree[tree.length - 1]);
@@ -594,7 +597,7 @@ function parseTags(_this, text, tree) {
 
   for (var n = 1, type = '', vars = '', body = '', space = 0, root = '', tmpRoot = '', tmpVars = '',
       testRegex = /^[!-]+/, elseRegex =/^else\s*/, types = { '#':'B','^':'B','/':'C','E':'E' },
-      cType = '', tag = '', tagData = {}, l = split.length; n < l; n += 5) {
+      child = {}, cType = '', tag = '', tagData = {}, l = split.length; n < l; n += 5) {
     type  = split[1 + n];
     vars  = split[2 + n];
     body  = trim(split[4 + n], split[3 + n], split[5 + n] || '');
@@ -618,8 +621,9 @@ function parseTags(_this, text, tree) {
     if (tag === 'C' && (tree[tree.length - 1].isPartial || tmpRoot)) { // Don't like this
       tagData = tree.splice(-1, 1, tmpRoot ?
         getTagData(_this, tmpVars, '>', split[n], 'I', tagData.text) : { text: tagData.text })[0];
-      tagData.children[0].children.unshift({ text: tagData.children[0].text });
-      _this.registerPartial(tmpRoot || tagData.vars[0].value, tagData.children[0].bodyFn);
+      child = tagData.children[0];
+      child.children.unshift({ text: child.text });
+      _this.registerPartial(tmpRoot || tagData.vars[0].value, child.bodyFn);
       tmpRoot = tmpVars = '';
     }
   }
