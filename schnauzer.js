@@ -68,7 +68,7 @@ Schnauzer.concatArrays = concatArrays;
 
 Schnauzer.prototype = {
   render: function(data, extra) {
-    var helpers = createHelper('', '', 0, undefined, null, [{ scope: data }]);
+    var helpers = createHelper(this, '', '', 0, data, null, [{ scope: data }]);
     return [this.partials[this.options.self]({
       extra: extra, scopes: [{ scope: data, helpers: helpers, level: [], values: null, alias: {} }],
     }), this.active = true][0];
@@ -110,7 +110,10 @@ function escapeHtml(_this, string, doEscape) {
     ) : string;
 }
 
-function createHelper(idx, key, len, value, parent, scopes) {
+function createHelper(_this, idx, key, len, value, parent, scopes) {
+  var depth = _this.options.limitPartialScope ?
+    (scopes.length - scopes.length % 2) / 2 - 1 : scopes.length - 2;
+
   return len ? {
     '@index': idx,
     '@number': idx + 1,
@@ -120,11 +123,11 @@ function createHelper(idx, key, len, value, parent, scopes) {
     '@length': len,
     '@parent': parent,
     '@root': scopes[scopes.length - 1].scope,
-    '@depth': (scopes.length - scopes.length % 2) / 2 - 1, // TODO: see what's practical
+    '@depth': depth, // TODO: see what's practical
     'this': value,
     '.': value,
   } : { '@parent': parent, '@root': scopes[scopes.length - 1].scope,
-        '@depth': (scopes.length - scopes.length % 2) / 2 - 1, 'this': value, '.': value };
+        '@depth': depth, 'this': value, '.': value };
 }
 
 function addScope(model, data, alias) {
@@ -305,7 +308,8 @@ function renderPartial(_this, data, model, tagData) {
   if (!partial && isBlock) partial = _this.partials[name];
   if (isBlock) scope.partialBlock = _this.partials[name];
     else if (isTemplate) partial = scope.partialBlock;
-  if (_this.options.limitPartialScope) model.scopes = [model.scopes[0]]; // TODO: check isTemplate
+  if (_this.options.limitPartialScope) model.scopes = [model.scopes[0]];
+  else model.scopes.splice(1, 1); // TODO: less effort (addScope -> splice)
   return [ partial ? partial(model) : '', reset() ][0];
 }
 
@@ -341,7 +345,7 @@ function renderConditions(_this, data, model, tagData, track) {
     reset = addScope(model, value, helper === 'with' && model.scopes[0].alias);
     if (helper === 'each') return renderEach(_this, value, main, model,
       tag, objKeys.keys, _this.options.loopHelper, reset);
-    model.scopes[0].helpers = createHelper('', '', 0,
+    model.scopes[0].helpers = createHelper(_this, '', '', 0,
       isVarOnly ? value : model.scopes[0].scope, model.scopes[1].scope, model.scopes);
   }
   return [canGo ? tag.text + tag.bodyFn(model) : '', reset && reset()][0];
@@ -359,14 +363,14 @@ function renderEach(_this, data, main, model, tagData, objKeys, loopHelper, rese
     model.scopes = currentScopes;
     model.scopes[0].scope = newData;
     model.scopes[0].helpers = main.helpers =
-      createHelper(key, key, main.value.length, data[key], newData, model.scopes);
+      createHelper(_this, key, key, main.value.length, data[key], newData, model.scopes);
     return loopHelper(_this, tagData.text + bodyFn(model), main, loopFn, true);
   };
 
   if (alias && loopHelper) scope.alias[alias[0]] = { parent: data };
   for (var n = 0, l = value.length, key = '', out = ''; n < l; n++) {
     key = (isArr ? n : value[n]);
-    scope.helpers = main.helpers = createHelper(n, key, l, data[key], data, model.scopes);
+    scope.helpers = main.helpers = createHelper(_this, n, key, l, data[key], data, model.scopes);
     scope.scope = data[key];
     if (alias) {
       if (alias[1]) level[alias[1]] = key;
@@ -595,12 +599,12 @@ function parseTags(_this, text, tree) {
 
   tree.push({ text: split[0] });
 
-  for (var n = 1, type = '', vars = '', body = '', space = 0, root = '', tmpRoot = '', tmpVars = '',
+  for (var n = 1, type = '', vars = '', body = '', space = 0, root = '', tmpRoot = [], tmpVars = [],
       testRegex = /^[!-]+/, elseRegex =/^else\s*/, types = { '#':'B','^':'B','/':'C','E':'E' },
       child = {}, cType = '', tag = '', tagData = {}, l = split.length; n < l; n += 5) {
-    type  = split[1 + n];
-    vars  = split[2 + n];
-    body  = trim(split[4 + n], split[3 + n], split[5 + n] || '');
+    type = split[1 + n];
+    vars = split[2 + n];
+    body = trim(split[4 + n], split[3 + n], split[5 + n] || '');
 
     if (split[n].substring(0, 1) === '\\' || testRegex.test(type)) continue;
 
@@ -609,7 +613,7 @@ function parseTags(_this, text, tree) {
     cType = type === '^' && (space !== -1 || vars === '') || root === 'else' ? 'E' : type;
     tag = types[cType.substring(0, 1)] || 'I';
 
-    if (type === '#>') { tmpRoot = '@' + root; tmpVars = '@' + vars; }
+    if (type === '#>') { tmpRoot.unshift('@' + root); tmpVars.unshift('@' + vars); }
     if (cType === 'E') vars = vars.replace(elseRegex, '');
     tagData = type === '/' ? { tag: 'C', text: body, vars: vars } :
       getTagData(_this, vars, type, split[n], tag, body);
@@ -618,13 +622,13 @@ function parseTags(_this, text, tree) {
 
     tree = buildTree(_this, tree, tagData, split[n]);
 
-    if (tag === 'C' && (tree[tree.length - 1].isPartial || tmpRoot)) { // Don't like this
-      tagData = tree.splice(-1, 1, tmpRoot ?
-        getTagData(_this, tmpVars, '>', split[n], 'I', tagData.text) : { text: tagData.text })[0];
+    if (tag === 'C' && (tree[tree.length - 1].isPartial || tmpRoot[0])) { // Don't like this
+      tagData = tree.splice(-1, 1, tmpRoot[0] ?
+        getTagData(_this, tmpVars[0], '>', split[n], 'I', tagData.text) : {text: tagData.text})[0];
       child = tagData.children[0];
       child.children.unshift({ text: child.text });
-      _this.registerPartial(tmpRoot || tagData.vars[0].value, child.bodyFn);
-      tmpRoot = tmpVars = '';
+      _this.registerPartial(tmpRoot[0] || tagData.vars[0].value, child.bodyFn);
+      tmpRoot.shift(); tmpVars.shift();
     }
   }
   if (tree.parent) throw('Schnauzer Error: Missing closing tag(s)');
