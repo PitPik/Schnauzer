@@ -227,7 +227,6 @@ function checkObjectLength(main, helper, objKeys) {
 
 function getHelperArgs(_this, model, tagData, data, newData, track) {
   var save = null;
-  var noop = function noop() { return '' };
   var name = tagData.helper ? tagData.helper.orig : '';
   var helpers = model.scopes[0].helpers;
   var children = tagData.children;
@@ -262,7 +261,7 @@ function getHelperArgs(_this, model, tagData, data, newData, track) {
       track.fnIdx = 1; if (track.checkFn) track.checkFn(1);
       save = tweakScope(model.scopes[0], context);
       return [ children[1].text + children[1].bodyFn(model), save() ][0];
-    } || noop;
+    } || function noop() { return '' };
   }
   return args;
 }
@@ -309,7 +308,7 @@ function renderPartial(_this, data, model, tagData) {
   if (isBlock) scope.partialBlock = _this.partials[name];
     else if (isTemplate) partial = scope.partialBlock;
   if (_this.options.limitPartialScope) model.scopes = [model.scopes[0]];
-  else model.scopes.splice(1, 1); // TODO: less effort (addScope -> splice)
+    else model.scopes.splice(1, 1); // TODO: less effort (addScope -> splice)
   return [ partial ? partial(model) : '', reset() ][0];
 }
 
@@ -543,12 +542,9 @@ function getTagData(_this, vars, type, start, tag, text) {
 
 // ---- parse inline and block tags
 
-function createExecutor(_this, tagData) { // TODO: check if all is needed (dyn)...
-  return tagData.bodyFn = tagData.tag === 'B' ? function executeBlock(model) {
-    return renderBlock(_this, tagData, getData(_this, model, tagData, []), model);
-  } : function executeInlines(model) {
-    return renderInlines(_this, tagData.children, model);
-  };
+function createExecutor(_this, tagData) {
+  return tagData.bodyFn = tagData.tag === 'B' ? undefined :
+    function executeInlines(model) { return renderInlines(_this, tagData.children, model); };
 }
 
 function buildTree(_this, tree, tagData, open) {
