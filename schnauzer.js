@@ -118,6 +118,7 @@ function createHelper(_this, idx, key, len, value, parent, scopes) {
     '@index': idx,
     '@number': idx + 1,
     '@key': key,
+    '@odd': idx % 2 !== 0,
     '@last': idx === len - 1,
     '@first': idx === 0,
     '@length': len,
@@ -244,8 +245,8 @@ function getHelperArgs(_this, model, tagData, data, newData, track) {
   };
 
   if (helpers['@length']) cloneObject(args.data, {
-    first: helpers['@first'], last: helpers['@last'], number: helpers['@number'],
-    index: helpers['@index'], key: helpers['@key'], length: helpers['@length'],
+    index: helpers['@index'], number: helpers['@number'], length: helpers['@length'],
+    first: helpers['@first'], last: helpers['@last'], key: helpers['@key'], odd: helpers['@odd']
   });
   for (var n = data.length; n--; ) {
     if (data[n].variable.name) args.hash[data[n].variable.name] = data[n].value;
@@ -390,9 +391,10 @@ function render(_this, model, data, tagData, out, renderFn, track) {
     { extra: model.extra, scopes: model.scopes };
   return !_this.options.renderHook || !data.length || _this.active ? out :
     _this.options.renderHook(_this, out, data, function(newModel) {
-      if (newModel[0].parent) model.scopes[0].scope = newModel[0].parent;
       return renderFn(_this, tagData, newModel, model, track || { fnIdx: 0 });
-    }, tagData, tagData.tag === 'B' ? track || { fnIdx: 0 } : undefined);
+    }, tagData, tagData.tag === 'B' ? track || { fnIdx: 0 } : undefined,
+    tagData.children && tagData.children[1] && tagData.children[1].tag === 'E' ?
+      function(tag) { return getData(_this, model, tag, []) } : null);
 }
 
 function renderInline(_this, tagData, data, model) {
@@ -628,7 +630,7 @@ function parseTags(_this, text, tree) {
     }
   }
   if (tree.parent) throw('Schnauzer Error: Missing closing tag(s)');
-  split = text = tagData = null;
+  split = text = null;
 
   return createExecutor(_this, { children: tree });
 }
