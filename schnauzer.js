@@ -111,8 +111,7 @@ function escapeHtml(_this, string, doEscape) {
 }
 
 function createHelper(_this, idx, key, len, value, parent, scopes) {
-  var depth = _this.options.limitPartialScope ?
-    (scopes.length - scopes.length % 2) / 2 - 1 : scopes.length - 2;
+  var depth = _this.options.limitPartialScope ? undefined : scopes.length - 2;
 
   return len ? {
     '@index': idx,
@@ -391,6 +390,7 @@ function render(_this, model, data, tagData, out, renderFn, track) {
     { extra: model.extra, scopes: model.scopes };
   return !_this.options.renderHook || !data.length || _this.active ? out :
     _this.options.renderHook(_this, out, data, function(newModel) {
+      if (newModel[0].parent) model.scopes[0].scope = newModel[0].parent; // dus wel
       return renderFn(_this, tagData, newModel, model, track || { fnIdx: 0 });
     }, tagData, tagData.tag === 'B' ? track || { fnIdx: 0 } : undefined,
     tagData.children && tagData.children[1] && tagData.children[1].tag === 'E' ?
