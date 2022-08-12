@@ -338,7 +338,7 @@ function renderConditions(_this, data, model, tagData, track, stop) {
   }
   track.fnIdx = canGo ? idx : idx + 1; // speeds up API calls
   track.checkFn && track.checkFn(idx);
-  if (stop) return 'dummy';
+  if (stop) return canGo;
   if (isVarOnly && main.type === 'array') helper = 'each';
   if (isVarOnly && !helper) helper = 'with';
   if (helper === 'with' || helper === 'each') { //  && value // TODO: maybe not needed if arr = arr
