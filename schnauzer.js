@@ -28,6 +28,7 @@ var Schnauzer = function(templateOrOptions, options) {
   this.helpers = {};
   this.regexps = {};
   this.active = false;
+  this.stop = false;
   this.options = {
     tags: ['{{', '}}'],
     entityMap: {
@@ -276,14 +277,14 @@ function getHelperFn(_this, model, tagData) {
 
 // ---- render blocks/inlines helpers (std. HBS helpers)
 
-function renderHelper(_this, data, model, tagData, track, stop) {
+function renderHelper(_this, data, model, tagData, track) {
   var helperFn = !tagData.helper && tagData.children &&
     (data[0] ? renderConditions : undefined) || tagData.helperFn;
   var newData = [];
   var out = '';
   var restore = model.scopes[0].values;
 
-  if (helperFn) return helperFn(_this, data, model, tagData, track, stop);
+  if (helperFn) return helperFn(_this, data, model, tagData, track);
   helperFn = getHelperFn(_this, model, tagData);
   if (!helperFn && data.length === 1 && data[0].type === 'function') helperFn = data.shift().value;
   if (model.values) model.scopes[0].values = model.values;
@@ -312,7 +313,7 @@ function renderPartial(_this, data, model, tagData) {
   return [ partial ? partial(model) : '', reset() ][0];
 }
 
-function renderConditions(_this, data, model, tagData, track, stop) {
+function renderConditions(_this, data, model, tagData, track) {
   var idx = 0;
   var objKeys = { keys: [] };
   var children = tagData.children;
@@ -338,7 +339,7 @@ function renderConditions(_this, data, model, tagData, track, stop) {
   }
   track.fnIdx = canGo ? idx : idx + 1; // speeds up API calls
   track.checkFn && track.checkFn(idx);
-  if (stop) return !!canGo;
+  if (_this.stop && helper === 'each') return '';
   if (isVarOnly && main.type === 'array') helper = 'each';
   if (isVarOnly && !helper) helper = 'with';
   if (helper === 'with' || helper === 'each') { //  && value // TODO: maybe not needed if arr = arr
@@ -392,7 +393,8 @@ function render(_this, model, data, tagData, out, renderFn, track) {
   return !_this.options.renderHook || !data.length || _this.active ? out :
     _this.options.renderHook(_this, out, data, function(newModel, stop) {
       if (newModel[0].parent) model.scopes[0].scope = newModel[0].parent; // dus wel
-      return renderFn(_this, tagData, newModel, model, track || { fnIdx: 0 }, stop);
+      if (stop) _this.stop = stop;
+      return [renderFn(_this, tagData, newModel, model, track || {fnIdx: 0}), _this.stop = false][0];
     }, tagData, tagData.tag === 'B' ? track || { fnIdx: 0 } : undefined,
     tagData.children && tagData.children[1] && tagData.children[1].tag === 'E' ?
       function(tag) { return getData(_this, model, tag, []) } : null);
@@ -414,9 +416,9 @@ function renderInlines(_this, tags, model) {
   return out;
 }
 
-function renderBlock(_this, tagData, data, model, recursive, stop) {
+function renderBlock(_this, tagData, data, model, recursive) {
   var track = recursive || { fnIdx: 0 };
-  var out = renderHelper(_this, data, model, tagData, track, stop);
+  var out = renderHelper(_this, data, model, tagData, track);
 
   return recursive ? out : render(_this, model, data, tagData, out, renderBlock, track);
 }
