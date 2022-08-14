@@ -394,7 +394,8 @@ function render(_this, model, data, tagData, out, renderFn, track) {
     _this.options.renderHook(_this, out, data, function(newModel, stop) {
       if (newModel[0].parent) model.scopes[0].scope = newModel[0].parent; // dus wel
       if (stop) _this.stop = stop;
-      return [renderFn(_this, tagData, newModel, model, track || {fnIdx: 0}), _this.stop = false][0];
+      return [renderFn(_this, tagData, newModel, model, track || { fnIdx: 0 }),
+        _this.stop = false, _this.active = true][0];
     }, tagData, tagData.tag === 'B' ? track || { fnIdx: 0 } : undefined,
     tagData.children && tagData.children[1] && tagData.children[1].tag === 'E' ?
       function(tag) { return getData(_this, model, tag, []) } : null);
