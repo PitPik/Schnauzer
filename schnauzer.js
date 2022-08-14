@@ -339,8 +339,8 @@ function renderConditions(_this, data, model, tagData, track) {
   }
   track.fnIdx = canGo ? idx : idx + 1; // speeds up API calls
   track.checkFn && track.checkFn(idx);
-  if (_this.stop && helper === 'each') return '';
   if (isVarOnly && main.type === 'array') helper = 'each';
+  if (_this.stop && helper === 'each') return '';
   if (isVarOnly && !helper) helper = 'with';
   if (helper === 'with' || helper === 'each') { //  && value // TODO: maybe not needed if arr = arr
     reset = addScope(model, value, helper === 'with' && model.scopes[0].alias);
