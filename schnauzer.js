@@ -218,7 +218,7 @@ function getData(_this, model, tagData, out) {
 function checkObjectLength(main, helper, objKeys) {
   var value = main.value;
   var isObject = main.type === 'object';
-  var go = helper === 'each' || (main.type === 'array' &&
+  var go = helper === 'each' || helper === 'with' || (main.type === 'array' &&
     (helper === 'if' || helper === 'unless'));
 
   if (!go || value === undefined) return value;
@@ -305,6 +305,7 @@ function renderPartial(_this, data, model, tagData) {
   var scope = data[0] && !data[0].variable.name ? data[0].value : model.scopes[0].scope;
   var reset = addScope(model, scope, model.scopes[0].alias);
 
+  model.scopes[0].level = []; // Hmmm...
   if (!partial && isBlock) partial = _this.partials[name];
   if (isBlock) scope.partialBlock = _this.partials[name];
     else if (isTemplate) partial = scope.partialBlock;
@@ -387,9 +388,9 @@ function renderEach(_this, data, main, model, tagData, objKeys, loopHelper, rese
 // ---- render blocks and inlines; delegations only
 
 function render(_this, model, data, tagData, out, renderFn, track) {
-  model.values = null; model.alias = null;
+  model.values = null; // check...
   if (_this.options.renderHook && tagData.tag === 'B') model =
-    { extra: model.extra, scopes: model.scopes };
+    { extra: model.extra, scopes: model.scopes, alias: model.alias };
   return !_this.options.renderHook || !data.length || _this.active ? out :
     _this.options.renderHook(_this, out, data, function recallBodyFn(newModel, stop) {
       if (newModel[0].parent) model.scopes[0].scope = newModel[0].parent; // dus wel
