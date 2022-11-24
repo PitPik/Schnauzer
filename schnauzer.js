@@ -1,4 +1,4 @@
-/**! @license schnauzer v2.0.3; Copyright (C) 2017-2022 by Peter Dematté */
+/**! @license schnauzer v2.0.4; Copyright (C) 2017-2022 by Peter Dematté */
 (function(global, factory) {
   if (typeof exports === 'object') module.exports = factory();
   else if (typeof define === 'function' && define.amd)
@@ -23,12 +23,11 @@ var concatArrays = function(array, host) {
 };
 
 var Schnauzer = function(templateOrOptions, options) {
-  this.version = '2.0.3';
+  this.version = '2.0.4';
   this.partials = {};
   this.helpers = {};
   this.regexps = {};
-  this.active = false;
-  this.stop = false;
+  this.controls = { active: false, stop: false };
   this.options = {
     tags: ['{{', '}}'],
     entityMap: {
@@ -58,8 +57,8 @@ var initSchnauzer = function(_this, options, template) {
   switchTags(_this, options.tags);
   _this.helpers = options.helpers;
   for (var name in options.partials) _this.registerPartial(name, options.partials[name]);
-  _this.escapeExpression = function(txt) { return escapeHtml(_this, txt, true) };
   if (template) _this.parse(template);
+  delete options.helpers; delete options.partials;
 };
 
 var HBSS = Schnauzer.SafeString = function(text) { this.string = text }; // WTF
@@ -72,7 +71,7 @@ Schnauzer.prototype = {
     var helpers = createHelper(this, '', '', 0, data, null, [{ scope: data }]);
     return [this.partials[this.options.self]({
       extra: extra, scopes: [{ scope: data, helpers: helpers, level: [], values: null, alias: {} }],
-    }), this.active = true][0];
+    }), this.controls.active = true][0];
   },
   parse: function(txt) { return this.registerPartial(this.options.self, txt) },
   registerHelper: function(name, helperFn) {
@@ -87,6 +86,7 @@ Schnauzer.prototype = {
   },
   unregisterPartial: function(name) { delete this.partials[name] },
   setTags: function(tags) { switchTags(this, tags) },
+  escapeExpression: function(txt) { return escapeHtml(this, txt, true) },
 };
 
 return Schnauzer;
@@ -236,7 +236,7 @@ function getHelperArgs(_this, model, tagData, data, newData, track) {
     hash: {},
     data: { root: helpers['@root'], scope: helpers['this'],
       parent: helpers['@parent'], depth: helpers['@depth'] },
-    escapeExpression: _this.escapeExpression,
+    escapeExpression: function(txt) { return _this.escapeExpression(txt) },
     SafeString: Schnauzer.SafeString,
     keys: getObjectKeys,
     extend: cloneObject,
@@ -341,7 +341,7 @@ function renderConditions(_this, data, model, tagData, track) {
   track.fnIdx = canGo ? idx : idx + 1; // speeds up API calls
   track.checkFn && track.checkFn(idx);
   if (isVarOnly && main.type === 'array') helper = 'each';
-  if (_this.stop && helper === 'each') return '';
+  if (_this.controls.stop && helper === 'each') return '';
   if (isVarOnly && !helper) helper = 'with';
   if (helper === 'with' || helper === 'each') { //  && value // TODO: maybe not needed if arr = arr
     reset = addScope(model, value, helper === 'with' && model.scopes[0].alias);
@@ -391,12 +391,12 @@ function render(_this, model, data, tagData, out, renderFn, track) {
   model.values = null; // check...
   if (_this.options.renderHook && tagData.tag === 'B') model =
     { extra: model.extra, scopes: model.scopes, alias: model.alias };
-  return !_this.options.renderHook || !data.length || _this.active ? out :
+  return !_this.options.renderHook || !data.length || _this.controls.active ? out :
     _this.options.renderHook(_this, out, data, function recallBodyFn(newModel, stop) {
       if (newModel[0].parent) model.scopes[0].scope = newModel[0].parent; // dus wel
-      if (stop) _this.stop = stop;
+      if (stop) _this.controls.stop = stop;
       return [renderFn(_this, tagData, newModel, model, track || { fnIdx: 0 }),
-        _this.stop = false, _this.active = true][0];
+        _this.controls.stop = false, _this.controls.active = true][0];
     }, tagData, tagData.tag === 'B' ? track || { fnIdx: 0 } : undefined,
     tagData.children && tagData.children[1] && tagData.children[1].tag === 'E' ?
       function(tag) { return getData(_this, model, tag, []) } : null);
