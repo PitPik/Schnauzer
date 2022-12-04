@@ -56,7 +56,7 @@ var initSchnauzer = function(_this, options, template) {
   options = cloneObject(_this.options, options);
   switchTags(_this, options.tags);
   _this.helpers = options.helpers;
-  for (var name in options.partials) _this.registerPartial(name, options.partials[name]);
+  _this.registerPartial(options.partials);
   if (template) _this.parse(template);
   delete options.helpers; delete options.partials;
 };
@@ -194,7 +194,7 @@ function getData(_this, model, tagData, out) {
       model.scopes[model.scopes.length - 1];
     if (!scope) { out.push(data); continue; }
     data = { value: scope.helpers[main.value], variable: main,
-      parent: scope.helpers['@parent'], helpers: scope.helpers };
+      parent: scope.scope, helpers: scope.helpers };
 
     if (data.value === undefined && scope.values) data = getAlias([scope.values], main, scope, data);
     if (data.value === undefined && !main.isStrict) data = getAlias(scope.level, main, scope, data);
@@ -209,6 +209,7 @@ function getData(_this, model, tagData, out) {
     if (!data.variable) data.variable = main; // nested helper functions don't
     if (trackData && main.helper) data.renderArgs = args;
     out.push(data);
+    if (data.parent !== scope.scope) data.parent = scope.scope; // ...
   }
   if (trackData && tagData.helper && !tagData.tag) tagData.renderFn =
     function(newData) { return renderHelper(_this, newData, model, tagData) };
@@ -365,7 +366,7 @@ function renderEach(_this, data, main, model, tagData, objKeys, loopHelper, rese
     model.scopes = currentScopes;
     model.scopes[0].scope = newData;
     model.scopes[0].helpers = main.helpers =
-      createHelper(_this, key, key, main.value.length, data[key], newData, model.scopes);
+      createHelper(_this, key, key, main.value.length, newData, data, model.scopes);
     return loopHelper(_this, tagData.text + bodyFn(model), main, loopFn, true);
   };
 
