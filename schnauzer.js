@@ -209,7 +209,6 @@ function getData(_this, model, tagData, out) {
     if (!data.variable) data.variable = main; // nested helper functions don't
     if (trackData && main.helper) data.renderArgs = args;
     out.push(data);
-    if (data.parent !== scope.scope) data.parent = scope.scope; // ...
   }
   if (trackData && tagData.helper && !tagData.tag) tagData.renderFn =
     function(newData) { return renderHelper(_this, newData, model, tagData) };
