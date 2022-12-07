@@ -363,11 +363,11 @@ function renderEach(_this, data, main, model, tagData, objKeys, loopHelper, rese
   var value = !isArr && main.type !== 'object' ? [] : isArr ? data : objKeys;
   var currentScopes = loopHelper ? concatArrays([], model.scopes) : null;
   var loopFn = loopHelper && main.variable.active && function(newData, key) { // Hmmm: limits
-    _this.controls.loop.unshift(scope.helpers);
     model.scopes = currentScopes;
     model.scopes[0].scope = newData;
     model.scopes[0].helpers = main.helpers =
       createHelper(_this, key, key, main.value.length, newData, data, model.scopes);
+    _this.controls.loop.unshift(scope.helpers);
     return [loopHelper(_this, tagData.text + bodyFn(model), main, +key, loopFn, true),
       _this.controls.loop.shift()][0];
   };
