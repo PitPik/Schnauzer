@@ -27,7 +27,7 @@ var Schnauzer = function(templateOrOptions, options) {
   this.partials = {};
   this.helpers = {};
   this.regexps = {};
-  this.controls = { active: false, stop: false };
+  this.controls = { active: false, stop: false, loop: [] };
   this.options = {
     tags: ['{{', '}}'],
     entityMap: {
@@ -122,13 +122,12 @@ function createHelper(_this, idx, key, len, value, parent, scopes) {
     '@last': idx === len - 1,
     '@first': idx === 0,
     '@length': len,
+    '@depth': depth, // TODO: see what's practical
     '@parent': parent,
     '@root': scopes[scopes.length - 1].scope,
-    '@depth': depth, // TODO: see what's practical
     'this': value,
     '.': value,
-  } : { '@parent': parent, '@root': scopes[scopes.length - 1].scope,
-        '@depth': depth, 'this': value, '.': value };
+  } : { '@parent': parent, '@root': scopes[scopes.length - 1].scope, 'this': value, '.': value };
 }
 
 function addScope(model, data, alias) {
@@ -209,6 +208,7 @@ function getData(_this, model, tagData, out) {
     data.type = data.value && data.value.constructor === Array ? 'array' : typeof data.value;
     if (!data.variable) data.variable = main; // nested helper functions don't
     if (trackData && main.helper) data.renderArgs = args;
+    if (trackData && _this.controls.loop[0]) data.loop = _this.controls.loop[0];
     out.push(data);
   }
   if (trackData && tagData.helper && !tagData.tag) tagData.renderFn =
@@ -363,27 +363,31 @@ function renderEach(_this, data, main, model, tagData, objKeys, loopHelper, rese
   var value = !isArr && main.type !== 'object' ? [] : isArr ? data : objKeys;
   var currentScopes = loopHelper ? concatArrays([], model.scopes) : null;
   var loopFn = loopHelper && main.variable.active && function(newData, key) { // Hmmm: limits
+    _this.controls.loop.unshift(scope.helpers);
     model.scopes = currentScopes;
     model.scopes[0].scope = newData;
     model.scopes[0].helpers = main.helpers =
       createHelper(_this, key, key, main.value.length, newData, data, model.scopes);
-    return loopHelper(_this, tagData.text + bodyFn(model), main, loopFn, true);
+    return [loopHelper(_this, tagData.text + bodyFn(model), main, +key, loopFn, true),
+      _this.controls.loop.shift()][0];
   };
 
   if (alias && loopHelper) scope.alias[alias[0]] = { parent: data };
+  if (loopHelper) _this.controls.loop.unshift(null);
   for (var n = 0, l = value.length, key = '', out = ''; n < l; n++) {
     key = (isArr ? n : value[n]);
-    scope.helpers = main.helpers = createHelper(_this, n, key, l, data[key], data, model.scopes);
+    scope.helpers = createHelper(_this, n, key, l, data[key], data, model.scopes);
     scope.scope = data[key];
     if (alias) {
       if (alias[1]) level[alias[1]] = key;
       level[alias[0]] = data[key];
       if (loopHelper) scope.alias[alias[0]].key = key;
     }
+    if (loopHelper) _this.controls.loop[0] = scope.helpers;
     out += loopFn ? loopHelper(_this, (loopHelper(_this, key, main),
-      tagData.text + bodyFn(model)), main, loopFn) : tagData.text + bodyFn(model);
+      tagData.text + bodyFn(model)), main, n, loopFn) : tagData.text + bodyFn(model);
   }
-  return [ out, reset() ][0];
+  return [ out, reset(), loopHelper && _this.controls.loop.shift() ][0];
 }
 
 // ---- render blocks and inlines; delegations only
@@ -393,7 +397,8 @@ function render(_this, model, data, tagData, out, renderFn, track) {
   if (_this.options.renderHook && tagData.tag === 'B') model =
     { extra: model.extra, scopes: model.scopes, alias: model.alias };
   return !_this.options.renderHook || !data.length || _this.controls.active ? out :
-    _this.options.renderHook(_this, out, data, function recallBodyFn(newModel, stop) {
+    _this.options.renderHook(_this, out, data, function recallBodyFn(newModel, helpers, stop) {
+      if (helpers) model.scopes[0].helpers = helpers; // model.scopes[newModel.variable.depth]?
       if (newModel[0].parent) model.scopes[0].scope = newModel[0].parent; // dus wel
       if (stop) _this.controls.stop = stop;
       return [renderFn(_this, tagData, newModel, model, track || { fnIdx: 0 }),
