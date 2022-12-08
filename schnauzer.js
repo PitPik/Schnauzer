@@ -112,8 +112,6 @@ function escapeHtml(_this, string, doEscape) {
 }
 
 function createHelper(_this, idx, key, len, value, parent, scopes) {
-  var depth = _this.options.limitPartialScope ? undefined : scopes.length - 2;
-
   return len ? {
     '@index': idx,
     '@number': idx + 1,
@@ -122,7 +120,7 @@ function createHelper(_this, idx, key, len, value, parent, scopes) {
     '@last': idx === len - 1,
     '@first': idx === 0,
     '@length': len,
-    '@depth': depth,
+    '@depth': _this.options.limitPartialScope ? undefined : scopes.length - 2,
     '@loop': parent,
     '@parent': scopes[1].scope,
     '@root': scopes[scopes.length - 1].scope,
