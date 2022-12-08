@@ -123,7 +123,8 @@ function createHelper(_this, idx, key, len, value, parent, scopes) {
     '@first': idx === 0,
     '@length': len,
     '@depth': depth,
-    '@parent': parent,
+    '@loop': parent,
+    '@parent': scopes[1].scope,
     '@root': scopes[scopes.length - 1].scope,
     'this': value,
     '.': value,
@@ -245,7 +246,7 @@ function getHelperArgs(_this, model, tagData, data, newData, track) {
     getDataDetails: function() { return data },
   };
 
-  if (helpers['@length']) cloneObject(args.data, {
+  if (helpers['@length']) cloneObject(args.data, { loop: helpers['@loop'],
     index: helpers['@index'], number: helpers['@number'], length: helpers['@length'],
     first: helpers['@first'], last: helpers['@last'], key: helpers['@key'], odd: helpers['@odd']
   });
