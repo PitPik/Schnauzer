@@ -122,7 +122,7 @@ function createHelper(_this, idx, key, len, value, parent, scopes) {
     '@last': idx === len - 1,
     '@first': idx === 0,
     '@length': len,
-    '@depth': depth, // TODO: see what's practical
+    '@depth': depth,
     '@parent': parent,
     '@root': scopes[scopes.length - 1].scope,
     'this': value,
@@ -137,7 +137,7 @@ function addScope(model, data, alias) {
   var values = model.values;
   var prevAlias = scopes[1] ? cloneObject({}, scopes[1].alias) : {};
 
-  model.alias = null; model.values = null; // TODO
+  model.alias = null; model.values = null;
   alias = alias ? cloneObject(prevAlias, alias) : prevAlias;
   model.scopes = concatArrays(scopes, [{
     scope: data, helpers: scopes[0].helpers, level: level, values: values, alias: alias,
@@ -306,12 +306,12 @@ function renderPartial(_this, data, model, tagData) {
   var scope = data[0] && !data[0].variable.name ? data[0].value : model.scopes[0].scope;
   var reset = addScope(model, scope, model.scopes[0].alias);
 
-  model.scopes[0].level = []; // Hmmm...
+  model.scopes[0].level = [];
   if (!partial && isBlock) partial = _this.partials[name];
   if (isBlock) scope.partialBlock = _this.partials[name];
     else if (isTemplate) partial = scope.partialBlock;
   if (_this.options.limitPartialScope) model.scopes = [model.scopes[0]];
-    else model.scopes.splice(1, 1); // TODO: less effort (addScope -> splice)
+    else model.scopes.splice(1, 1);
   return [ partial ? partial(model) : '', reset() ][0];
 }
 
@@ -344,7 +344,7 @@ function renderConditions(_this, data, model, tagData, track) {
   if (isVarOnly && main.type === 'array') helper = 'each';
   if (_this.controls.stop && helper === 'each') return '';
   if (isVarOnly && !helper) helper = 'with';
-  if (helper === 'with' || helper === 'each') { //  && value // TODO: maybe not needed if arr = arr
+  if (helper === 'with' || helper === 'each') {
     reset = addScope(model, value, helper === 'with' && model.scopes[0].alias);
     if (helper === 'each') return renderEach(_this, value, main, model,
       tag, objKeys.keys, _this.options.loopHelper, reset);
@@ -362,10 +362,10 @@ function renderEach(_this, data, main, model, tagData, objKeys, loopHelper, rese
   var isArr = main.type === 'array';
   var value = !isArr && main.type !== 'object' ? [] : isArr ? data : objKeys;
   var currentScopes = loopHelper ? concatArrays([], model.scopes) : null;
-  var loopFn = loopHelper && main.variable.active && function(newData, key) { // Hmmm: limits
+  var loopFn = loopHelper && main.variable.active && function(newData, key) {
     model.scopes = currentScopes;
     model.scopes[0].scope = newData;
-    model.scopes[0].helpers = main.helpers =
+    model.scopes[0].helpers =
       createHelper(_this, key, key, main.value.length, newData, data, model.scopes);
     _this.controls.loop.unshift(scope.helpers);
     return [loopHelper(_this, tagData.text + bodyFn(model), main, +key, loopFn, true),
@@ -393,7 +393,7 @@ function renderEach(_this, data, main, model, tagData, objKeys, loopHelper, rese
 // ---- render blocks and inlines; delegations only
 
 function render(_this, model, data, tagData, out, renderFn, track) {
-  model.values = null; // check...
+  model.values = null;
   if (_this.options.renderHook && tagData.tag === 'B') model =
     { extra: model.extra, scopes: model.scopes, alias: model.alias };
   return !_this.options.renderHook || !data.length || _this.controls.active ? out :
@@ -411,7 +411,7 @@ function render(_this, model, data, tagData, out, renderFn, track) {
 function renderInline(_this, tagData, data, model) {
   var type = data[0] && data[0].type;
   var out = tagData.partial ? renderPartial(_this, data, model, tagData) :
-    escapeHtml(_this, tagData.helper || type === 'function' ? // helper
+    escapeHtml(_this, tagData.helper || type === 'function' ?
       renderHelper(_this, data, model, tagData) : data[0] && data[0].value,
       type !== 'boolean' && type !== 'number' && tagData.isEscaped);
 
