@@ -159,13 +159,12 @@ function getDeepData(data, main, alias) {
 }
 
 function getAlias(level, main, scope, data) {
-  for (var n = 0, l = level.length, helpers = scope.helpers; n < l; n++) {
+  for (var n = 0, l = level.length; n < l; n++) {
     data = getDeepData(level[n], main, true);
     if (data.value !== undefined) {
       if (scope = scope.alias[data.variable.value]) {
         data.parent = scope.parent;
         data.key = scope.key;
-        if (helpers['@length']) data.helpers = helpers;
       }
       return data;
     }
@@ -191,7 +190,7 @@ function getData(_this, model, tagData, out) {
     scope = !main.path || main.path[0] !== '@root' ? model.scopes[main.depth || 0] :
       model.scopes[model.scopes.length - 1];
     if (!scope) { out.push(data); continue; }
-    data = { value: scope.helpers[main.value], variable: main, helpers: scope.helpers,
+    data = { value: scope.helpers[main.value], variable: main,
       parent: help = (main.value + '').charAt(0) === '@' ? scope.helpers : scope.scope };
 
     if (data.value === undefined && scope.values) data = getAlias([scope.values], main, scope, data);
