@@ -339,7 +339,7 @@ function renderConditions(_this, data, model, tagData, track) {
   track.fnIdx = canGo ? idx : idx + 1; // speeds up API calls
   track.checkFn && track.checkFn(idx);
   if (isVarOnly && main.type === 'array') helper = 'each';
-  if (_this.controls.stop && helper === 'each') return '';
+  if (_this.controls.stop && typeof _this.controls.stop !== 'string' && helper === 'each') return '';
   if (isVarOnly && !helper) helper = 'with';
   if (helper === 'with' || helper === 'each') {
     reset = addScope(model, value, helper === 'with' && model.scopes[0].alias);
@@ -358,7 +358,7 @@ function renderEach(_this, data, main, model, tagData, objKeys, loopHelper, rese
   var level = scope.level[0];
   var isArr = main.type === 'array';
   var value = !isArr && main.type !== 'object' ? [] : isArr ? data : objKeys;
-  var currentScopes = loopHelper ? concatArrays([], model.scopes) : null;
+  var currentScopes = model.scopes; // loopHelper ? concatArrays([], model.scopes) : null;
   var loopFn = loopHelper && main.variable.active && function(newData, key) {
     model.scopes = currentScopes;
     model.scopes[0].scope = newData;
@@ -370,6 +370,7 @@ function renderEach(_this, data, main, model, tagData, objKeys, loopHelper, rese
   };
 
   if (alias && loopHelper) scope.alias[alias[0]] = { parent: data };
+  if (_this.controls.stop) return ['', loopHelper(_this, loopFn, main), reset()][0];
   if (loopHelper) _this.controls.loop.unshift(null);
   for (var n = 0, l = value.length, key = '', out = ''; n < l; n++) {
     key = (isArr ? n : value[n]);
