@@ -233,8 +233,7 @@ function getHelperArgs(_this, model, tagData, data, newData, track) {
   var args = {
     name: name,
     hash: {},
-    data: { root: helpers['@root'], scope: helpers['this'],
-      parent: helpers['@parent'], depth: helpers['@depth'] },
+    data: { root: helpers['@root'], scope: helpers['this'], parent: helpers['@parent'] },
     escapeExpression: function(txt) { return _this.escapeExpression(txt) },
     SafeString: Schnauzer.SafeString,
     keys: getObjectKeys,
@@ -243,7 +242,7 @@ function getHelperArgs(_this, model, tagData, data, newData, track) {
     getDataDetails: function() { return data },
   };
 
-  if (helpers['@length']) cloneObject(args.data, { loop: helpers['@loop'],
+  if (helpers['@length']) cloneObject(args.data, { loop: helpers['@loop'], depth: helpers['@depth'],
     index: helpers['@index'], number: helpers['@number'], length: helpers['@length'],
     first: helpers['@first'], last: helpers['@last'], key: helpers['@key'], odd: helpers['@odd']
   });
