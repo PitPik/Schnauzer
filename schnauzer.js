@@ -6,10 +6,9 @@
   else global.Schnauzer = factory();
 }(this && this.window || global, function factory() { 'use strict';
 
-var getObjectKeysFn = function(obj, key, keys) { obj.hasOwnProperty(key) && keys.push(key) };
 var getObjectKeys = Object.keys || function(obj) {
-  var keys = [];
-  for (var key in obj) getObjectKeysFn(obj, key, keys);
+  var keys = [], prop = '';
+  for (prop in obj) if (hasOwnProperty.call(obj, prop)) keys.push(prop);
   return keys;
 };
 var cloneObjectFn = function(obj, newObj, key) { newObj[key] = obj[key] };
@@ -17,10 +16,7 @@ var cloneObject = function(newObj, obj) {
   for (var key in obj) cloneObjectFn(obj, newObj, key);
   return newObj;
 };
-var concatArrays = function(array, host) {
-  for (var n = 0, l = array.length; n < l; n++) host[host.length] = array[n];
-  return host;
-};
+var concatArrays = function(array, host) { return host.push.apply(host, array), host };
 
 var Schnauzer = function(templateOrOptions, options) {
   this.version = '2.0.5';
