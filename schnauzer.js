@@ -65,7 +65,7 @@ Schnauzer.concatArrays = concatArrays;
 Schnauzer.prototype = {
   render: function(data, extra) {
     var helpers = createHelper(this, '', '', 0, data, null, [{ scope: data }]);
-    return [this.partials[this.options.self]({
+    return [this.partials[this.options.self]({ blocks: {},
       extra: extra, scopes: [{ scope: data, helpers: helpers, level: [], values: null, alias: {} }],
     }), this.controls.active = true][0];
   },
@@ -301,8 +301,8 @@ function renderPartial(_this, data, model, tagData) {
 
   model.scopes[0].level = [];
   if (!partial && isBlock) partial = _this.partials[name];
-  if (isBlock) scope.partialBlock = _this.partials[name];
-    else if (isTemplate) partial = scope.partialBlock;
+  if (isBlock) model.blocks[name] = _this.partials[name];
+    else if (isTemplate) partial = model.blocks[name];
   if (_this.options.limitPartialScope) model.scopes = [model.scopes[0]];
     else model.scopes.splice(1, 1);
   return [ partial ? partial(model) : '', reset() ][0];
@@ -389,7 +389,7 @@ function renderEach(_this, data, main, model, tagData, objKeys, loopHelper, rese
 function render(_this, model, data, tagData, out, renderFn, track) {
   model.values = null;
   if (_this.options.renderHook && tagData.tag === 'B') model =
-    { extra: model.extra, scopes: model.scopes, alias: model.alias };
+    { extra: model.extra, scopes: model.scopes, alias: model.alias, blocks: model.blocks };
   return !_this.options.renderHook || !data.length || _this.controls.active ? out :
     _this.options.renderHook(_this, out, data, function recallBodyFn(newModel, helpers, stop) {
       if (helpers) model.scopes[0].helpers = helpers; // model.scopes[newModel.variable.depth]?
