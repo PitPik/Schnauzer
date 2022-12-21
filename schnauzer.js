@@ -355,7 +355,7 @@ function renderEach(_this, data, main, model, tagData, objKeys, loopHelper, rese
   var isArr = main.type === 'array';
   var value = !isArr && main.type !== 'object' ? [] : isArr ? data : objKeys;
   var currentScopes = model.scopes; // loopHelper ? concatArrays([], model.scopes) : null;
-  var loopFn = loopHelper && main.variable.active && function(newData, key) {
+  var loopFn = loopHelper && function(newData, key) { // main.variable.active && 
     model.scopes = currentScopes;
     model.scopes[0].scope = newData;
     model.scopes[0].helpers =
