@@ -1,10 +1,10 @@
-/**! @license schnauzer v2.0.6; Copyright (C) 2017-2022 by Peter Dematté */
+/**! @license schnauzer v2.0.7; Copyright (C) 2017-2022 by Peter Dematté */
 (function(global, factory) {
   if (typeof exports === 'object' && typeof module === 'object') module.exports = factory();
   else if (typeof define === 'function' && define.amd)
     define([], function() { return factory(); }, 'schnauzer');
-  else if (typeof exports === 'object') exports['schnauzer'] = factory();
-  else global.schnauzer = factory();
+  else if (typeof exports === 'object') exports['Schnauzer'] = factory();
+  else global.Schnauzer = factory();
 }(this && this.window || global, function factory() { 'use strict';
 
 var getObjectKeys = Object.keys || function(obj) {
@@ -20,7 +20,7 @@ var cloneObject = function(newObj, obj) {
 var concatArrays = function(array, host) { return host.push.apply(host, array), host };
 
 var Schnauzer = function(templateOrOptions, options) {
-  this.version = '2.0.6';
+  this.version = '2.0.7';
   this.partials = {};
   this.helpers = {};
   this.regexps = {};
