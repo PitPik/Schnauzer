@@ -90,11 +90,11 @@ return Schnauzer;
 
 function switchTags(_this, tags) {
   var tgs = (function(tags) { for (var n = tags.length; n--; ) {
-    tags[n] = '(' + (n ? '~*' : '') + (!n ? '\\\\*' : '') + tags[n] + (!n ? '~*' : '') + ')';
-  } return tags; })(tags[0] === '{{' ? ['{{2,3}', '}{2,3}'] : tags);
+    tags[n] = '(' + tags[n] + ')';
+  } return tags; })(tags[0] === '{{' ? ['{{2,3}', '[~}]{2,4}'] : tags);
 
   _this.regexps = {
-    tags: new RegExp(tgs[0] + '([#^/!>*-]*)\\s*(.*?)\\s*' + tgs[1]),
+    tags: new RegExp(tgs[0] + '([#~^/!>*-]*)\\s*([^~}]*)' + tgs[1]),
     entity: new RegExp('[' + getObjectKeys(_this.options.entityMap).join('') + ']', 'g')
   };
 }
@@ -485,6 +485,7 @@ function getVars(text, collection, out, type) {
 
   for (var n = 0, l = txtParts.length, match = /--(\d+)--/, replace = /%+/, dataType = '',
       parts = [], value = '', data = {}, paths = {}, skipConvert = false; n < l; n++) {
+    if (!txtParts[n]) continue; // whitespace after
     parts = txtParts[n].split('=');
     value = parts[1] !== undefined ? parts[1] : parts[0];
     if (value === '' || value === 'as') continue;
@@ -606,9 +607,9 @@ function parseTags(_this, text, tree) {
   for (var n = 1, type = '', vars = '', body = '', space = 0, root = '', tmpRoot = [], tmpVars = [],
       testRegex = /^[!-]+/, elseRegex =/^else\s*/, types = { '#':'B','^':'B','/':'C','E':'E' },
       child = {}, cType = '', tag = '', tagData = {}, l = split.length; n < l; n += 5) {
-    type = split[1 + n];
+    type = split[1 + n].replace('~', '');
     vars = split[2 + n];
-    body = trim(split[4 + n], split[3 + n], split[5 + n] || '');
+    body = trim(split[4 + n], split[3 + n], split[6 + n] || '');
 
     if (split[n].charAt(0) === '\\' || testRegex.test(type)) continue;
 
