@@ -1,4 +1,4 @@
-/**! @license schnauzer v2.0.7; Copyright (C) 2017-2022 by Peter Dematté */
+/**! @license schnauzer v2.0.7; Copyright (C) 2017-2023 by Peter Dematté */
 (function(global, factory) {
   if (typeof exports === 'object' && typeof module === 'object') module.exports = factory();
   else if (typeof define === 'function' && define.amd)
@@ -54,7 +54,7 @@ var initSchnauzer = function(_this, options, template) {
   switchTags(_this, options.tags);
   _this.helpers = options.helpers;
   _this.registerPartial(options.partials);
-  if (template) _this.parse(template);
+  if (template !== undefined) _this.parse(template);
   delete options.helpers; delete options.partials;
 };
 
@@ -296,7 +296,7 @@ function renderPartial(_this, data, model, tagData) {
   var name = tagData.partial.orig || newData && (helperValue || newData[0].value) || '';
   var isTemplate = name === '@partial-block';
   var isBlock = !isTemplate && name.charAt(0) === '@';
-  var partial = _this.partials[isBlock ? name.substring(1) : name];
+  var partial = _this.partials[isBlock ? name.substring(1) : name] || (model.extra && model.extra[name]);
   var scope = data[0] && !data[0].variable.name ? data[0].value : model.scopes[0].scope;
   var reset = addScope(model, scope, model.scopes[0].alias);
 
