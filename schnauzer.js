@@ -432,7 +432,7 @@ function renderBlock(_this, tagData, data, model, recursive) {
 function trim(text, start, end) {
   var doStart = start.indexOf('~') !== -1;
   var doEnd = end.indexOf('~') !== -1;
-  var regExp = !doStart && !doEnd ? '' : !doStart ? trims.end : !doEnd ? trims.start : trims.both;
+  var regExp = !doStart && !doEnd ? '' : !doStart ? trims.end : !doEnd ? trims.start : trims.all;
 
   return regExp ? text.replace(regExp, '') : text;
 }
