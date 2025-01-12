@@ -1,4 +1,4 @@
-/**! @license schnauzer v3.0.0; Copyright (C) 2017-2025 by Peter Dematté */
+/**! @license schnauzer v3.0.1; Copyright (C) 2017-2025 by Peter Dematté */
 (function(global, factory) {
   if (typeof exports === 'object' && typeof module === 'object')
     module.exports = factory(global);
@@ -8,26 +8,28 @@
   else global.Schnauzer = factory(global);
 }(this && this.window || global, function factory(global) { 'use strict';
 
+var console = global.console;
+var trims = { start: /^\s+/, end: /\s+$/, whitespace: /\s+/ };
 var getKeys = Object.keys || function(obj) {
   var keys = [], prop = '';
   for (prop in obj) if (hasOwnProperty.call(obj, prop)) keys.push(prop);
   return keys;
 };
 var extendFn = function(obj, newObj, key) { newObj[key] = obj[key] };
-var extend = function(newObj, obj) {
+var extend = Object.assign || function(newObj, obj) {
   for (var key in obj) extendFn(obj, newObj, key);
   return newObj;
 };
 var templateError = function() { throw('Schnauzer Error: Incorrect template') };
-var console = global.console;
-var trims = { start: /^\s+/, end: /\s+$/, whitespace: /\s+/ };
 
 var Schnauzer = function(templateOrOptions, options) {
-  this.version = '3.0.0';
+  this.version = '3.0.1';
   this.partials = {};
+  this.exports = {};
   this.helpers = {
     lookup: lookupProperty,
     log: function(options) {
+      if (!console) return;
       for (var n = 0, l = arguments.length, args = []; n < l; n++)
         if (n === l - 1) options = arguments[n]; else args.push(arguments[n]);
       (console[options.hash['level']] || console.log).apply(console, args);
@@ -54,20 +56,28 @@ var Schnauzer = function(templateOrOptions, options) {
     strictArguments: true,
     loopHelper: null,
     renderHook: null,
+    evaluationHook: null,
+    dynamic: null,
   };
-  initSchnauzer(this, options || {}, templateOrOptions);
+  initSchnauzer(this, options || {}, templateOrOptions, this.exports);
 };
 
-var initSchnauzer = function(_this, options, template) {
+var initSchnauzer = function(_this, options, template, exp) {
   if (typeof template !== 'string') { options = template; template = undefined }
   options = extend(_this.options, options);
   _this.regex.tags = /({{2,3})([#~^/!>*-]*)\s*([^~}]*)([~}]{2,4})/;
   _this.regex.entity = new RegExp(
-    '[' + getKeys(_this.options.entityMap).join('') + ']', 'g'
+    '[' + getKeys(options.entityMap).join('') + ']', 'g'
   );
   _this.helpers = extend(_this.helpers, options.helpers);
   _this.registerPartial(options.partials);
   if (template !== undefined) _this.parse(template);
+  if (options.dynamic) {
+    exp.render = render;
+    exp.renderBlock = renderBlock;
+    exp.renderHelper = renderHelper;
+    exp.renderEach = renderEach;
+  }
   delete options.helpers;
   delete options.partials;
 };
@@ -75,14 +85,15 @@ var initSchnauzer = function(_this, options, template) {
 var SafeString = function(text) { this.string = text };
 SafeString.prototype.toString = SafeString.prototype.toHTML =
   function() { return '' + this.string };
+Schnauzer.extend = extend;
+Schnauzer.getKeys = getKeys;
 
 Schnauzer.prototype = {
   render: function(data, extra) {
-    var helpers = createHelper(this, [{ context: data }], data);
+    var helpers = createHelper([{ context: data }], data);
     var scopes = [{ context: data, helpers: helpers, vars: {} }];
-    var partial = this.partials[this.options.self];
 
-    return render(this, partial, {
+    return render(this, this.partials[this.options.self], {
       scopes: scopes, extra: extra || {}, $vars: {}, $alias: {},
     });
   },
@@ -124,7 +135,7 @@ function lookupProperty(parent, propertyName) {
 
 function addScope(model, value, partialContent) {
   var scope = model.scopes[0];
-  var sav = partialContent ? {} : null;
+  var sav = {};
   var vars = extend({}, model.$vars);
 
   if (partialContent) for (var key in scope.$vars) {
@@ -148,11 +159,11 @@ function addScope(model, value, partialContent) {
 
   return function() {
     model.scopes.shift();
-    if (partialContent) for (var key in sav) scope.vars[key] = sav[key];
+    if (partialContent) extend(scope.vars, sav);
   };
 }
 
-function createHelper(_this, scopes, value, parent, idx, key, len) {
+function createHelper(scopes, value, parent, idx, key, len) {
   return len ? {
     '@index': idx,
     '@number': idx + 1,
@@ -161,8 +172,7 @@ function createHelper(_this, scopes, value, parent, idx, key, len) {
     '@last': idx === len - 1,
     '@first': idx === 0,
     '@length': len,
-    '@depth': _this.options.limitPartialScope ? undefined : scopes.length - 2,
-    '@loop': parent,
+    '@depth': scopes.length - 2 >= 0 ? scopes.length - 2 : 0,
     '@parent': scopes[1].context,
     '@root': scopes[scopes.length - 1].context,
     'this': value,
@@ -187,12 +197,9 @@ function createDataModel(main, context, isLoop) {
   var type = main.type;
   var isLiteral = type !== 'key' && type !== 'helper';
   var isThis = key === 'this';
-  var hasValue = false;
-  var noParent = false;
+  var noParent = isLiteral || isThis;
 
   if (main.path.length) context = deepData(main, context, {}).parent;
-  hasValue = context && context[key] !== undefined || false;
-  noParent = isLiteral || isThis || !hasValue;
 
   return {
     value: isThis ? context : isLiteral ? key : context && context[key],
@@ -230,7 +237,6 @@ function getHelperData(_this, model, data, main, isHelper) {
 function getData(_this, tagData, model) {
   var out = [];
   var main = {};
-  var scopes = model.scopes;
   var scope = null;
   var context = {};
   var data = {};
@@ -241,10 +247,10 @@ function getData(_this, tagData, model) {
   for (var n = 0, l = tagData.vars.length; n < l; n++) {
     main = tagData.vars[n];
     alias = !!main.name || !!main.alias.length;
-    scope = scopes[main.depth];
+    scope = model.scopes[main.depth];
     if (!scope) { out.push(createDataModel(main, context)); continue; }
 
-    if (!main.strict) helper = _this.helpers[main.value];
+    helper = !main.strict ? _this.helpers[main.value] : null;
     if (helper && main.type !== 'string') main.type = 'helper';
     context = main.value[0] === '@' || (main.path[0] || '')[0] === '@' ?
       scope.helpers : helper ? _this.helpers : scope.context;
@@ -264,7 +270,6 @@ function getData(_this, tagData, model) {
 }
 
 function checkValue(main, value, helper, keys) {
-  var isEach = helper === 'each';
   var isIf = helper === 'if' || helper === 'unless';
   var isLiteral = main.type === 'number' || main.type === 'string';
   var isObject = main.type === 'object' && main.value !== null;
@@ -272,28 +277,9 @@ function checkValue(main, value, helper, keys) {
   if (!keys) keys = {};
 
   return main.type === 'array' ? !!main.value.length :
-    isObject ? !isEach || !!(keys.keys = getKeys(main.value)).length :
+    isObject ? helper !== 'each' || !!(keys.keys = getKeys(main.value)).length :
     main.zero && main.value === 0 ? true :
     !isIf && isLiteral ? value !== undefined : !!value;
-}
-
-// ---- helpers functions
-
-function scopeFn(_this, context, model, data, fnData) {
-  var resetScope = addScope(model, context);
-  var out = '';
-  var scope = model.scopes[0];
-  var savedContext = scope.context;
-
-  if (!fnData.SafeString && fnData.data) for (var key in fnData.data)
-    model.scopes[0].vars['@' + key] = fnData.data[key];
-
-  scope.context = context;
-  out = render(_this, data, model);
-  scope.context = savedContext;
-  resetScope();
-
-  return out;
 }
 
 function helperArgs(_this, tagData, main, model) {
@@ -314,7 +300,7 @@ function helperArgs(_this, tagData, main, model) {
   for (var n = main.args.length; n--; ) if (item = main.args[n], item.alias)
     args.hash[item.alias] = item.value;
 
-  if (tagData.block) {
+  if (tagData.block && tagData.alts) {
     args.fn = function(context, fnData) {
       return scopeFn(_this, context, model, tagData.children, fnData || args);
     };
@@ -358,18 +344,22 @@ function renderPartial(_this, data, model, tagData) {
   return out;
 }
 
-function renderWith(_this, value, model, tagData) {
+function scopeFn(_this, context, model, children, data) {
   var out = '';
-  var resetScope = addScope(model, value);
+  var resetScope = addScope(model, context);
 
-  out = render(_this, tagData.children, model);
+  if (data && data.data && !data.SafeString) for (var key in data.data)
+    model.scopes[0].vars['@' + key] = data.data[key];
+
+  out = render(_this, children, model);
   resetScope();
 
   return out;
 }
 
-function renderEach(_this, value, model, main, tagData, objKeys) {
+function renderEach(_this, model, main, tagData, objKeys) {
   var out = '';
+  var value = main.value;
   var hook = _this.options.loopHelper;
   var resetScope = addScope(model, value);
   var scopes = model.scopes;
@@ -379,15 +369,16 @@ function renderEach(_this, value, model, main, tagData, objKeys) {
   var alias = tagData.vars[0].alias;
 
   for (var n = 0, key = '', l = data.length; n < l; n++) {
+    if (hook && data[n] === undefined) continue;
     key = isArray ? n : data[n];
-    scope.helpers = createHelper(_this, scopes, value[key], value, n, key, l);
+    scope.helpers = createHelper(scopes, value[key], value, n, key, l);
     scope.context = value[key];
 
     if (alias[0]) scope.vars[alias[0]] = value[key];
     if (alias[1]) scope.vars[alias[1]] = key;
 
     out += !hook ? render(_this, tagData.children, model) :
-      hook(_this, model, data, value, main, key, tagData, render, createHelper);
+      hook(_this, tagData, model, main, n);
   }
   resetScope();
 
@@ -396,14 +387,13 @@ function renderEach(_this, value, model, main, tagData, objKeys) {
 
 function renderHelper(_this, tagData, main, model) {
   var fnArgs = [];
-  var args = main.args;
   var arg = null;
-  var n = 0, l = args.length;
+  var n = 0, l = main.args.length;
   var context = model.scopes[0].context;
 
   if (!main.value || !main.value.apply) return main.value;
 
-  for ( ; n < l; n++) if (arg = args[n], arg.helper)
+  for ( ; n < l; n++) if (arg = main.args[n], arg.helper)
     fnArgs.push(renderHelper(_this, tagData, arg, model));
   else if (!arg.alias) fnArgs.push(arg.value);
 
@@ -413,7 +403,7 @@ function renderHelper(_this, tagData, main, model) {
   return main.value.apply(context, fnArgs);
 }
 
-function renderBlockData(_this, tagData, model, value) {
+function renderBlockHelper(_this, tagData, model, value) {
   var isIf = tagData.vars.length !== 0 && tagData.vars[0].type !== 'helper';
   var resetScope = isIf && !tagData.helper ? addScope(model, value) : null;
   var out = tagData.text;
@@ -425,15 +415,35 @@ function renderBlockData(_this, tagData, model, value) {
   return out;
 }
 
-function renderBlocklHelper(_this, data, model, tagData) {
+function getEvaluationHookHelper(_this, alts, main, hook) {
+  var mainAlts = alts.length ? main.alts = main.alts || [] : null;
+  var lastIndex = alts.length - 1;
+  var elseIndex = alts[lastIndex] && alts[lastIndex].vars.length === 0 ?
+    lastIndex : -1;
+
+  if (!mainAlts) return function() {};
+
+  main.index = 0;
+  return function(data, n) {
+    if (!data) return hook(main);
+
+    if (!mainAlts[n]) mainAlts[n] = n === elseIndex ? { args: [] } : data;
+    if (n !== elseIndex) mainAlts[n].type = data.type;
+    main.index = n + 1;
+  };
+}
+
+function evaluateBlock(_this, data, model, tagData) {
   var main = data[0];
   var unless = tagData.helper === 'unless';
   var value = renderHelper(_this, tagData, main, model);
   var keys = { keys: [] };
   var check = checkValue(main, value, tagData.helper, keys);
-  var alts = tagData.alts, n = 0, l = alts.length, track = tagData;
+  var alts = tagData.alts;
+  var hook = _this.options.evaluationHook;
+  var $hook = hook && getEvaluationHookHelper(_this, alts, main, hook);
 
-  if (check === unless) for ( ;n < l; n++) {
+  if (check === unless) for (var n = 0, l = alts.length ;n < l; n++) {
     tagData = alts[n];
     unless = tagData.helper === 'unless';
 
@@ -441,18 +451,19 @@ function renderBlocklHelper(_this, data, model, tagData) {
       main = getData(_this, tagData, model)[0];
       value = renderHelper(_this, tagData, main, model);
     } else value = render(_this, tagData.children, model);
+    if ($hook) $hook(main, n);
 
     check = checkValue(main, value, tagData.helper);
-    if (check !== unless) { n++; break; }
+    if (check !== unless) break;
   }
-  track.index = n;
 
   if (tagData.helper === 'with' && value)
-    return renderWith(_this, value, model, tagData);
+    return scopeFn(_this, value, model, tagData.children);
   if (main.isLoop && value)
-    return renderEach(_this, value, model, main, tagData, keys);
-  if (check !== unless) return renderBlockData(_this, tagData, model, value);
-  return !tagData.alts ? tagData.text : '';
+    return renderEach(_this, model, main, tagData, keys);
+  if ((!$hook || !$hook()) && check !== unless)
+    return renderBlockHelper(_this, tagData, model, value);
+  return !tagData.alts && !tagData.helper ? tagData.text : '';
 }
 
 // ---- render blocks and inlines; delegations only
@@ -461,9 +472,9 @@ function renderBlock(_this, tag, model, data) {
   var hook = _this.options.renderHook;
   var out = tag.partial ?
     renderPartial(_this, data, model, tag) :
-    renderBlocklHelper(_this, data, model, tag);
+    evaluateBlock(_this, data, model, tag);
 
-  return hook ? hook(_this, model, tag, data, out, renderBlock, render) : out;
+  return hook ? hook(_this, model, tag, data, out) : out;
 }
 
 function renderInline(_this, tag, model, data) {
@@ -473,9 +484,10 @@ function renderInline(_this, tag, model, data) {
     renderHelper(_this, tag, data[0], model) :
     data[0].value;
 
-  out = escapeHtml(_this, out, tag.escape) + tag.text;
+  out = escapeHtml(_this, out, tag.escape);
+  if (hook) out = hook(_this, model, tag, data, out);
 
-  return hook ? hook(_this, model, tag, data, out, renderInline, render) : out;
+  return out + tag.text;
 }
 
 function render(_this, tags, model) {
@@ -659,7 +671,6 @@ function buildTree(tree, tagData) {
     tree = getTreeParent(tree);
     if (!checkBlockStart(tree, tagData.close)) templateError();
     if (tree[tree.length - 1].partial) movePartialText(tree[tree.length - 1]);
-    tree[tree.length - 1].index = 0;
     tree.push({ text: tagData.text });
   } else if (tagData.block) {
     tree.push(tagData);
