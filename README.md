@@ -1,4 +1,4 @@
- ![coverage](https://img.shields.io/badge/version-3&#46;0&#46;1-blue) ![coverage](https://img.shields.io/badge/dependencies-0-green) ![coverage](https://img.shields.io/badge/minified-11&#46;13KB-blue) ![coverage](https://img.shields.io/badge/gzipped-~4&#46;89KB-blue)
+ ![coverage](https://img.shields.io/badge/version-3&#46;0&#46;2-blue) ![coverage](https://img.shields.io/badge/dependencies-0-green) ![coverage](https://img.shields.io/badge/minified-11&#46;13KB-blue) ![coverage](https://img.shields.io/badge/gzipped-~4&#46;89KB-blue)
 
 # {{schnauzer.js}} - Handlebars templates with JavaScript
 
