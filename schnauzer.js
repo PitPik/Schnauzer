@@ -1,4 +1,4 @@
-/**! @license schnauzer v3.0.1; Copyright (C) 2017-2025 by Peter Dematté */
+/**! @license schnauzer v3.0.2; Copyright (C) 2017-2025 by Peter Dematté */
 (function(global, factory) {
   if (typeof exports === 'object' && typeof module === 'object')
     module.exports = factory(global);
@@ -187,6 +187,7 @@ function createAlias(main, model, data, out) {
   if (main.name) {
     if (main.name === 'includeZero') return out[0].zero = main.value;
     model.$vars[main.name] = data.value;
+    if (data.type === 'array') model.$vars['__' + main.name] = main.value;
     data.alias = main.name;
   } else for (var n = 0, l = main.alias.length; n < l; n++)
     model.$alias[main.alias[n]] = out[n] ? out[n].value : undefined;
@@ -210,21 +211,24 @@ function createDataModel(main, context, isLoop) {
     alias: '',
     args: [],
     isLoop: isLoop || false,
+    loopName: '',
     helper: main.enclosed,
     // zero: false,
   };
 }
 
-function deepData(main, context, data) {
+function deepData(main, context, data, scope) {
   var n = 0;
   var l = main.path.length;
   var value = null;
+  var loopName = scope && scope.vars['__' + data.key];
 
   for ( ; n < l; n++) if (!(context = context[main.path[n]])) return data;
   if ((value = context[main.value]) === undefined) return data;
 
   data.value = value;
   data.parent = context;
+  if (loopName) data.loopName = loopName;
 
   return data;
 }
@@ -257,7 +261,7 @@ function getData(_this, tagData, model) {
 
     out.push(data = createDataModel(main, context, isLoop));
     if (main.type === 'helper') getHelperData(_this, model, data, main, !n);
-    if (!alias || data.value === undefined) deepData(main, scope.vars, data);
+    if (!alias || data.value === undefined) deepData(main, scope.vars, data, scope);
     if (data.value === undefined) deepData(main, model.extra, data);
 
     if (!data.type) data.type = data.value && data.value.constructor === Array ?
@@ -415,24 +419,6 @@ function renderBlockHelper(_this, tagData, model, value) {
   return out;
 }
 
-function getEvaluationHookHelper(_this, alts, main, hook) {
-  var mainAlts = alts.length ? main.alts = main.alts || [] : null;
-  var lastIndex = alts.length - 1;
-  var elseIndex = alts[lastIndex] && alts[lastIndex].vars.length === 0 ?
-    lastIndex : -1;
-
-  if (!mainAlts) return function() {};
-
-  main.index = 0;
-  return function(data, n) {
-    if (!data) return hook(main);
-
-    if (!mainAlts[n]) mainAlts[n] = n === elseIndex ? { args: [] } : data;
-    if (n !== elseIndex) mainAlts[n].type = data.type;
-    main.index = n + 1;
-  };
-}
-
 function evaluateBlock(_this, data, model, tagData) {
   var main = data[0];
   var unless = tagData.helper === 'unless';
@@ -441,7 +427,8 @@ function evaluateBlock(_this, data, model, tagData) {
   var check = checkValue(main, value, tagData.helper, keys);
   var alts = tagData.alts;
   var hook = _this.options.evaluationHook;
-  var $hook = hook && getEvaluationHookHelper(_this, alts, main, hook);
+  var $hook = hook && !main.isLoop && tagData.helper !== 'with' &&
+    tagData.vars[0].type !== 'helper' ? hook(alts, main, check) : null;
 
   if (check === unless) for (var n = 0, l = alts.length ;n < l; n++) {
     tagData = alts[n];
