@@ -1,4 +1,4 @@
-/**! @license schnauzer v3.0.2; Copyright (C) 2017-2025 by Peter Dematté */
+/**! @license schnauzer v3.0.3; Copyright (C) 2017-2025 by Peter Dematté */
 (function(global, factory) {
   if (typeof exports === 'object' && typeof module === 'object')
     module.exports = factory(global);
@@ -23,18 +23,10 @@ var extend = Object.assign || function(newObj, obj) {
 var templateError = function() { throw('Schnauzer Error: Incorrect template') };
 
 var Schnauzer = function(templateOrOptions, options) {
-  this.version = '3.0.1';
+  this.version = '3.0.3';
   this.partials = {};
   this.exports = {};
-  this.helpers = {
-    lookup: lookupProperty,
-    log: function(options) {
-      if (!console) return;
-      for (var n = 0, l = arguments.length, args = []; n < l; n++)
-        if (n === l - 1) options = arguments[n]; else args.push(arguments[n]);
-      (console[options.hash['level']] || console.log).apply(console, args);
-    },
-  };
+  this.helpers = { lookup: lookupProperty, log: log };
   this.regex = { tags: null, entity: null };
   this.controls = { partialBlocks: [] };
   this.options = {
@@ -129,6 +121,13 @@ function lookupProperty(parent, propertyName) {
   if (out == null) return out;
   if (Object.prototype.hasOwnProperty.call(parent, propertyName)) return out;
   return undefined;
+}
+
+function log (options) {
+  if (!console) return;
+  for (var n = 0, l = arguments.length, args = []; n < l; n++)
+    if (n === l - 1) options = arguments[n]; else args.push(arguments[n]);
+  (console[options.hash['level']] || console.log).apply(console, args);
 }
 
 // ---- render data helpers
