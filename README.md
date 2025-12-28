@@ -6,7 +6,7 @@ Schanuzer parses and renderes Handlebars templates. It lets you build **semantic
 
 Schanuzer is largely compatible with Mustache and Handlebars templates. In most cases it is possible to swap out Mustache or Handlebars with Schanuzer and continue using your current templates. Schnauzer aims to be 100% compatible to Handlebars although there are some differences in how helpers work and Schnauzer is a Klass to be initialized.
 
-Schanuzer is also very small and fast. It has the power of Handlebars but is almost the size of Mustage (11.13KB minified, ~4.89KB compressed) and therefore also perfectly suitable for mobile applications.
+Schanuzer is also very small and fast. It has the power of Handlebars but is almost the size of Mustage (11.11KB minified, ~4.60KB compressed) and therefore also perfectly suitable for mobile applications.
 Rendering with Schnauzer is about ~33% faster than Handlebars, and parsing is around as fast as rendering although you can still precompile your templates (serveside and pass them to your app/page as a simple JSON).
 
 ## Where to use schnauzer.js?
