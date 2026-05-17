@@ -1,4 +1,4 @@
-/**! @license schnauzer v3.0.3; Copyright (C) 2017-2025 by Peter Dematté */
+/**! @license schnauzer v3.0.3; Copyright (C) 2017-2026 by Peter Dematté */
 (function(global, factory) {
   if (typeof exports === 'object' && typeof module === 'object')
     module.exports = factory(global);
@@ -83,7 +83,9 @@ Schnauzer.getKeys = getKeys;
 Schnauzer.prototype = {
   render: function(data, extra) {
     var helpers = createHelper([{ context: data }], data);
-    var scopes = [{ context: data, helpers: helpers, vars: {} }];
+    var scopes = [{
+      context: data, helpers: helpers, vars: {}, depth: 0, loopName: ''
+    }];
 
     return render(this, this.partials[this.options.self], {
       scopes: scopes, extra: extra || {}, $vars: {}, $alias: {},
@@ -116,7 +118,7 @@ function escapeHtml(_this, string, doEscape) {
 }
 
 function lookupProperty(parent, propertyName) {
-  var out = parent[propertyName];
+  var out = parent && parent[propertyName];
 
   if (out == null) return out;
   if (Object.prototype.hasOwnProperty.call(parent, propertyName)) return out;
@@ -132,10 +134,11 @@ function log (options) {
 
 // ---- render data helpers
 
-function addScope(model, value, partialContent) {
+function addScope(model, value, partialContent, loop) {
   var scope = model.scopes[0];
   var sav = {};
   var vars = extend({}, model.$vars);
+  var isLoop = loop !== undefined;
 
   if (partialContent) for (var key in scope.$vars) {
     vars[key] = sav[key] = scope.$vars[key];
@@ -152,6 +155,8 @@ function addScope(model, value, partialContent) {
     vars: vars,
     $alias: model.$alias,
     $vars: model.$vars,
+    depth: isLoop ? scope.depth + 1 : scope.depth,
+    loopName: scope.loopName || loop || '',
   });
   model.$vars = {};
   model.$alias = {};
@@ -171,7 +176,7 @@ function createHelper(scopes, value, parent, idx, key, len) {
     '@last': idx === len - 1,
     '@first': idx === 0,
     '@length': len,
-    '@depth': scopes.length - 2 >= 0 ? scopes.length - 2 : 0,
+    '@depth': scopes[0].depth - 1,
     '@parent': scopes[1].context,
     '@root': scopes[scopes.length - 1].context,
     'this': value,
@@ -203,7 +208,7 @@ function createDataModel(main, context, isLoop) {
 
   return {
     value: isThis ? context : isLiteral ? key : context && context[key],
-    type: isLiteral ? type : undefined,
+    type: isLiteral ? type : '',
     parent: noParent ? undefined : context,
     active: noParent || type === 'helper' ? 0 : main.active,
     key: isLiteral ? '' : key,
@@ -212,7 +217,7 @@ function createDataModel(main, context, isLoop) {
     isLoop: isLoop || false,
     loopName: '',
     helper: main.enclosed,
-    // zero: false,
+    zero: false,
   };
 }
 
@@ -364,13 +369,14 @@ function renderEach(_this, model, main, tagData, objKeys) {
   var out = '';
   var value = main.value;
   var hook = _this.options.loopHelper;
-  var resetScope = addScope(model, value);
+  var resetScope = addScope(model, value, false, main.loopName || main.key);
   var scopes = model.scopes;
   var scope = scopes[0];
   var isArray = main.type === 'array';
   var data = isArray ? value : objKeys.keys;
   var alias = tagData.vars[0].alias;
 
+  if (!main.loopName) main.loopName = scope.loopName;
   for (var n = 0, key = '', l = data.length; n < l; n++) {
     if (hook && data[n] === undefined) continue;
     key = isArray ? n : data[n];
@@ -426,8 +432,8 @@ function evaluateBlock(_this, data, model, tagData) {
   var check = checkValue(main, value, tagData.helper, keys);
   var alts = tagData.alts;
   var hook = _this.options.evaluationHook;
-  var $hook = hook && !main.isLoop && tagData.helper !== 'with' &&
-    tagData.vars[0].type !== 'helper' ? hook(alts, main, check) : null;
+  var $hook = hook && !main.isLoop && tagData.helper !== 'with' ?
+    hook(alts, main, check) : null;
 
   if (check === unless) for (var n = 0, l = alts.length ;n < l; n++) {
     tagData = alts[n];
@@ -499,8 +505,8 @@ function convertValue(text, model) {
 
 function getVarsModel() {
   return {
-    active: 0, alias: [], args: [], depth: 0, name: '', helper: false,
-    path: [], strict: false, type: 'key', value: '', enclosed: false,
+    active: 0, alias: [], args: [], depth: 0, name: '', enclosed: false,
+    path: [], strict: false, type: 'key', value: '', helper: false, zero: false,
   };
 }
 
